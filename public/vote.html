@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vote for Pokémon</title>
+</head>
+<body>
+  <h1>Vote for Your Favorite Pokémon</h1>
+  <div id="pokemonVoteContainer">
+    <!-- The two random Pokémon will be displayed here -->
+    <div class="pokemon" id="pokemon1">
+      <!-- Pokémon 1 data goes here -->
+      <h2 id="pokemon1Name"></h2>
+      <p id="pokemon1Elo"></p>
+    </div>
+    <div class="pokemon" id="pokemon2">
+      <!-- Pokémon 2 data goes here -->
+      <h2 id="pokemon2Name"></h2>
+      <p id="pokemon2Elo"></p>
+    </div>
+  </div>
+  <script>
+    // Sample Pokémon data (assuming you have fetched the data)
+    const pokemon1 = { name: "Pikachu", elo: 1500 };
+    const pokemon2 = { name: "Charizard", elo: 1800 };
+
+    // Function to handle voting
+    function handleVote(winner, loser) {
+      vote('pokemon', winner.name, loser.name);
+      // Here you might want to update the UI or fetch new Pokémon for voting
+    }
+
+    // Display Pokémon data within the containers
+    document.getElementById("pokemon1Name").textContent = pokemon1.name;
+    document.getElementById("pokemon1Elo").textContent = `Elo: ${pokemon1.elo}`;
+    document.getElementById("pokemon2Name").textContent = pokemon2.name;
+    document.getElementById("pokemon2Elo").textContent = `Elo: ${pokemon2.elo}`;
+
+    // Create clickable Pokémon elements
+    const pokemon1Container = document.getElementById("pokemon1");
+    const pokemon2Container = document.getElementById("pokemon2");
+
+    // Set up click event listeners
+    pokemon1Container.addEventListener("click", () => {
+      handleVote(pokemon1, pokemon2);
+    });
+
+    pokemon2Container.addEventListener("click", () => {
+      handleVote(pokemon2, pokemon1);
+    });
+
+    // Function to vote using the provided API
+    async function vote(listName, winner, loser) {
+      const response = await fetch('/vote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listName: listName, winner: winner, loser: loser })
+      });
+      const data = await response.json();
+      console.log(data);
+    }
+  </script>
+</body>
+</html>
