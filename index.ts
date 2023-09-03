@@ -39,6 +39,20 @@ db.serialize(() => {
   `);
 });
 
+// Create a table for storing list votes
+db.serialize(() => {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS list_votes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      list_name TEXT,
+      user_id INTEGER,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (list_name) REFERENCES lists (name)
+      -- You can add a foreign key to reference the user table for user_id if needed
+    )
+  `);
+});
+
 
 // Placeholder Elo ranking parameters (adjust as needed)
 const K = 32; // Elo constant, controls rating update magnitude
@@ -218,8 +232,15 @@ app.post('/vote', (req, res) => {
           if (err) {
             return res.status(400).json({ error: `Failed to update Elo rating for "${loser}".` });
           }
+					// Insert a record in the list_votes table to track the vote
+					const userId = 123; // Replace with the actual user ID or authentication logic
+					db.run('INSERT INTO list_votes (list_name, user_id) VALUES (?, ?)', [listName, userId], (err) => {
+						if (err) {
+							return res.status(400).json({ error: 'Failed to record the vote.' });
+						}
 
-          res.status(200).json({ message: 'Elo rankings updated successfully.' });
+						res.status(200).json({ message: 'Elo rankings updated successfully.' });
+					});
         });
       });
     });
@@ -228,14 +249,23 @@ app.post('/vote', (req, res) => {
 
 // Endpoint to get the names of all available lists
 app.get('/get-lists', (req, res) => {
-  // Fetch all list names from the 'lists' table
-  db.all('SELECT name FROM lists', [], (err, rows) => {
+  db.all(`
+    SELECT lists.name, COUNT(list_votes.id) as vote_count
+    FROM lists
+    LEFT JOIN list_votes ON lists.name = list_votes.list_name
+    GROUP BY lists.name
+    ORDER BY vote_count DESC
+  `, [], (err, rows) => {
     if (err) {
       return res.status(400).json({ error: 'Failed to fetch list names.' });
     }
 
-    const listNames = rows.map((row) => row.name);
-    res.status(200).json({ lists: listNames });
+    const sortedLists = rows.map((row) => ({
+      name: row.name,
+      voteCount: row.vote_count
+    }));
+
+    res.status(200).json({ lists: sortedLists });
   });
 });
 
