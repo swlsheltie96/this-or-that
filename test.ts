@@ -51,9 +51,24 @@ async function testGetSortedList(listName) {
   }
 }
 
+// Function to test the get-lists endpoint
+async function getListsWithPopularity() {
+  try {
+    const response = await fetch(`http://localhost:${PORT}/get-lists`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch lists: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log(data);
+  } catch (error) {
+    console.error(`Error: ${error.message}`);
+  }
+}
 
 // Usage example
 await createList("pokemon");
+await createList("random");
 await addItem("pokemon", {name: "Pikachu", picture: 'bleh'});
 await addItem("pokemon", {name: "Charizard", picture: 'bleh'});
 await addItem("pokemon", {name: "Ekans", picture: 'bleh'});
@@ -61,3 +76,4 @@ await getPairForVoting("pokemon");
 await vote("pokemon", "Pikachu", "Ekans");
 await vote("pokemon", "Charizard", "Pikachu");
 await testGetSortedList("pokemon");
+await getListsWithPopularity();

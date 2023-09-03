@@ -13,7 +13,7 @@ db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS lists (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT
+      name TEXT UNIQUE
     )
   `);
 
@@ -67,7 +67,6 @@ app.post('/create-list', (req, res) => {
   // Insert the list into the 'lists' table
   db.run('INSERT INTO lists (name) VALUES (?)', [listName], (err) => {
     if (err) {
-      console.log(err);
       return res.status(400).json({ error: `Failed to create list "${listName}".` });
     }
     res.status(200).json({ message: `List "${listName}" created successfully.` });
@@ -232,20 +231,22 @@ app.post('/vote', (req, res) => {
           if (err) {
             return res.status(400).json({ error: `Failed to update Elo rating for "${loser}".` });
           }
-					// Insert a record in the list_votes table to track the vote
-					const userId = 123; // Replace with the actual user ID or authentication logic
-					db.run('INSERT INTO list_votes (list_name, user_id) VALUES (?, ?)', [listName, userId], (err) => {
-						if (err) {
-							return res.status(400).json({ error: 'Failed to record the vote.' });
-						}
 
-						res.status(200).json({ message: 'Elo rankings updated successfully.' });
-					});
+          // Insert a record in the list_votes table to track the vote
+          const userId = 123; // Replace with the actual user ID or authentication logic
+          db.run('INSERT INTO list_votes (list_name, user_id) VALUES (?, ?)', [listName, userId], (err) => {
+            if (err) {
+              return res.status(400).json({ error: 'Failed to record the vote.' });
+            }
+
+            res.status(200).json({ message: 'Elo rankings updated successfully.' });
+          });
         });
       });
     });
   });
 });
+
 
 // Endpoint to get the names of all available lists
 app.get('/get-lists', (req, res) => {
