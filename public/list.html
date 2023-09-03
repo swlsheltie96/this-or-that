@@ -21,7 +21,7 @@
       .listitem {
         border: 1px solid #ccc;
         padding: 10px;
-        margin: 5px;
+        margin: 5px 0;
         display: block;
       }
       #voteButton {
@@ -39,19 +39,6 @@
     <div id="listContainer"></div>
 
     <script>
-      // Sample Pokémon data with names and Elo ratings (made up values)
-      // const pokemonData = [
-      //   { name: "Pikachu", elo: 1500 },
-      //   { name: "Charizard", elo: 1800 },
-      //   { name: "Bulbasaur", elo: 1200 },
-      //   { name: "Squirtle", elo: 1350 },
-      //   { name: "Jigglypuff", elo: 1000 },
-      //   // Add more Pokémon data as needed
-      // ];
-
-      // Sort Pokémon data based on Elo rating (descending order)
-      // pokemonData.sort((a, b) => b.elo - a.elo);
-
       // Create and append div elements for each Pokémon in descending order
 
       function makeList(data, listname, listContainer) {
