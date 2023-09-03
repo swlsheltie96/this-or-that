@@ -53,11 +53,11 @@ async function testGetSortedList(listName) {
 
 
 // Usage example
-createList("pokemon");
-addItem("pokemon", {name: "Pikachu", picture: 'bleh'});
-addItem("pokemon", {name: "Charizard", picture: 'bleh'});
-addItem("pokemon", {name: "Ekans", picture: 'bleh'});
-getPairForVoting("pokemon");
-vote("pokemon", "Pikachu", "Ekans");
-vote("pokemon", "Charizard", "Pikachu");
-testGetSortedList("pokemon");
+await createList("pokemon");
+await addItem("pokemon", {name: "Pikachu", picture: 'bleh'});
+await addItem("pokemon", {name: "Charizard", picture: 'bleh'});
+await addItem("pokemon", {name: "Ekans", picture: 'bleh'});
+await getPairForVoting("pokemon");
+await vote("pokemon", "Pikachu", "Ekans");
+await vote("pokemon", "Charizard", "Pikachu");
+await testGetSortedList("pokemon");
