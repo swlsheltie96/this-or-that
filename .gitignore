@@ -171,3 +171,4 @@ dist
 *.swp
 lists.db
 bun.lockdb
+node_modules/
