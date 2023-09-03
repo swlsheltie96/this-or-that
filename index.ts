@@ -226,6 +226,19 @@ app.post('/vote', (req, res) => {
   });
 });
 
+// Endpoint to get the names of all available lists
+app.get('/get-lists', (req, res) => {
+  // Fetch all list names from the 'lists' table
+  db.all('SELECT name FROM lists', [], (err, rows) => {
+    if (err) {
+      return res.status(400).json({ error: 'Failed to fetch list names.' });
+    }
+
+    const listNames = rows.map((row) => row.name);
+    res.status(200).json({ lists: listNames });
+  });
+});
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
