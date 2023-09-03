@@ -45,6 +45,7 @@
         let listTitle = document.getElementById("listName");
         listTitle.textContent = listname;
         data.forEach((element, index) => {
+          console.log(element);
           const elementDiv = document.createElement("div");
           elementDiv.className = "listitem";
           elementDiv.textContent = `${index + 1}. ${element.name} - Elo: ${
