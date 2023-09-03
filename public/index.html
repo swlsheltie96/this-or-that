@@ -44,9 +44,6 @@
         <label for="listName">List Name:</label>
         <input type="text" id="listName" name="listName" required /><br /><br />
 
-        <label for="itemName">Item Name:</label>
-        <input type="text" id="itemName" name="item" required /><br /><br />
-
         <div id="itemFields">
           <!-- Default 3 item input fields -->
           <label for="item1">Item Name:</label>
@@ -54,9 +51,6 @@
 
           <label for="item2">Item Name:</label>
           <input type="text" id="item2" name="item" required /><br /><br />
-
-          <label for="item3">Item Name:</label>
-          <input type="text" id="item3" name="item" required /><br /><br />
         </div>
 
         <button type="button" id="addItemButton">Add Item</button><br /><br />
@@ -78,11 +72,12 @@
         listOfLists.innerHTML = "";
 
         // Populate the list of lists
-        data.lists.forEach((listName) => {
+        data.lists.forEach((list) => {
+          console.log(data.lists);
           const listItem = document.createElement("li");
           const listLink = document.createElement("a");
-          listLink.href = `list.html?listName=${listName}`;
-          listLink.textContent = listName;
+          listLink.href = `list.html?listName=${list.name}`;
+          listLink.textContent = list.name;
           listItem.appendChild(listLink);
           listOfLists.appendChild(listItem);
         });
@@ -100,7 +95,7 @@
 
       //////
       // Counter for dynamically added item fields
-      let itemCount = 3;
+      let itemCount = 2;
 
       // Function to add a new item input field
       function addItemField() {

@@ -18,7 +18,7 @@
         font-weight: normal;
         font-size: 12px;
       }
-      .pokemon {
+      .listitem {
         border: 1px solid #ccc;
         padding: 10px;
         margin: 5px;
@@ -31,12 +31,12 @@
   </head>
   <body>
     <div class="listData">
-      <h1 class="listName">Pokemon</h1>
+      <h1 id="listName"></h1>
     </div>
     <button id="voteButton">Vote</button>
     <!-- Added button for voting -->
 
-    <div id="pokemonContainer"></div>
+    <div id="listContainer"></div>
 
     <script>
       // Sample Pokémon data with names and Elo ratings (made up values)
@@ -54,12 +54,12 @@
 
       // Create and append div elements for each Pokémon in descending order
 
-
-
-      function makeList(data, listContainer) {
+      function makeList(data, listname, listContainer) {
+        let listTitle = document.getElementById("listName");
+        listTitle.textContent = listname;
         data.forEach((element, index) => {
           const elementDiv = document.createElement("div");
-          elementDiv.className = "pokemon";
+          elementDiv.className = "listitem";
           elementDiv.textContent = `${index + 1}. ${element.name} - Elo: ${
             element.elo
           }`;
@@ -67,23 +67,31 @@
         });
       }
 
-      // Add event listener to the "Vote" button
-      const voteButton = document.getElementById("voteButton");
-      voteButton.addEventListener("click", () => {
-        window.location.href = "vote.html"; // Redirect to the voting page
-      });
-
       window.addEventListener("load", async (event) => {
-        const listName = "pokemon";
+        // 1. Get the current URL
+        const queryString = window.location.search;
+
+        // Create a URLSearchParams object from the query string
+        const searchParams = new URLSearchParams(queryString);
+
+        // 3. Get the value of a specific query parameter
+        const listName = searchParams.get(`listName`);
+        console.log(listName);
+
         const response = await fetch(
           `/get-sorted-list?listName=${encodeURIComponent(listName)}`
         );
         const data = await response.json();
         console.log(data);
 
-        const pokemonContainer = document.getElementById("pokemonContainer");
+        const listContainer = document.getElementById("listContainer");
+        // Add event listener to the "Vote" button
 
-        makeList(data.list, pokemonContainer)
+        const voteButton = document.getElementById("voteButton");
+        voteButton.addEventListener("click", () => {
+          window.location.href = `vote.html?listName=${listName}`; // Redirect to the voting page
+        });
+        makeList(data.list, listName, listContainer);
       });
     </script>
   </body>
