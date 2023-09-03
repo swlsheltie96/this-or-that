@@ -1,4 +1,191 @@
-this is the list of lists
+<!-- this is the list of lists
 <button>
   <a href="list.html">TEST LIST</a>
-</button>
+</button> -->
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>List of Lists</title>
+    <style>
+      body {
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: 12px;
+        margin: 10em;
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+      }
+      li {
+        border: 1px solid #ccc;
+        margin: 5px;
+        padding: 10px;
+      }
+      li a {
+        text-decoration: none;
+        color: #333;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>List of Lists</h1>
+    <ul id="listOfLists">
+      <!-- Existing list items will be populated here -->
+    </ul>
+
+    <button id="creatListInitButton">Create New List</button>
+    <div id="createList" style="display: none">
+      <h1>Create List and Add Items</h1>
+
+      <form id="createListForm">
+        <label for="listName">List Name:</label>
+        <input type="text" id="listName" name="listName" required /><br /><br />
+
+        <label for="itemName">Item Name:</label>
+        <input type="text" id="itemName" name="item" required /><br /><br />
+
+        <div id="itemFields">
+          <!-- Default 3 item input fields -->
+          <label for="item1">Item Name:</label>
+          <input type="text" id="item1" name="item" required /><br /><br />
+
+          <label for="item2">Item Name:</label>
+          <input type="text" id="item2" name="item" required /><br /><br />
+
+          <label for="item3">Item Name:</label>
+          <input type="text" id="item3" name="item" required /><br /><br />
+        </div>
+
+        <button type="button" id="addItemButton">Add Item</button><br /><br />
+
+        <input type="submit" value="Create List and Add Items" />
+      </form>
+
+      <div id="responseMessage"></div>
+    </div>
+
+    <!-- JavaScript code to handle form submission and populate the list of lists -->
+    <script>
+      async function populateListOfLists() {
+        const response = await fetch("/get-lists"); // Fetch the list of lists
+        const data = await response.json();
+        const listOfLists = document.getElementById("listOfLists");
+
+        // Clear the existing list items
+        listOfLists.innerHTML = "";
+
+        // Populate the list of lists
+        data.lists.forEach((listName) => {
+          const listItem = document.createElement("li");
+          const listLink = document.createElement("a");
+          listLink.href = `list.html?listName=${listName}`;
+          listLink.textContent = listName;
+          listItem.appendChild(listLink);
+          listOfLists.appendChild(listItem);
+        });
+      }
+
+      document
+        .getElementById("creatListInitButton")
+        .addEventListener("click", () => {
+          const createListForm = document.getElementById("createList");
+          createListForm.style.display = "block";
+        });
+
+      // Initial population of the list of lists
+      populateListOfLists();
+
+      //////
+      // Counter for dynamically added item fields
+      let itemCount = 3;
+
+      // Function to add a new item input field
+      function addItemField() {
+        itemCount++;
+        const newItemField = document.createElement("div");
+        newItemField.innerHTML = `
+        <label for="item${itemCount}">Item Name:</label>
+        <input type="text" id="item${itemCount}" name="item" required><br><br>
+    `;
+        document.getElementById("itemFields").appendChild(newItemField);
+      }
+
+      // Event listener for the "Add Item" button
+      document
+        .getElementById("addItemButton")
+        .addEventListener("click", function () {
+          addItemField();
+        });
+
+      document
+        .getElementById("createListForm")
+        .addEventListener("submit", function (event) {
+          event.preventDefault();
+
+          const listName = document.getElementById("listName").value;
+          const items = [];
+
+          // Collect all item values
+          for (let i = 1; i <= itemCount; i++) {
+            const itemValue = document.getElementById(`item${i}`).value.trim();
+            if (itemValue !== "") {
+              items.push({ name: itemValue });
+            }
+          }
+
+          // Send a POST request to create a new list
+          fetch("/create-list", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ listName: listName }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.error) {
+                document.getElementById("responseMessage").textContent =
+                  data.error;
+              } else {
+                // List created successfully, now add the items
+                Promise.all(
+                  items.map((item) => {
+                    return fetch("/add-item", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({ listName: listName, item: item }),
+                    }).then((response) => response.json());
+                  })
+                ).then((results) => {
+                  const successMessages = results
+                    .filter((result) => !result.error)
+                    .map((result) => result.message);
+                  const errorMessages = results
+                    .filter((result) => result.error)
+                    .map((result) => result.error);
+
+                  if (successMessages.length > 0) {
+                    document.getElementById(
+                      "responseMessage"
+                    ).textContent = `Items added successfully: ${successMessages.join(
+                      ", "
+                    )}`;
+                  }
+
+                  if (errorMessages.length > 0) {
+                    document.getElementById(
+                      "responseMessage"
+                    ).textContent += `\n${errorMessages.join("\n")}`;
+                  }
+                });
+              }
+            });
+        });
+    </script>
+  </body>
+</html>
