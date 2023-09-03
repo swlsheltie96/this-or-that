@@ -84,9 +84,17 @@ app.get('/get-sorted-list', (req, res) => {
     const ratingB = userVotes[listName][itemB] || 1000;
     return ratingB - ratingA; // Sort in descending order
   });
-  console.log(sortedItems, sortedItems.map((x)=>lists[listName][x]));
+  const sortedItemsObj = sortedItems.map(x=>lists[listName][x])
+  sortedItemsObj.forEach((x) => {
+    if (listName in userVotes) {
+		  x.elo = userVotes[listName][x.name] || 1000;
+		} else {
+		  x.elo = 1000;
+			}
+  })
 
-  res.status(200).json({list: sortedItems.map(x=>lists[listName][x])});
+
+  res.status(200).json({list: sortedItemsObj});
 });
 
 app.post('/vote', (req, res) => {

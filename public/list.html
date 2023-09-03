@@ -1,73 +1,90 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Random Pokémon List</title>
-  <style>
-    body {
-      font-family: Helvetica, Arial, sans-serif;
-      font-size: 12px;
-      margin: 10em;
-    }
-    .listData {
-      text-align: center;
-      font-weight: normal;
-    }
-    h1.listName {
-      font-weight: normal;
-      font-size: 12px;
-    }
-    .pokemon {
-      border: 1px solid #ccc;
-      padding: 10px;
-      margin: 5px;
-      display: block;
-    }
-    #voteButton {
-      width: 100%;
-    }
-  </style>
-</head>
-<body>
-  <div class="listData">
-    <h1 class="listName">Pokemon</h1>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Random Pokémon List</title>
+    <style>
+      body {
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: 12px;
+        margin: 10em;
+      }
+      .listData {
+        text-align: center;
+        font-weight: normal;
+      }
+      h1.listName {
+        font-weight: normal;
+        font-size: 12px;
+      }
+      .pokemon {
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin: 5px;
+        display: block;
+      }
+      #voteButton {
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="listData">
+      <h1 class="listName">Pokemon</h1>
+    </div>
+    <button id="voteButton">Vote</button>
+    <!-- Added button for voting -->
+
+    <div id="pokemonContainer"></div>
+
+    <script>
+      // Sample Pokémon data with names and Elo ratings (made up values)
+      // const pokemonData = [
+      //   { name: "Pikachu", elo: 1500 },
+      //   { name: "Charizard", elo: 1800 },
+      //   { name: "Bulbasaur", elo: 1200 },
+      //   { name: "Squirtle", elo: 1350 },
+      //   { name: "Jigglypuff", elo: 1000 },
+      //   // Add more Pokémon data as needed
+      // ];
+
+      // Sort Pokémon data based on Elo rating (descending order)
+      // pokemonData.sort((a, b) => b.elo - a.elo);
+
+      // Create and append div elements for each Pokémon in descending order
 
 
-  </div>
-  <button id="voteButton">Vote</button> <!-- Added button for voting -->
 
-  <div id="pokemonContainer"></div>
+      function makeList(data, listContainer) {
+        data.forEach((element, index) => {
+          const elementDiv = document.createElement("div");
+          elementDiv.className = "pokemon";
+          elementDiv.textContent = `${index + 1}. ${element.name} - Elo: ${
+            element.elo
+          }`;
+          listContainer.appendChild(elementDiv);
+        });
+      }
 
-  
-  <script>
-    // Sample Pokémon data with names and Elo ratings (made up values)
-    const pokemonData = [
-      { name: "Pikachu", elo: 1500 },
-      { name: "Charizard", elo: 1800 },
-      { name: "Bulbasaur", elo: 1200 },
-      { name: "Squirtle", elo: 1350 },
-      { name: "Jigglypuff", elo: 1000 },
-      // Add more Pokémon data as needed
-    ];
+      // Add event listener to the "Vote" button
+      const voteButton = document.getElementById("voteButton");
+      voteButton.addEventListener("click", () => {
+        window.location.href = "vote.html"; // Redirect to the voting page
+      });
 
-    // Sort Pokémon data based on Elo rating (descending order)
-    pokemonData.sort((a, b) => b.elo - a.elo);
+      window.addEventListener("load", async (event) => {
+        const listName = "pokemon";
+        const response = await fetch(
+          `/get-sorted-list?listName=${encodeURIComponent(listName)}`
+        );
+        const data = await response.json();
+        console.log(data);
 
-    // Create and append div elements for each Pokémon in descending order
-    const pokemonContainer = document.getElementById("pokemonContainer");
-    pokemonData.forEach((pokemon, index) => {
-      const pokemonDiv = document.createElement("div");
-      pokemonDiv.className = "pokemon";
-      pokemonDiv.textContent = `${index + 1}. ${pokemon.name} - Elo: ${pokemon.elo}`;
-      pokemonContainer.appendChild(pokemonDiv);
-    });
+        const pokemonContainer = document.getElementById("pokemonContainer");
 
-    // Add event listener to the "Vote" button
-    const voteButton = document.getElementById("voteButton");
-    voteButton.addEventListener("click", () => {
-      window.location.href = "vote.html"; // Redirect to the voting page
-    });
-  </script>
-</body>
+        makeList(data.list, pokemonContainer)
+      });
+    </script>
+  </body>
 </html>
