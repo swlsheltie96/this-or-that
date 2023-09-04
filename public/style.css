@@ -1,0 +1,163 @@
+/* Reset some default styles */
+body,
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+li,
+a {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+}
+
+/* Apply a basic background color and font styles */
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background-color: #f8f9fa;
+  margin: 0 auto;
+  max-width: 800px;
+  padding: 20px;
+}
+
+/* Apply Wikipedia-like content container */
+#content {
+  background-color: #ffffff;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Style headings */
+h1, h2, h3, h4 {
+  font-family: 'Times New Roman', Times, serif;
+  margin-bottom: 10px;
+}
+
+h1 {
+  font-size: 28px;
+}
+
+h2 {
+  font-size: 24px;
+}
+
+h3 {
+  font-size: 20px;
+}
+
+h4 {
+  font-size: 18px;
+}
+
+/* Style links */
+a {
+  color: #0645ad;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Style unordered and ordered lists */
+ul, ol {
+  margin-left: 20px;
+}
+
+/* Style list items */
+li {
+  margin: 6px 0;
+}
+
+/* Apply some padding to paragraphs */
+p {
+  margin-bottom: 15px;
+}
+
+/* Apply Wikipedia-like table styles */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 20px;
+  border: 1px solid #ccc;
+}
+
+table th,
+table td {
+  padding: 3px 6px;
+  text-align: left;
+  border: 1px solid #ccc;
+}
+
+/* Style table headers */
+table th {
+  background-color: #f2f2f2;
+}
+
+/* Style alternating row colors */
+table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+/* Add hover effect to table rows */
+table tr:hover {
+  background-color: #e0e0e0;
+}
+
+/* Apply a light gray background to code blocks */
+pre, code {
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 5px;
+  font-family: Consolas, Monaco, monospace;
+}
+
+/* Style blockquotes */
+blockquote {
+  border-left: 2px solid #ddd;
+  margin-left: 10px;
+  padding-left: 10px;
+  color: #777;
+}
+
+/* Apply a slight shadow to images */
+img {
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Style horizontal rules */
+hr {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 20px 0;
+}
+
+/* Style code inline */
+code {
+  font-family: Consolas, Monaco, monospace;
+}
+
+/* Style code block */
+pre code {
+  display: block;
+  white-space: pre;
+}
+
+/* Style code block line numbers */
+pre code::before {
+  content: attr(data-line);
+  display: inline-block;
+  width: 2em;
+  margin-right: 1em;
+  color: #999;
+}
+
