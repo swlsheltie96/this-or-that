@@ -69,8 +69,8 @@ async function getListsWithPopularity() {
 // Usage example
 await createList("pokemon");
 await createList("random");
-await addItem("pokemon", {name: "Pikachu", picture: 'bleh'});
-await addItem("pokemon", {name: "Charizard", picture: 'bleh'});
+await addItem("pokemon", {name: "Pikachu", data: 'bleh'});
+await addItem("pokemon", {name: "Charizard", data: 'bleh'});
 await addItem("pokemon", {name: "Ekans", picture: 'bleh'});
 await getPairForVoting("pokemon");
 await vote("pokemon", "Pikachu", "Ekans");

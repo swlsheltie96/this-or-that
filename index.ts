@@ -16,13 +16,13 @@ db.serialize(() => {
       name TEXT UNIQUE
     )
   `);
-
   // Create a table for storing items with a foreign key reference to the list
   db.run(`
     CREATE TABLE IF NOT EXISTS items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       list_id INTEGER,
       name TEXT,
+      data JSON, -- Add a column to store JSON data
       FOREIGN KEY (list_id) REFERENCES lists (id)
     )
   `);
@@ -96,10 +96,10 @@ app.post('/add-item', (req, res) => {
         return res.status(400).json({ error: `Item "${newItem.name}" already exists in list "${listName}".` });
       }
 
-      // Insert the new item into the 'items' table
+      // Insert the new item into the 'items' table with JSON data
       db.run(
-        'INSERT INTO items (list_id, name) VALUES (?, ?)',
-        [listId, newItem.name],
+        'INSERT INTO items (list_id, name, data) VALUES (?, ?, ?)',
+        [listId, newItem.name, JSON.stringify(newItem.data)], // Convert JSON data to a string
         (err) => {
           if (err) {
             return res.status(400).json({ error: `Failed to add item to list "${listName}".` });
@@ -110,6 +110,7 @@ app.post('/add-item', (req, res) => {
     });
   });
 });
+
 
 // Endpoint to get a random pair of items for voting
 app.get('/get-pair', (req, res) => {

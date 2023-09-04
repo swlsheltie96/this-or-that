@@ -172,3 +172,4 @@ dist
 lists.db
 bun.lockdb
 node_modules/
+package-lock.json
