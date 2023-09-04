@@ -47,7 +47,8 @@
       label {
         display: block;
         flex-grow: 1;
-        width: 15%;
+        padding-bottom: 5px;
+        /* width: 15%; */
       }
       input {
         display: block;
@@ -56,13 +57,23 @@
         padding: 10px;
         border-radius: 0;
         border: solid 1px #ccc;
+        box-sizing: border-box;
+        width: 100%;
       }
-      #itemFields div,
+      #itemFields > div,
       #listTitle {
-        margin: 10px 0;
-        display: flex;
+        margin: 1em 0;
+        /* display: flex; */
       }
-
+      .itemContainer {
+        display: flex;
+        gap: 10px;
+        padding-top: 5px;
+      }
+      .itemName,
+      .itemImage {
+        width: 50%;
+      }
       form {
         border: solid 1px #ccc;
         padding: 10px;
@@ -93,25 +104,41 @@
         </div>
 
         <div id="itemFields">
-          <!-- Default 3 item input fields -->
           <div>
-            <label for="item1">Item Name:</label>
-            <input type="text" id="item1" name="item" required />
-            <input
-              type="text"
-              id="item1Image"
-              placeholder="Image Link for Item 1"
-            />
+            Item:
+            <div class="itemContainer">
+              <div class="itemName">
+                <label for="item1">Name:</label>
+                <input type="text" id="item1" name="item" required />
+              </div>
+              <div class="itemImage">
+                <label for="item1Image">Image:</label>
+                <input
+                  type="text"
+                  id="item1Image"
+                  placeholder="Image Link for Item 1"
+                />
+              </div>
+            </div>
           </div>
 
           <div>
-            <label for="item2">Item Name:</label>
-            <input type="text" id="item2" name="item" required />
-            <input
-              type="text"
-              id="item2Image"
-              placeholder="Image Link for Item 2"
-            />
+            Item:
+            <div class="itemContainer">
+              <div class="itemName">
+                <label for="item2">Name:</label>
+                <input type="text" id="item2" name="item" required />
+              </div>
+
+              <div class="itemImage">
+                <label for="item2Image">Image:</label>
+                <input
+                  type="text"
+                  id="item2Image"
+                  placeholder="Image Link for Item 2"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -168,10 +195,20 @@
         itemCount++;
         const newItemField = document.createElement("div");
         newItemField.innerHTML = `
-        <label for="item${itemCount}">Item Name:</label>
-        <input type="text" id="item${itemCount}" name="item" required>
+        Item: 
+        <div class="itemContainer">
+          <div class="itemName">  
+          <label for="item${itemCount}">Name:</label>
+        <input type="text" id="item${itemCount}" name="item" required> 
+        </div>
+        <div class="itemImage">     
+          <label for="item${itemCount}Image">Image:</label>
         <input type="text" id="item${itemCount}Image" placeholder="Image Link for Item ${itemCount}">
+        </div>
+          </div>
 
+       
+      
     `;
         document.getElementById("itemFields").appendChild(newItemField);
       }

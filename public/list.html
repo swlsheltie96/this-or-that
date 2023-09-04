@@ -65,11 +65,10 @@
           // console.log(element.data["image"]);
           let data = JSON.parse(element.data);
           const elementDiv = document.createElement("div");
-          const p = document.createElement("p");
           elementDiv.className = "listitem";
-          p.textContent = `${index + 1}. ${element.name} - Elo: ${element.elo}`;
-          elementDiv.appendChild(p);
-
+          elementDiv.innerHTML = `
+            <p>${index + 1}. ${element.name} - ${element.elo}</p>
+          `;
           listContainer.appendChild(elementDiv);
 
           if (data.image) {
