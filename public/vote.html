@@ -18,20 +18,26 @@
         text-align: center;
       }
       #elementVoteContainer {
-        display: flex;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        grid-gap: 10px;
       }
-      .element {
-        width: 50%;
+      .voteElement {
         border: 1px solid #ccc;
         padding: 10px;
         margin: 5px 0;
         cursor: pointer;
       }
+      img {
+        aspect-ratio: 1 / 1;
+        max-width: 100%;
+        object-fit: contain;
+      }
     </style>
   </head>
   <body>
     <div class="titleContainer">
-      <a href="javascript:history.back();">
+      <a id="backButton">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="31"
@@ -50,23 +56,33 @@
     </div>
 
     <div id="elementVoteContainer">
-      <!-- The two random Pokémon will be displayed here -->
-      <div class="element" id="element1">
-        <!-- Pokémon 1 data goes here -->
-        <h2 id="element1Name"></h2>
-        <p id="element1Elo"></p>
-      </div>
-      <div class="element" id="element2">
-        <!-- Pokémon 2 data goes here -->
-        <h2 id="element2Name"></h2>
-        <p id="element2Elo"></p>
-      </div>
+      <div class="voteElement" id="element1"></div>
+      <div class="voteElement" id="element2"></div>
     </div>
     <script>
-      // Create clickable Pokémon elements
+      // Create clickable elements
       function createVote(list, data) {
-        document.getElementById("element1Name").textContent = data.item1.name;
-        document.getElementById("element2Name").textContent = data.item2.name;
+        console.log(data);
+        const items = Object.keys(data);
+
+        let voteBoxes = document.querySelectorAll(".voteElement");
+
+        items.forEach((el, i) => {
+          const h2_el = document.createElement("h2");
+          h2_el.textContent = data[el].name;
+          voteBoxes[i].appendChild(h2_el);
+          if (data[el].data) {
+            let parsedData = JSON.parse(data[el].data);
+            if (parsedData.image) {
+              const image = document.createElement("img");
+              image.src = parsedData.image;
+              voteBoxes[i].appendChild(image);
+            }
+          }
+        });
+
+        // document.getElementById("element1Name").textContent = data.item1.name;
+        // document.getElementById("element2Name").textContent = data.item2.name;
 
         const element1Container = document.getElementById("element1");
         const element2Container = document.getElementById("element2");
@@ -111,6 +127,9 @@
 
         // 3. Get the value of a specific query parameter
         const listName = searchParams.get(`listName`);
+
+        const backButton = document.getElementById("backButton");
+        backButton.href = `list.html?listName=${listName}`;
 
         const response = await fetch(
           `/get-pair?listName=${encodeURIComponent(listName)}`

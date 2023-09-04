@@ -199,7 +199,12 @@
               .value.trim(); // Get image link
 
             if (itemValue !== "") {
-              items.push({ name: itemValue, imageLink: imageLink || null }); // Include image link or null if not provided
+              items.push({
+                name: itemValue,
+                data: { image: imageLink },
+              }); // Include image link or null if not provided
+
+              // {name: "Pikachu", data: 'bleh'}
             }
           }
           console.log(items);
