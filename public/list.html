@@ -60,20 +60,21 @@
 
     <script>
       // Create and append div elements for each Pokémon in descending order
-
       function makeList(data, listname, listBody) {
         let listTitle = document.getElementById("listName");
         listTitle.textContent = listname;
 
-        data.forEach((element, index) => {
-          let rowData = JSON.parse(element.data);
+        let hasImage = false; // Initialize the flag
 
+        data.forEach((element, index) => {
           const row = document.createElement("tr");
           row.innerHTML = `
             <td>${index + 1}</td>
-            <td>${element.name}</td>
-            <td>${element.elo}</td>
+            <td>${element.name || ''}</td>
+            <td>${element.elo || ''}</td>
           `;
+
+          const rowData = element.data ? JSON.parse(element.data) : {};
 
           if (rowData.image) {
             const imageCell = document.createElement("td");
@@ -81,13 +82,30 @@
             image.src = rowData.image;
             imageCell.appendChild(image);
             row.appendChild(imageCell);
+
+            hasImage = true; // Set the flag to true if an image exists
           } else {
             row.innerHTML += `<td></td>`;
           }
 
           listBody.appendChild(row);
         });
+
+        // Remove the "Picture" column if no items have an image
+        if (!hasImage) {
+          const tableHeader = document.querySelector("#listTable thead tr");
+          const pictureHeader = tableHeader.querySelector("th:nth-child(4)");
+          pictureHeader.style.display = "none";
+
+          const tableRows = document.querySelectorAll("#listTable tbody tr");
+          tableRows.forEach((row) => {
+            const pictureCell = row.querySelector("td:nth-child(4)");
+            pictureCell.style.display = "none";
+          });
+        }
       }
+
+
 
       window.addEventListener("load", async (event) => {
         // 1. Get the current URL
