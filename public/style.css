@@ -36,8 +36,11 @@ body {
 }
 
 /* Style headings */
-h1, h2, h3, h4 {
-  font-family: 'Times New Roman', Times, serif;
+h1,
+h2,
+h3,
+h4 {
+  font-family: "Times New Roman", Times, serif;
   margin-bottom: 10px;
 }
 
@@ -68,7 +71,8 @@ a:hover {
 }
 
 /* Style unordered and ordered lists */
-ul, ol {
+ul,
+ol {
   margin-left: 20px;
 }
 
@@ -113,7 +117,8 @@ table tr:hover {
 }
 
 /* Apply a light gray background to code blocks */
-pre, code {
+pre,
+code {
   background-color: #f5f5f5;
   border: 1px solid #ddd;
   border-radius: 3px;
@@ -160,4 +165,3 @@ pre code::before {
   margin-right: 1em;
   color: #999;
 }
-

@@ -1,14 +1,9 @@
-<!-- this is the list of lists
-<button>
-  <a href="list.html">TEST LIST</a>
-</button> -->
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" type="text/css" href="style.css" />
 
     <title>Elo Chamber</title>
     <style>
@@ -86,67 +81,8 @@
     <ul id="listOfLists">
       <!-- Existing list items will be populated here -->
     </ul>
-    <br>
-    <a id="creatListInitButton">Create New List</a>
-    <div id="createList" style="display: none">
-      <!-- <h1>Create List and Add Items</h1> -->
-
-      <form id="createListForm">
-        <div id="listTitle">
-          <label for="listName">List Name:</label>
-          <input type="text" id="listName" name="listName" required />
-        </div>
-
-        <div id="itemFields">
-          <div>
-            Item:
-            <div class="itemContainer">
-              <div class="itemName">
-                <label for="item1">Name:</label>
-                <input type="text" id="item1" name="item" required />
-              </div>
-              <div class="itemImage">
-                <label for="item1Image">Image:</label>
-                <input
-                  type="text"
-                  id="item1Image"
-                  placeholder="Image Link for Item 1"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            Item:
-            <div class="itemContainer">
-              <div class="itemName">
-                <label for="item2">Name:</label>
-                <input type="text" id="item2" name="item" required />
-              </div>
-
-              <div class="itemImage">
-                <label for="item2Image">Image:</label>
-                <input
-                  type="text"
-                  id="item2Image"
-                  placeholder="Image Link for Item 2"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <button type="button" id="addItemButton">Add Item</button>
-      </form>
-      <input
-        type="submit"
-        form="createListForm"
-        value="Create List and Add Items"
-        id="submitNewList"
-      />
-
-      <div id="responseMessage"></div>
-    </div>
+    <br />
+    <a id="creatListInitButton" href="create.html">Create New List</a>
 
     <!-- JavaScript code to handle form submission and populate the list of lists -->
     <script>
@@ -170,126 +106,8 @@
         });
       }
 
-      document
-        .getElementById("creatListInitButton")
-        .addEventListener("click", () => {
-          const createListForm = document.getElementById("createList");
-          createListForm.style.display = "block";
-        });
-
       // Initial population of the list of lists
       populateListOfLists();
-
-      //////
-      // Counter for dynamically added item fields
-      let itemCount = 2;
-
-      // Function to add a new item input field
-      function addItemField() {
-        itemCount++;
-        const newItemField = document.createElement("div");
-        newItemField.innerHTML = `
-        Item: 
-        <div class="itemContainer">
-          <div class="itemName">  
-          <label for="item${itemCount}">Name:</label>
-        <input type="text" id="item${itemCount}" name="item" required> 
-        </div>
-        <div class="itemImage">     
-          <label for="item${itemCount}Image">Image:</label>
-        <input type="text" id="item${itemCount}Image" placeholder="Image Link for Item ${itemCount}">
-        </div>
-          </div>
-
-       
-      
-    `;
-        document.getElementById("itemFields").appendChild(newItemField);
-      }
-
-      // Event listener for the "Add Item" button
-      document
-        .getElementById("addItemButton")
-        .addEventListener("click", function () {
-          addItemField();
-        });
-
-      document
-        .getElementById("createListForm")
-        .addEventListener("submit", function (event) {
-          event.preventDefault();
-
-          const listName = document.getElementById("listName").value;
-          const items = [];
-
-          // Collect all item values
-          for (let i = 1; i <= itemCount; i++) {
-            const itemValue = document.getElementById(`item${i}`).value.trim();
-            const imageLink = document
-              .getElementById(`item${i}Image`)
-              .value.trim(); // Get image link
-
-            if (itemValue !== "") {
-              items.push({
-                name: itemValue,
-                data: { image: imageLink },
-              }); // Include image link or null if not provided
-
-              // {name: "Pikachu", data: 'bleh'}
-            }
-          }
-          console.log(items);
-          // Send a POST request to create a new list
-          fetch("/create-list", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ listName: listName }),
-          })
-            .then((response) => response.json())
-            .then((data) => {
-              if (data.error) {
-                document.getElementById("responseMessage").textContent =
-                  data.error;
-              } else {
-                // List created successfully, now add the items
-
-                Promise.all(
-                  items.map((item) => {
-                    return fetch("/add-item", {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                      },
-                      body: JSON.stringify({ listName: listName, item: item }),
-                    }).then((response) => response.json());
-                  })
-                ).then((results) => {
-                  const successMessages = results
-                    .filter((result) => !result.error)
-                    .map((result) => result.message);
-                  const errorMessages = results
-                    .filter((result) => result.error)
-                    .map((result) => result.error);
-
-                  if (successMessages.length > 0) {
-                    document.getElementById(
-                      "responseMessage"
-                    ).textContent = `Items added successfully: ${successMessages.join(
-                      ", "
-                    )}`;
-                  }
-
-                  if (errorMessages.length > 0) {
-                    document.getElementById(
-                      "responseMessage"
-                    ).textContent += `\n${errorMessages.join("\n")}`;
-                  }
-                });
-              }
-            });
-        });
     </script>
   </body>
 </html>

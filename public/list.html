@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" type="text/css" href="style.css" />
 
     <title>List</title>
     <style>
@@ -11,10 +11,7 @@
         text-align: center;
         font-weight: normal;
       }
-      h1.listName {
-        font-weight: normal;
-        font-size: 12px;
-      }
+
       .listitem {
         border: 1px solid #ccc;
         padding: 10px;
@@ -23,14 +20,12 @@
         justify-content: space-between;
         align-items: center;
       }
-      #voteButton {
-        /* width: 100%; */
-        display: block;
-        margin: 0 auto 1em auto;
-        cursor: pointer;
-      }
+
       #backButton {
         float: left;
+      }
+      #editButton {
+        float: right;
       }
       img {
         max-width: 40px;
@@ -41,11 +36,13 @@
   </head>
   <body>
     <div class="listData">
-      <a id="backButton">←</a><h1 id="listName"></h1>
+      <a id="backButton">←</a>
+      <h1 id="listName"></h1>
+      <a id="editButton">Edit List</a>
     </div>
     <!-- Added button for voting -->
 
-   <table id="listTable">
+    <table id="listTable">
       <thead>
         <tr>
           <th>Rank</th>
@@ -56,23 +53,130 @@
       </thead>
       <tbody id="listContainer"></tbody>
     </table>
+
     <a id="voteButton">Vote</a>
 
+    <button type="button" id="addItemButton">Add Item</button>
+
+    <button type="button" id="saveAllButton">Save All</button>
+
     <script>
+      function saveAll(listname, listbody) {
+        console.log(listname);
+        const fetchPromises = [];
+        listbody.querySelectorAll("tr").forEach((row) => {
+          if (row.classList.contains("unsaved")) {
+            let unsavedRow = {
+              name: row.querySelector("#nameInput").value,
+              picture: row.querySelector("#pictureInput").value,
+            };
+
+            const fetchPromise = fetch("/add-item", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                listName: listname,
+                item: {
+                  name: unsavedRow.name,
+                  data: {
+                    image: unsavedRow.picture,
+                  },
+                },
+              }),
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                if (data.error) {
+                  console.error(data.error);
+                } else {
+                  console.log(data.message);
+                  listbody.removeChild(row);
+                }
+              })
+              .catch((error) => {
+                console.error("Error:", error);
+              });
+            fetchPromises.push(fetchPromise);
+          }
+        });
+        Promise.all(fetchPromises)
+          .then(() => {
+            // All fetch requests are done, now call getList
+            getList(listname).then((data) => {
+              makeList(data.list, listname, listbody);
+            });
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+          });
+      }
+      function saveAndReloadTable(listname, listbody) {
+        // Save the unsaved rows
+        console.log("reloading");
+        const unsavedRows = [];
+        listbody.querySelectorAll("tr").forEach((row) => {
+          if (row.classList.contains("unsaved")) {
+            // let name = unsavedRows.push(row.cloneNode(true));
+            console.log(row);
+            let unsavedRow = {
+              name: row.querySelector("#nameInput").value,
+              picture: row.querySelector("#pictureInput").value,
+            };
+            unsavedRows.push(unsavedRow);
+            //instead of clone node, save the data
+          }
+        });
+
+        getList(listname)
+          .then((data) => {
+            // Clear the existing table
+            while (listbody.firstChild) {
+              listbody.removeChild(listbody.firstChild);
+            }
+
+            // Rebuild the table with the updated data
+            makeList(data.list, listname, listbody);
+
+            // Add back the unsaved rows
+            unsavedRows.forEach((row) => {
+              // listbody.appendChild(row);
+              addRow(listname, listbody, row.name, row.picture);
+              //instead of appending clones, recreate the rows using below code
+            });
+          })
+          .catch((error) => {
+            console.error("Error fetching updated data:", error);
+          });
+      }
+
+      async function getList(listname) {
+        //### LOAD LIST
+        const response = await fetch(
+          `/get-sorted-list?listName=${encodeURIComponent(listname)}`
+        );
+        const data = await response.json();
+        console.log(data);
+        return data;
+      }
       // Create and append div elements for each Pokémon in descending order
       function makeList(data, listname, listBody) {
         let listTitle = document.getElementById("listName");
         listTitle.textContent = listname;
-
+        console.log(data);
         let hasImage = false; // Initialize the flag
+        while (listBody.firstChild) {
+          listBody.removeChild(listBody.firstChild);
+        }
 
         data.forEach((element, index) => {
           const row = document.createElement("tr");
           row.innerHTML = `
-            <td>${index + 1}</td>
-            <td>${element.name || ''}</td>
-            <td>${element.elo || ''}</td>
-          `;
+                  <td>${index + 1}</td>
+                  <td>${element.name || ""}</td>
+                  <td>${element.elo || ""}</td>
+                `;
 
           const rowData = element.data ? JSON.parse(element.data) : {};
 
@@ -105,36 +209,143 @@
         }
       }
 
+      function addRow(
+        listName,
+        listbody,
+        unsavedName = "",
+        unsavedPicture = ""
+      ) {
+        // Create a new table row element
+        const newRow = document.createElement("tr");
+        newRow.classList.add("unsaved");
+        // Create and append the table cells and input elements
+        const actionCell = document.createElement("td");
+        const saveButton = document.createElement("button");
+        saveButton.type = "button";
+        saveButton.textContent = "Save";
+        actionCell.appendChild(saveButton);
 
+        const cancelButton = document.createElement("button");
+        cancelButton.type = "button";
+        cancelButton.textContent = "Cancel";
+        actionCell.appendChild(cancelButton);
 
+        newRow.appendChild(actionCell);
+
+        const itemCell = document.createElement("td");
+        const itemNameInput = document.createElement("input");
+        itemNameInput.type = "text";
+        itemNameInput.id = "nameInput";
+        if (unsavedName !== "") {
+          itemNameInput.value = unsavedName;
+        } else {
+          itemNameInput.placeholder = "Item Name";
+        }
+        itemCell.appendChild(itemNameInput);
+        newRow.appendChild(itemCell);
+
+        const eloCell = document.createElement("td");
+        // const eloInput = document.createElement("input");
+        // eloInput.type = "number";
+        // eloInput.placeholder = "Elo";
+        // eloCell.appendChild(eloInput);
+        eloCell.textContent = "";
+        newRow.appendChild(eloCell);
+
+        const pictureCell = document.createElement("td");
+        const pictureInput = document.createElement("input");
+        pictureInput.id = "pictureInput";
+        pictureInput.type = "text";
+        if (unsavedPicture !== "") {
+          pictureInput.value = unsavedPicture;
+        } else {
+          pictureInput.placeholder = "Picture URL";
+        }
+        pictureCell.appendChild(pictureInput);
+        newRow.appendChild(pictureCell);
+
+        // Append the new row to the list container
+        listbody.appendChild(newRow);
+
+        cancelButton.addEventListener("click", () => {
+          listbody.removeChild(newRow); // Remove the row if canceled
+        });
+
+        saveButton.addEventListener("click", () => {
+          // Handle saving the new item data here
+          const newItemName = itemNameInput.value;
+          // const newItemElo = eloInput.value;
+          const newItemPicture = pictureInput.value;
+          console.log("saving", newItemName, newItemPicture);
+          // Send a POST request to the server to add the new item
+          fetch("/add-item", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              listName: listName, // Replace with the actual list name
+              item: {
+                name: newItemName,
+                data: {
+                  image: newItemPicture,
+                },
+              },
+            }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.error) {
+                // Handle errors, e.g., display an error message
+                console.error(data.error);
+              } else {
+                // Item added successfully, you can update the UI as needed
+                console.log(data.message);
+                // newRow.style.display = "none"; // Hide the row after saving
+                // // Optionally, update the UI to reflect the newly added item
+                listbody.removeChild(newRow);
+                saveAndReloadTable(listName, listbody);
+              }
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+            });
+        });
+      }
       window.addEventListener("load", async (event) => {
+        const listContainer = document.getElementById("listContainer");
+
+        //### GET LIST
         // 1. Get the current URL
         const queryString = window.location.search;
-
         // Create a URLSearchParams object from the query string
         const searchParams = new URLSearchParams(queryString);
-
         // 3. Get the value of a specific query parameter
         const listName = searchParams.get(`listName`);
-        // console.log(listName);
 
-        const response = await fetch(
-          `/get-sorted-list?listName=${encodeURIComponent(listName)}`
-        );
-        const data = await response.json();
-        console.log(data);
+        getList(listName).then((data) => {
+          makeList(data.list, listName, listContainer);
+        });
 
-        const listContainer = document.getElementById("listContainer");
-        // Add event listener to the "Vote" button
-
+        // Add event listener to the "Vote" button and "Back" button
         const backButton = document.getElementById("backButton");
         backButton.href = `index.html`;
-
         const voteButton = document.getElementById("voteButton");
         voteButton.addEventListener("click", () => {
           window.location.href = `vote.html?listName=${listName}`; // Redirect to the voting page
         });
-        makeList(data.list, listName, listContainer);
+
+        //### EDITING LIST: ADD NEW ROWS
+        const addItemButton = document.getElementById("addItemButton");
+
+        addItemButton.addEventListener("click", () => {
+          addRow(listName, listContainer);
+        });
+        //// temp save all button
+        const saveAllButton = document.getElementById("saveAllButton");
+        saveAllButton.addEventListener("click", () => {
+          saveAll(listName, listContainer);
+        });
       });
     </script>
   </body>

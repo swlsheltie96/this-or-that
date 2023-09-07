@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" type="text/css" href="style.css" />
+
+    <title>Elo Chamber</title>
+    <style>
+      ul {
+        list-style: none;
+        padding: 0;
+      }
+      li {
+        border: 1px solid #ccc;
+        margin: 5px 0;
+        padding: 10px;
+        cursor: pointer;
+      }
+      li a {
+        text-decoration: none;
+        color: #333;
+        cursor: pointer;
+      }
+      button,
+      #submitNewList {
+        font-size: 12px;
+        color: #333;
+        background-color: white;
+        border: 1px black solid;
+        padding: 5px 10px;
+        border-radius: 25px;
+        cursor: pointer;
+      }
+
+      label {
+        display: block;
+        flex-grow: 1;
+        padding-bottom: 5px;
+        /* width: 15%; */
+      }
+      input {
+        display: block;
+        flex-grow: 3;
+        font-size: 12px;
+        padding: 10px;
+        border-radius: 0;
+        border: solid 1px #ccc;
+        box-sizing: border-box;
+        width: 100%;
+      }
+      #itemFields > div,
+      #listTitle {
+        margin: 1em 0;
+        /* display: flex; */
+      }
+      .itemContainer {
+        display: flex;
+        gap: 10px;
+        padding-top: 5px;
+      }
+      .itemName,
+      .itemImage {
+        width: 50%;
+      }
+      form {
+        border: solid 1px #ccc;
+        padding: 10px;
+        margin-top: 20px;
+        margin-bottom: 1em;
+      }
+      #addItemButton {
+        margin-right: 0;
+        margin-left: auto;
+        display: block;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="createList">
+      <!-- <h1>Create List and Add Items</h1> -->
+
+      <form id="createListForm">
+        <div id="listTitle">
+          <label for="listName">List Name:</label>
+          <input type="text" id="listName" name="listName" required />
+        </div>
+
+        <div id="itemFields">
+          <div>
+            Item:
+            <div class="itemContainer">
+              <div class="itemName">
+                <label for="item1">Name:</label>
+                <input type="text" id="item1" name="item" required />
+              </div>
+              <div class="itemImage">
+                <label for="item1Image">Image:</label>
+                <input
+                  type="text"
+                  id="item1Image"
+                  placeholder="Image Link for Item 1"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            Item:
+            <div class="itemContainer">
+              <div class="itemName">
+                <label for="item2">Name:</label>
+                <input type="text" id="item2" name="item" required />
+              </div>
+
+              <div class="itemImage">
+                <label for="item2Image">Image:</label>
+                <input
+                  type="text"
+                  id="item2Image"
+                  placeholder="Image Link for Item 2"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" id="addItemButton">Add Item</button>
+      </form>
+      <input
+        type="submit"
+        form="createListForm"
+        value="Create List and Add Items"
+        id="submitNewList"
+      />
+
+      <div id="responseMessage"></div>
+    </div>
+    <script>
+      //////
+      // Counter for dynamically added item fields
+      let itemCount = 2;
+
+      // Function to add a new item input field
+      function addItemField() {
+        itemCount++;
+        const newItemField = document.createElement("div");
+        newItemField.innerHTML = `
+        Item: 
+        <div class="itemContainer">
+          <div class="itemName">  
+          <label for="item${itemCount}">Name:</label>
+        <input type="text" id="item${itemCount}" name="item" required> 
+        </div>
+        <div class="itemImage">     
+          <label for="item${itemCount}Image">Image:</label>
+        <input type="text" id="item${itemCount}Image" placeholder="Image Link for Item ${itemCount}">
+        </div>
+          </div>
+    `;
+        document.getElementById("itemFields").appendChild(newItemField);
+      }
+
+      // Event listener for the "Add Item" button
+      document
+        .getElementById("addItemButton")
+        .addEventListener("click", function () {
+          addItemField();
+        });
+
+      document
+        .getElementById("createListForm")
+        .addEventListener("submit", function (event) {
+          event.preventDefault();
+
+          const listName = document.getElementById("listName").value;
+          const items = [];
+
+          // Collect all item values
+          for (let i = 1; i <= itemCount; i++) {
+            const itemValue = document.getElementById(`item${i}`).value.trim();
+            const imageLink = document
+              .getElementById(`item${i}Image`)
+              .value.trim(); // Get image link
+
+            if (itemValue !== "") {
+              items.push({
+                name: itemValue,
+                data: { image: imageLink },
+              }); // Include image link or null if not provided
+
+              // {name: "Pikachu", data: 'bleh'}
+            }
+          }
+          console.log(items);
+          // Send a POST request to create a new list
+          fetch("/create-list", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ listName: listName }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.error) {
+                document.getElementById("responseMessage").textContent =
+                  data.error;
+              } else {
+                // List created successfully, now add the items
+
+                Promise.all(
+                  items.map((item) => {
+                    return fetch("/add-item", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({ listName: listName, item: item }),
+                    }).then((response) => response.json());
+                  })
+                ).then((results) => {
+                  const successMessages = results
+                    .filter((result) => !result.error)
+                    .map((result) => result.message);
+                  const errorMessages = results
+                    .filter((result) => result.error)
+                    .map((result) => result.error);
+
+                  if (successMessages.length > 0) {
+                    document.getElementById(
+                      "responseMessage"
+                    ).textContent = `Items added successfully: ${successMessages.join(
+                      ", "
+                    )}`;
+                  }
+
+                  if (errorMessages.length > 0) {
+                    document.getElementById(
+                      "responseMessage"
+                    ).textContent += `\n${errorMessages.join("\n")}`;
+                  }
+                });
+              }
+            });
+        });
+    </script>
+  </body>
+</html>
