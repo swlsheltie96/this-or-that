@@ -112,7 +112,7 @@ async function randomActions() {
   if (!Object.keys(lists).length) {
     await randomCreateList();
   }
-  if (Math.random() < 0.1) {
+  if (Math.random() < 0.15) {
     await randomCreateList();
   }
   if (Math.random() < 0.7) {
