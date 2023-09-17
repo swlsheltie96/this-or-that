@@ -1,43 +1,44 @@
 const PORT = process.env.PORT || 3000;
-// Create a new list
-async function createList(listName) {
-  const response = await fetch(`localhost:${PORT}/create-list`, {
+
+// Create a new list with a password
+async function createList(listName, password) {
+  const response = await fetch(`http://localhost:${PORT}/create-list`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ listName: listName })
+    body: JSON.stringify({ listName: listName, password: password }) // Include the password
   });
   const data = await response.json();
   console.log(data);
 }
 
-// Delete a list and its associated items
-async function deleteList(listName) {
-  const response = await fetch(`localhost:${PORT}/delete-list`, {
+// Delete a list and its associated items with a password
+async function deleteList(listName, password) {
+  const response = await fetch(`http://localhost:${PORT}/delete-list`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ listName: listName })
+    body: JSON.stringify({ listName: listName, password: password }) // Include the password
   });
   const data = await response.json();
   console.log(data);
 }
 
-// Add an item to a list
-async function addItem(listName, item) {
-  const response = await fetch(`localhost:${PORT}/add-item`, {
+// Add an item to a list with a password
+async function addItem(listName, item, password) {
+  const response = await fetch(`http://localhost:${PORT}/add-item`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ listName: listName, item: item })
+    body: JSON.stringify({ listName: listName, item: item, password: password }) // Include the password
   });
   const data = await response.json();
   console.log(data);
 }
 
-// Delete an item from a list
-async function deleteItem(listName, itemName) {
-  const response = await fetch(`localhost:${PORT}/delete-item`, {
+// Delete an item from a list with a password
+async function deleteItem(listName, itemName, password) {
+  const response = await fetch(`http://localhost:${PORT}/delete-item`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ listName: listName, itemName: itemName })
+    body: JSON.stringify({ listName: listName, itemName: itemName, password: password }) // Include the password
   });
   const data = await response.json();
   console.log(data);
@@ -45,14 +46,14 @@ async function deleteItem(listName, itemName) {
 
 // Get a random pair of items for voting
 async function getPairForVoting(listName) {
-  const response = await fetch(`localhost:${PORT}/get-pair?listName=${encodeURIComponent(listName)}`);
+  const response = await fetch(`http://localhost:${PORT}/get-pair?listName=${encodeURIComponent(listName)}`);
   const data = await response.json();
   console.log(data);
 }
 
 // Vote on a pair of items
 async function vote(listName, winner, loser) {
-  const response = await fetch(`localhost:${PORT}/vote`, {
+  const response = await fetch(`http://localhost:${PORT}/vote`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ listName: listName, winner: winner, loser: loser })
@@ -63,7 +64,7 @@ async function vote(listName, winner, loser) {
 
 // Test function for the /get-sorted-list endpoint
 async function testGetSortedList(listName) {
-  const response = await fetch(`localhost:${PORT}/get-sorted-list?listName=${encodeURIComponent(listName)}`);
+  const response = await fetch(`http://localhost:${PORT}/get-sorted-list?listName=${encodeURIComponent(listName)}`);
   const data = await response.json();
 
   if (response.ok) {
@@ -89,16 +90,15 @@ async function getListsWithPopularity() {
 }
 
 // Usage example
-await createList("pokemon");
-await createList("random");
-await addItem("pokemon", {name: "Pikachu", data: 'bleh'});
-await addItem("pokemon", {name: "Charizard", data: 'bleh'});
-await addItem("pokemon", {name: "Ekans", picture: 'bleh'});
+await createList("pokemon", "your_list_password");
+await createList("random", "your_list_password");
+await addItem("pokemon", { name: "Pikachu", data: 'bleh' }, "your_list_password");
+await addItem("pokemon", { name: "Charizard", data: 'bleh' }, "your_list_password");
+await addItem("pokemon", { name: "Ekans", picture: 'bleh' }, "your_list_password");
 await getPairForVoting("pokemon");
 await vote("pokemon", "Pikachu", "Ekans");
 await vote("pokemon", "Charizard", "Pikachu");
-await deleteItem("pokemon", "Ekans");
+await deleteItem("pokemon", "Ekans", "your_list_password");
 await testGetSortedList("pokemon");
 await getListsWithPopularity();
-await deleteList("random");
-
+await deleteList("random", "your_list_password");

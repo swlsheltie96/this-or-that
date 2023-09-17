@@ -13,7 +13,8 @@ db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS lists (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT UNIQUE
+      name TEXT UNIQUE,
+      password TEXT -- Add a column to store list passwords
     )
   `);
   // Create a table for storing items with a foreign key reference to the list
@@ -57,15 +58,13 @@ db.serialize(() => {
 // Placeholder Elo ranking parameters (adjust as needed)
 const K = 32; // Elo constant, controls rating update magnitude
 
-// Placeholder user voting history (you should store this in a database)
-const userVotes = {};
-
 // Endpoint to create a new list
 app.post('/create-list', (req, res) => {
   const listName = req.body.listName;
+  const password = req.body.password; // Add password parameter
 
-  // Insert the list into the 'lists' table
-  db.run('INSERT INTO lists (name) VALUES (?)', [listName], (err) => {
+  // Insert the list into the 'lists' table with the associated password
+  db.run('INSERT INTO lists (name, password) VALUES (?, ?)', [listName, password], (err) => {
     if (err) {
       return res.status(400).json({ error: `Failed to create list "${listName}".` });
     }
@@ -77,14 +76,21 @@ app.post('/create-list', (req, res) => {
 app.post('/add-item', (req, res) => {
   const listName = req.body.listName;
   const newItem = req.body.item;
+  const password = req.body.password; // Add password parameter
 
   // Fetch the list ID from the 'lists' table
-  db.get('SELECT id FROM lists WHERE name = ?', [listName], (err, row) => {
+  db.get('SELECT id, password FROM lists WHERE name = ?', [listName], (err, row) => {
     if (err || !row) {
       return res.status(400).json({ error: `List "${listName}" does not exist.` });
     }
 
     const listId = row.id;
+    const storedPassword = row.password;
+
+    // Check if the provided password matches the stored password
+    if (password !== storedPassword) {
+      return res.status(401).json({ error: 'Invalid password for this list.' });
+    }
 
     // Check for existing items with the same name in the 'items' table
     db.get('SELECT * FROM items WHERE list_id = ? AND name = ?', [listId, newItem.name], (err, row) => {
@@ -114,14 +120,21 @@ app.post('/add-item', (req, res) => {
 // Endpoint to delete a list and its associated items
 app.delete('/delete-list', (req, res) => {
   const listName = req.body.listName;
+  const password = req.body.password; // Add password parameter
 
   // Fetch the list ID from the 'lists' table
-  db.get('SELECT id FROM lists WHERE name = ?', [listName], (err, row) => {
+  db.get('SELECT id, password FROM lists WHERE name = ?', [listName], (err, row) => {
     if (err || !row) {
       return res.status(400).json({ error: `List "${listName}" does not exist.` });
     }
 
     const listId = row.id;
+    const storedPassword = row.password;
+
+    // Check if the provided password matches the stored password
+    if (password !== storedPassword) {
+      return res.status(401).json({ error: 'Invalid password for this list.' });
+    }
 
     // Delete the items associated with the list from the 'items' table
     db.run('DELETE FROM items WHERE list_id = ?', [listId], (err) => {
@@ -151,14 +164,21 @@ app.delete('/delete-list', (req, res) => {
 app.post('/delete-item', (req, res) => {
   const listName = req.body.listName;
   const itemName = req.body.itemName;
+  const password = req.body.password; // Add password parameter
 
   // Fetch the list ID from the 'lists' table
-  db.get('SELECT id FROM lists WHERE name = ?', [listName], (err, row) => {
+  db.get('SELECT id, password FROM lists WHERE name = ?', [listName], (err, row) => {
     if (err || !row) {
       return res.status(400).json({ error: `List "${listName}" does not exist.` });
     }
 
     const listId = row.id;
+    const storedPassword = row.password;
+
+    // Check if the provided password matches the stored password
+    if (password !== storedPassword) {
+      return res.status(401).json({ error: 'Invalid password for this list.' });
+    }
 
     // Delete the item from the 'items' table
     db.run('DELETE FROM items WHERE list_id = ? AND name = ?', [listId, itemName], (err) => {
