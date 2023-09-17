@@ -30,7 +30,9 @@
         align-items: center;
         gap: 10px;
       }
-
+      .edit {
+        display: none;
+      }
       img {
         max-width: 40px;
         aspect-ratio: 1;
@@ -48,9 +50,13 @@
       <div class="listSettings">
         <div class="editList">
           <a id="editButton">Edit List</a>
-          <button type="button" id="addItemButtonTop">Add Item</button>
+          <button type="button" class="edit add" id="addItemButtonTop">
+            Add Item
+          </button>
 
-          <button type="button" id="saveAllButtonTop">Save All</button>
+          <button type="button" class="edit save" id="saveAllButtonTop">
+            Save All
+          </button>
         </div>
         <a id="voteButton">Vote</a>
       </div>
@@ -69,9 +75,9 @@
       <tbody id="listContainer"></tbody>
     </table>
 
-    <button type="button" id="addItemButton">Add Item</button>
+    <button type="button" class="edit add" id="addItemButton">Add Item</button>
 
-    <button type="button" id="saveAllButton">Save All</button>
+    <button type="button" class="edit save" id="saveAllButton">Save All</button>
 
     <script>
       function saveAll(listname, listbody) {
@@ -285,10 +291,15 @@
         });
 
         saveButton.addEventListener("click", () => {
+          //get password
+          const passwordInput = document.getElementById("passwordInput");
+          const inputtedPassword = passwordInput.value;
+
           // Handle saving the new item data here
           const newItemName = itemNameInput.value;
           // const newItemElo = eloInput.value;
           const newItemPicture = pictureInput.value;
+
           console.log("saving", newItemName, newItemPicture);
           // Send a POST request to the server to add the new item
           fetch("/add-item", {
@@ -303,6 +314,7 @@
                 data: {
                   image: newItemPicture,
                 },
+                password: inputtedPassword,
               },
             }),
           })
@@ -357,7 +369,8 @@
           // Create an input element
           const inputElement = document.createElement("input");
           inputElement.type = "text";
-          inputElement.placeholder = "Password Protected"; // Set the initial value
+          inputElement.id = "passwordInput";
+          inputElement.placeholder = "Input password here to edit the list"; // Set the initial value
 
           // Create an "Enter" button
           const enterButton = document.createElement("button");
@@ -371,8 +384,42 @@
           enterButton.addEventListener("click", function () {
             // Retrieve the entered value
             const password = inputElement.value;
-            // Do something with the password, e.g., validate it
-            console.log("Password entered:", password);
+
+            // Create a data object with the password and listName
+            const data = {
+              listName: listName,
+              password: password,
+            };
+
+            // Send a POST request to the server
+            fetch("/check-password", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(data),
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                // Handle the response from the server
+                if (data.message) {
+                  console.log(data.message); // Password is valid
+                  let editButtons = document.querySelectorAll(".edit");
+
+                  editButtons.forEach((el) => {
+                    el.style.display = "inline";
+                  });
+                  inputElement.disabled = true;
+                  enterButton.style.display = "none";
+                } else if (data.error) {
+                  console.error(data.error); // Invalid password or other errors
+                  // Add your logic for an invalid password or error here
+                }
+              })
+              .catch((error) => {
+                console.error("Error:", error);
+                // Handle network or server errors here
+              });
           });
         });
 
@@ -382,11 +429,26 @@
         addItemButton.addEventListener("click", () => {
           addRow(listName, listContainer);
         });
-        //// temp save all button
-        const saveAllButton = document.getElementById("saveAllButton");
-        saveAllButton.addEventListener("click", () => {
-          saveAll(listName, listContainer);
-        });
+
+        document
+          .getElementById("addItemButtonTop")
+          .addEventListener("click", function () {
+            addRow(listName, listContainer);
+            console.log("top");
+            lastListItem = document.getElementById("listContainer");
+            lastListItem.lastChild.scrollIntoView({ behavior: "smooth" });
+          });
+      });
+      //// temp save all button
+      const saveAllButton = document.getElementById("saveAllButton");
+      const saveAllButtonTop = document.getElementById("saveAllButtonTop");
+
+      saveAllButton.addEventListener("click", () => {
+        saveAll(listName, listContainer);
+      });
+
+      saveAllButtonTop.addEventListener("click", () => {
+        saveAll(listName, listContainer);
       });
     </script>
   </body>
