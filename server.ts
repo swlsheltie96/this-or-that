@@ -111,6 +111,36 @@ app.post('/add-item', (req, res) => {
   });
 });
 
+app.post('/delete-item', (req, res) => {
+  const listName = req.body.listName;
+  const itemName = req.body.itemName;
+
+  // Fetch the list ID from the 'lists' table
+  db.get('SELECT id FROM lists WHERE name = ?', [listName], (err, row) => {
+    if (err || !row) {
+      return res.status(400).json({ error: `List "${listName}" does not exist.` });
+    }
+
+    const listId = row.id;
+
+    // Delete the item from the 'items' table
+    db.run('DELETE FROM items WHERE list_id = ? AND name = ?', [listId, itemName], (err) => {
+      if (err) {
+        return res.status(400).json({ error: `Failed to delete item "${itemName}" from list "${listName}".` });
+      }
+
+      // Delete the Elo rating for the item from the 'elo_ratings' table
+      db.run('DELETE FROM elo_ratings WHERE list_name = ? AND item_name = ?', [listName, itemName], (err) => {
+        if (err) {
+          return res.status(400).json({ error: `Failed to delete Elo rating for item "${itemName}" from list "${listName}".` });
+        }
+
+        res.status(200).json({ message: `Item "${itemName}" deleted from list "${listName}" successfully.` });
+      });
+    });
+  });
+});
+
 
 // Endpoint to get a random pair of items for voting
 app.get('/get-pair', (req, res) => {

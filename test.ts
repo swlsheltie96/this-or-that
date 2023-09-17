@@ -21,6 +21,17 @@ async function addItem(listName, item) {
   console.log(data);
 }
 
+// Delete an item from a list
+async function deleteItem(listName, itemName) {
+  const response = await fetch(`localhost:${PORT}/delete-item`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ listName: listName, itemName: itemName })
+  });
+  const data = await response.json();
+  console.log(data);
+}
+
 // Get a random pair of items for voting
 async function getPairForVoting(listName) {
   const response = await fetch(`localhost:${PORT}/get-pair?listName=${encodeURIComponent(listName)}`);
@@ -75,5 +86,6 @@ await addItem("pokemon", {name: "Ekans", picture: 'bleh'});
 await getPairForVoting("pokemon");
 await vote("pokemon", "Pikachu", "Ekans");
 await vote("pokemon", "Charizard", "Pikachu");
+await deleteItem("pokemon", "Ekans");
 await testGetSortedList("pokemon");
 await getListsWithPopularity();
