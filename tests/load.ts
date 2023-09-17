@@ -2,15 +2,15 @@ import * as api from './api';
 
 const lists = {};
 const stats = {
-  getPair: { count: 0, time: 0},
-  vote: { count: 0, time: 0},
-  changePassword: { count: 0, time: 0},
-  createList: { count: 0, time: 0},
-  deleteList: { count: 0, time: 0},
-  addItem: { count: 0, time: 0},
-  deleteItem: { count: 0, time: 0},
-  getSortedList: { count: 0, time: 0},
-  getListsWithPopularity: { count: 0, time: 0},
+  getPair: { count: 0, time: 0, failures: 0},
+  vote: { count: 0, time: 0, failures: 0},
+  changePassword: { count: 0, time: 0, failures: 0},
+  createList: { count: 0, time: 0, failures: 0},
+  deleteList: { count: 0, time: 0, failures: 0},
+  addItem: { count: 0, time: 0, failures: 0},
+  deleteItem: { count: 0, time: 0, failures: 0},
+  getSortedList: { count: 0, time: 0, failures: 0},
+  getListsWithPopularity: { count: 0, time: 0, failures: 0},
 };
 
 function genStr(length) {
@@ -28,10 +28,15 @@ function genStr(length) {
 async function track(name, fn) {
   stats[name].count += 1
   const t0 = performance.now();
-  const out = await fn();
-  const t1 = performance.now();
-  stats[name].time += t1 - t0;
-  return out;
+  try {
+    const out = await fn();
+    const t1 = performance.now();
+    stats[name].time += t1 - t0;
+    return out;
+  } catch (e) {
+    stats[name].failures += 1;
+    throw e;
+  }
 }
 
 async function randomVote(list) {
@@ -156,5 +161,5 @@ await cleanup();
 
 for (let stat of Object.keys(stats)) {
   const obj = stats[stat];
-  console.log(`${stat.padStart(25,' ')}: \t${obj.count * 1e3 / obj.time} iter/sec`)
+  console.log(`${stat.padStart(25,' ')}: \t${(obj.count * 1e3 / obj.time).toFixed(2)} iter/sec (${(100 * (1 - obj.failures / obj.count)).toFixed(2)}% success rate)`)
 }
