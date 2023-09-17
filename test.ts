@@ -11,6 +11,17 @@ async function createList(listName, password) {
   console.log(data);
 }
 
+// Check the password for a list
+async function checkPassword(listName, password) {
+  const response = await fetch(`http://localhost:${PORT}/check-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ listName: listName, password: password })
+  });
+  const data = await response.json();
+  return response.ok; // Return true if the password is valid, false otherwise
+}
+
 // Delete a list and its associated items with a password
 async function deleteList(listName, password) {
   const response = await fetch(`http://localhost:${PORT}/delete-list`, {
@@ -91,6 +102,8 @@ async function getListsWithPopularity() {
 
 // Usage example
 await createList("pokemon", "your_list_password");
+console.assert(await checkPassword("pokemon", "your_list_password"));
+console.assert(! await checkPassword("pokemon", "wrong_pass"));
 await createList("random", "your_list_password");
 await addItem("pokemon", { name: "Pikachu", data: 'bleh' }, "your_list_password");
 await addItem("pokemon", { name: "Charizard", data: 'bleh' }, "your_list_password");

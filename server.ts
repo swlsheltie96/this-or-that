@@ -15,7 +15,7 @@ db.query(`
     name TEXT UNIQUE,
     password TEXT -- Add a column to store list passwords
   )
-`);
+`).run();
 
 // Create a table for storing items with a foreign key reference to the list
 db.query(`
@@ -26,7 +26,7 @@ db.query(`
     data JSON, -- Add a column to store JSON data
     FOREIGN KEY (list_id) REFERENCES lists (id)
   )
-`);
+`).run();
 
 // Create a table for storing Elo ratings
 db.query(`
@@ -36,7 +36,7 @@ db.query(`
     rating REAL,
     PRIMARY KEY (list_name, item_name)
   )
-`);
+`).run();
 
 // Create a table for storing list votes
 db.query(`
@@ -48,7 +48,7 @@ db.query(`
     FOREIGN KEY (list_name) REFERENCES lists (name)
     -- You can add a foreign key to reference the user table for user_id if needed
   )
-`);
+`).run();
 
 // Placeholder Elo ranking parameters (adjust as needed)
 const K = 32; // Elo constant, controls rating update magnitude
@@ -76,6 +76,37 @@ app.post('/create-list', (req, res) => {
 
   runQuery(sql, params, successMessage, errorMessage, res);
 });
+
+// Endpoint to check the password for a list
+app.post('/check-password', (req, res) => {
+  const listName = req.body.listName;
+  const password = req.body.password;
+
+  // Query the database to retrieve the stored password for the given list
+  const sqlGetListPassword = 'SELECT password FROM lists WHERE name = ?';
+  const paramsGetListPassword = [listName];
+
+  try {
+    const queryGetListPassword = db.query(sqlGetListPassword);
+    const resultGetListPassword = queryGetListPassword.get(paramsGetListPassword);
+
+    if (!resultGetListPassword) {
+      return res.status(400).json({ error: `List "${listName}" does not exist.` });
+    }
+
+    const storedPassword = resultGetListPassword.password;
+
+    // Compare the provided password with the stored password
+    if (password === storedPassword) {
+      return res.status(200).json({ message: 'Password is valid.' });
+    } else {
+      return res.status(401).json({ error: 'Invalid password for this list.' });
+    }
+  } catch (error) {
+    res.status(400).json({ error: `Failed to check the password for list "${listName}".` });
+  }
+});
+
 
 // Endpoint to add items to a list (with uniqueness check)
 app.post('/add-item', (req, res) => {
