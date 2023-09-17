@@ -20,13 +20,17 @@
         justify-content: space-between;
         align-items: center;
       }
+      .listSettings {
+        display: flex;
+        justify-content: space-between;
+      }
+      .headerContent {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
 
-      #backButton {
-        float: left;
-      }
-      #editButton {
-        float: right;
-      }
       img {
         max-width: 40px;
         aspect-ratio: 1;
@@ -35,10 +39,21 @@
     </style>
   </head>
   <body>
-    <div class="listData">
+    <div class="headerContent">
       <a id="backButton">←</a>
+      <a href="index.html"><h5>Elo Chamber</h5></a>
+    </div>
+    <div class="listData">
       <h1 id="listName"></h1>
-      <a id="editButton">Edit List</a>
+      <div class="listSettings">
+        <div class="editList">
+          <a id="editButton">Edit List</a>
+          <button type="button" id="addItemButtonTop">Add Item</button>
+
+          <button type="button" id="saveAllButtonTop">Save All</button>
+        </div>
+        <a id="voteButton">Vote</a>
+      </div>
     </div>
     <!-- Added button for voting -->
 
@@ -53,8 +68,6 @@
       </thead>
       <tbody id="listContainer"></tbody>
     </table>
-
-    <a id="voteButton">Vote</a>
 
     <button type="button" id="addItemButton">Add Item</button>
 
@@ -312,6 +325,7 @@
             });
         });
       }
+
       window.addEventListener("load", async (event) => {
         const listContainer = document.getElementById("listContainer");
 
@@ -333,6 +347,33 @@
         const voteButton = document.getElementById("voteButton");
         voteButton.addEventListener("click", () => {
           window.location.href = `vote.html?listName=${listName}`; // Redirect to the voting page
+        });
+
+        // EDIT LIST BUTTON BECOMES PASSWORD BOX AND TRIGGERS ADD/SAVE BUTTONS
+        const editButton = document.getElementById("editButton");
+        const editList = document.querySelector(".editList");
+
+        editButton.addEventListener("click", function () {
+          // Create an input element
+          const inputElement = document.createElement("input");
+          inputElement.type = "text";
+          inputElement.placeholder = "Password Protected"; // Set the initial value
+
+          // Create an "Enter" button
+          const enterButton = document.createElement("button");
+          enterButton.textContent = "Enter";
+
+          // Replace the "Edit List" button with the input and "Enter" button
+          editList.replaceChild(inputElement, editButton);
+          editList.appendChild(enterButton);
+
+          // Add an event listener for the "Enter" button
+          enterButton.addEventListener("click", function () {
+            // Retrieve the entered value
+            const password = inputElement.value;
+            // Do something with the password, e.g., validate it
+            console.log("Password entered:", password);
+          });
         });
 
         //### EDITING LIST: ADD NEW ROWS
