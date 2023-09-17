@@ -47,6 +47,7 @@ h4 {
 
 h1 {
   font-size: 28px;
+  text-align: center;
 }
 
 h2 {
@@ -93,32 +94,37 @@ p {
 }
 
 /* Apply Wikipedia-like table styles */
-table {
+#listTable {
   border-collapse: collapse;
   width: 100%;
-  margin-bottom: 20px;
-  border: 1px solid #ccc;
-}
-
-table th,
-table td {
-  padding: 3px 6px;
-  text-align: left;
-  border: 1px solid #ccc;
+  margin: 10px auto;
+  border: 0.5px solid #ccc;
 }
 
 /* Style table headers */
-table th {
+.listHeader {
   background-color: #f2f2f2;
 }
 
-/* Style alternating row colors */
-table tr:nth-child(even) {
-  background-color: #f9f9f9;
+.listRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 6px;
+  border: 0.5px solid #ccc;
+  height: 1.2em;
+  align-items: center;
+}
+.listCell {
+  flex: 1;
+  text-align: left;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /* Add hover effect to table rows */
-table tr:hover {
+.listRow:hover {
   background-color: #e0e0e0;
 }
 

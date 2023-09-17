@@ -7,36 +7,32 @@
 
     <title>List</title>
     <style>
-      .listData {
-        text-align: center;
-        font-weight: normal;
-      }
-
-      .listitem {
-        border: 1px solid #ccc;
-        padding: 10px;
-        margin: 5px 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
       .listSettings {
         display: flex;
         justify-content: space-between;
       }
+
       .headerContent {
         position: relative;
         display: flex;
         align-items: center;
         gap: 10px;
       }
-      .edit {
+
+      .edit,
+      .delete,
+      .save {
         display: none;
       }
+
       img {
         max-width: 40px;
         aspect-ratio: 1;
         object-fit: cover;
+      }
+      .listCell input {
+        width: 100%;
+        max-width: fit-content;
       }
     </style>
   </head>
@@ -50,36 +46,76 @@
       <div class="listSettings">
         <div class="editList">
           <a id="editButton">Edit List</a>
-          <button type="button" class="edit add" id="addItemButtonTop">
+          <button type="button" class="edit" id="addItemButtonTop">
             Add Item
           </button>
 
-          <button type="button" class="edit save" id="saveAllButtonTop">
+          <button type="button" class="edit" id="saveAllButtonTop">
             Save All
           </button>
         </div>
         <a id="voteButton">Vote</a>
       </div>
     </div>
-    <!-- Added button for voting -->
 
-    <table id="listTable">
-      <thead>
-        <tr>
-          <th>Rank</th>
-          <th>Item</th>
-          <th>Elo</th>
-          <th>Picture</th>
-        </tr>
-      </thead>
-      <tbody id="listContainer"></tbody>
-    </table>
+    <div id="listTable">
+      <div class="listRow listHeader">
+        <div class="listCell delete">Delete</div>
+        <div class="listCell">Rank</div>
+        <div class="listCell">Item</div>
+        <div class="listCell">Elo</div>
+        <div class="listCell">Picture</div>
+        <div class="listCell save">Save</div>
+      </div>
+      <div class="listContainer" id="listContainer"></div>
+    </div>
 
-    <button type="button" class="edit add" id="addItemButton">Add Item</button>
+    <button type="button" class="edit" id="addItemButton">Add Item</button>
 
-    <button type="button" class="edit save" id="saveAllButton">Save All</button>
+    <button type="button" class="edit" id="saveAllButton">Save All</button>
 
     <script>
+      function deleteCell(listName, elName, listBody) {
+        console.log(listName, elName);
+        const hidden = document.getElementById("confirmedPassword");
+        const inputtedPassword = hidden.value;
+        console.log(inputtedPassword);
+        console.log("deleting");
+        fetch("/delete-item", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            listName: listName,
+            itemName: elName,
+            password: inputtedPassword,
+          }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            // Handle the response from the server here
+            console.log(data);
+          })
+          .catch((error) => {
+            // Handle any errors here
+            console.error("Error:", error);
+          });
+
+        getList(listName)
+          .then((data) => {
+            // Clear the existing table
+            while (listBody.firstChild) {
+              listBody.removeChild(listBody.firstChild);
+            }
+            // Rebuild the table with the updated data
+            makeList(data.list, listName, listBody);
+          })
+          .catch((error) => {
+            console.error("Error fetching updated data:", error);
+          });
+      }
+
       function saveAll(listname, listbody) {
         console.log(listname);
 
@@ -88,7 +124,7 @@
         const inputtedPassword = hidden.value;
 
         const fetchPromises = [];
-        listbody.querySelectorAll("tr").forEach((row) => {
+        listbody.querySelectorAll(".listRow.unsaved").forEach((row) => {
           if (row.classList.contains("unsaved")) {
             let unsavedRow = {
               name: row.querySelector("#nameInput").value,
@@ -141,7 +177,7 @@
         // Save the unsaved rows
         console.log("reloading");
         const unsavedRows = [];
-        listbody.querySelectorAll("tr").forEach((row) => {
+        listbody.querySelectorAll(".listRow.unsaved").forEach((row) => {
           if (row.classList.contains("unsaved")) {
             // let name = unsavedRows.push(row.cloneNode(true));
             console.log(row);
@@ -196,42 +232,63 @@
         }
 
         data.forEach((element, index) => {
-          const row = document.createElement("tr");
-          row.innerHTML = `
-                  <td>${index + 1}</td>
-                  <td>${element.name || ""}</td>
-                  <td>${element.elo || ""}</td>
-                `;
+          const listItem = document.createElement("div");
+          listItem.classList.add("listRow");
 
-          const rowData = element.data ? JSON.parse(element.data) : {};
+          const deleteCel = document.createElement("div");
+          const del = document.createElement("button");
+          del.textContent = "Delete";
+          deleteCel.classList.add("listCell", "delete");
+          deleteCel.appendChild(del);
+          del.addEventListener("click", () => {
+            deleteCell(listname, element.name, listBody);
+          });
 
-          if (rowData.image) {
-            const imageCell = document.createElement("td");
+          const rankCell = document.createElement("div");
+          rankCell.classList.add("listCell");
+          rankCell.textContent = index + 1;
+
+          const itemCell = document.createElement("div");
+          itemCell.classList.add("listCell");
+          itemCell.textContent = element.name || "";
+
+          const eloCell = document.createElement("div");
+          eloCell.classList.add("listCell");
+          eloCell.textContent = element.elo || "";
+
+          const pictureCell = document.createElement("div");
+          pictureCell.classList.add("listCell");
+          if (element.data && element.data.image) {
             const image = document.createElement("img");
-            image.src = rowData.image;
-            imageCell.appendChild(image);
-            row.appendChild(imageCell);
-
-            hasImage = true; // Set the flag to true if an image exists
-          } else {
-            row.innerHTML += `<td></td>`;
+            image.src = element.data.image;
+            pictureCell.appendChild(image);
           }
 
-          listBody.appendChild(row);
+          const saveCell = document.createElement("div");
+          saveCell.classList.add("listCell", "save");
+
+          listItem.appendChild(deleteCel);
+          listItem.appendChild(rankCell);
+          listItem.appendChild(itemCell);
+          listItem.appendChild(eloCell);
+          listItem.appendChild(pictureCell);
+          listItem.appendChild(saveCell);
+
+          listContainer.appendChild(listItem);
         });
 
         // Remove the "Picture" column if no items have an image
-        if (!hasImage) {
-          const tableHeader = document.querySelector("#listTable thead tr");
-          const pictureHeader = tableHeader.querySelector("th:nth-child(4)");
-          pictureHeader.style.display = "none";
+        // if (!hasImage) {
+        //   const tableHeader = document.querySelector("#listTable thead tr");
+        //   const pictureHeader = tableHeader.querySelector("th:nth-child(4)");
+        //   pictureHeader.style.display = "none";
 
-          const tableRows = document.querySelectorAll("#listTable tbody tr");
-          tableRows.forEach((row) => {
-            const pictureCell = row.querySelector("td:nth-child(4)");
-            pictureCell.style.display = "none";
-          });
-        }
+        //   const tableRows = document.querySelectorAll("#listTable tbody tr");
+        //   tableRows.forEach((row) => {
+        //     const pictureCell = row.querySelector("td:nth-child(4)");
+        //     pictureCell.style.display = "none";
+        //   });
+        // }
       }
 
       function addRow(
@@ -240,24 +297,27 @@
         unsavedName = "",
         unsavedPicture = ""
       ) {
-        // Create a new table row element
-        const newRow = document.createElement("tr");
-        newRow.classList.add("unsaved");
-        // Create and append the table cells and input elements
-        const actionCell = document.createElement("td");
-        const saveButton = document.createElement("button");
-        saveButton.type = "button";
-        saveButton.textContent = "Save";
-        actionCell.appendChild(saveButton);
+        const newRow = document.createElement("div");
+        newRow.classList.add("listRow", "unsaved");
 
+        // Create and append the cells
+
+        const deleteCel = document.createElement("div");
+        deleteCel.classList.add("listCell", "delete");
+        deleteCel.style.display = "block";
         const cancelButton = document.createElement("button");
         cancelButton.type = "button";
         cancelButton.textContent = "Cancel";
-        actionCell.appendChild(cancelButton);
+        deleteCel.appendChild(cancelButton);
+        newRow.appendChild(deleteCel);
 
-        newRow.appendChild(actionCell);
+        const rankCell = document.createElement("div");
+        rankCell.classList.add("listCell");
+        newRow.appendChild(rankCell);
 
-        const itemCell = document.createElement("td");
+        const itemCell = document.createElement("div");
+        itemCell.classList.add("listCell");
+
         const itemNameInput = document.createElement("input");
         itemNameInput.type = "text";
         itemNameInput.id = "nameInput";
@@ -269,15 +329,14 @@
         itemCell.appendChild(itemNameInput);
         newRow.appendChild(itemCell);
 
-        const eloCell = document.createElement("td");
-        // const eloInput = document.createElement("input");
-        // eloInput.type = "number";
-        // eloInput.placeholder = "Elo";
-        // eloCell.appendChild(eloInput);
-        eloCell.textContent = "";
+        const eloCell = document.createElement("div");
+        eloCell.classList.add("listCell");
+        eloCell.textContent = ""; // You can add Elo-related input here if needed
         newRow.appendChild(eloCell);
 
-        const pictureCell = document.createElement("td");
+        const pictureCell = document.createElement("div");
+        pictureCell.classList.add("listCell");
+
         const pictureInput = document.createElement("input");
         pictureInput.id = "pictureInput";
         pictureInput.type = "text";
@@ -288,6 +347,16 @@
         }
         pictureCell.appendChild(pictureInput);
         newRow.appendChild(pictureCell);
+
+        const saveCell = document.createElement("div");
+        const saveButton = document.createElement("button");
+        saveButton.type = "button";
+        saveButton.textContent = "Save";
+        saveCell.classList.add("listCell", "save");
+        saveCell.appendChild(saveButton);
+        saveCell.style.display = "block";
+
+        newRow.appendChild(saveCell);
 
         // Append the new row to the list container
         listbody.appendChild(newRow);
@@ -417,9 +486,17 @@
                 if (data.message) {
                   console.log(data.message); // Password is valid
                   let editButtons = document.querySelectorAll(".edit");
-
+                  let deleteButtons = document.querySelectorAll(".delete");
+                  let saveButtons = document.querySelectorAll(".save");
                   editButtons.forEach((el) => {
                     el.style.display = "inline";
+                  });
+                  deleteButtons.forEach((el) => {
+                    el.style.display = "block";
+                  });
+
+                  saveButtons.forEach((el) => {
+                    el.style.display = "block";
                   });
 
                   let tempPass = inputElement.value;
