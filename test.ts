@@ -100,18 +100,35 @@ async function getListsWithPopularity() {
   }
 }
 
+// Change the password for a list
+async function changePassword(listName, currentPassword, newPassword) {
+  const response = await fetch(`http://localhost:${PORT}/change-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      listName: listName,
+      currentPassword: currentPassword, // Provide the current password
+      newPassword: newPassword // Provide the new password
+    })
+  });
+  const data = await response.json();
+  console.log(data);
+}
+
+
 // Usage example
 await createList("pokemon", "your_list_password");
-console.assert(await checkPassword("pokemon", "your_list_password"));
+await changePassword("pokemon", "your_list_password", "new_password");
+console.assert(await checkPassword("pokemon", "new_password"));
 console.assert(! await checkPassword("pokemon", "wrong_pass"));
-await createList("random", "your_list_password");
-await addItem("pokemon", { name: "Pikachu", data: 'bleh' }, "your_list_password");
-await addItem("pokemon", { name: "Charizard", data: 'bleh' }, "your_list_password");
-await addItem("pokemon", { name: "Ekans", picture: 'bleh' }, "your_list_password");
+await createList("random", "new_password");
+await addItem("pokemon", { name: "Pikachu", data: 'bleh' }, "new_password");
+await addItem("pokemon", { name: "Charizard", data: 'bleh' }, "new_password");
+await addItem("pokemon", { name: "Ekans", picture: 'bleh' }, "new_password");
 await getPairForVoting("pokemon");
 await vote("pokemon", "Pikachu", "Ekans");
 await vote("pokemon", "Charizard", "Pikachu");
-await deleteItem("pokemon", "Ekans", "your_list_password");
+await deleteItem("pokemon", "Ekans", "new_password");
 await testGetSortedList("pokemon");
 await getListsWithPopularity();
-await deleteList("random", "your_list_password");
+await deleteList("random", "new_password");

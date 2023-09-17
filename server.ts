@@ -107,6 +107,42 @@ app.post('/check-password', (req, res) => {
   }
 });
 
+// Endpoint to change the password for a list
+app.post('/change-password', (req, res) => {
+  const listName = req.body.listName;
+  const currentPassword = req.body.currentPassword; // Current password
+  const newPassword = req.body.newPassword; // New password
+
+  // Query the database to retrieve the stored password for the given list
+  const sqlGetListPassword = 'SELECT password FROM lists WHERE name = ?';
+  const paramsGetListPassword = [listName];
+
+  try {
+    const queryGetListPassword = db.query(sqlGetListPassword);
+    const resultGetListPassword = queryGetListPassword.get(paramsGetListPassword);
+
+    if (!resultGetListPassword) {
+      return res.status(400).json({ error: `List "${listName}" does not exist.` });
+    }
+
+    const storedPassword = resultGetListPassword.password;
+
+    // Compare the provided current password with the stored password
+    if (currentPassword !== storedPassword) {
+      return res.status(401).json({ error: 'Invalid current password for this list.' });
+    }
+
+    // Update the password in the 'lists' table
+    const sqlUpdatePassword = 'UPDATE lists SET password = ? WHERE name = ?';
+    const paramsUpdatePassword = [newPassword, listName];
+
+    runQuery(sqlUpdatePassword, paramsUpdatePassword, `Password for list "${listName}" changed successfully.`, `Failed to change password for list "${listName}".`, res);
+  } catch (error) {
+    res.status(400).json({ error: `Failed to change the password for list "${listName}".` });
+  }
+});
+
+
 
 // Endpoint to add items to a list (with uniqueness check)
 app.post('/add-item', (req, res) => {
