@@ -82,6 +82,11 @@
     <script>
       function saveAll(listname, listbody) {
         console.log(listname);
+
+        //get password
+        const hidden = document.getElementById("confirmedPassword");
+        const inputtedPassword = hidden.value;
+
         const fetchPromises = [];
         listbody.querySelectorAll("tr").forEach((row) => {
           if (row.classList.contains("unsaved")) {
@@ -103,6 +108,7 @@
                     image: unsavedRow.picture,
                   },
                 },
+                password: inputtedPassword,
               }),
             })
               .then((response) => response.json())
@@ -292,8 +298,9 @@
 
         saveButton.addEventListener("click", () => {
           //get password
-          const passwordInput = document.getElementById("passwordInput");
-          const inputtedPassword = passwordInput.value;
+          const hidden = document.getElementById("confirmedPassword");
+          const inputtedPassword = hidden.value;
+          // console.log(inputtedPassword === "new_password");
 
           // Handle saving the new item data here
           const newItemName = itemNameInput.value;
@@ -314,8 +321,8 @@
                 data: {
                   image: newItemPicture,
                 },
-                password: inputtedPassword,
               },
+              password: inputtedPassword,
             }),
           })
             .then((response) => response.json())
@@ -368,9 +375,13 @@
         editButton.addEventListener("click", function () {
           // Create an input element
           const inputElement = document.createElement("input");
+          const hiddenElement = document.createElement("input");
+          hiddenElement.type = "hidden";
           inputElement.type = "text";
-          inputElement.id = "passwordInput";
+
           inputElement.placeholder = "Input password here to edit the list"; // Set the initial value
+          hiddenElement.name = "hiddenPassword";
+          hiddenElement.id = "hiddenPassword";
 
           // Create an "Enter" button
           const enterButton = document.createElement("button");
@@ -378,6 +389,7 @@
 
           // Replace the "Edit List" button with the input and "Enter" button
           editList.replaceChild(inputElement, editButton);
+          editList.appendChild(hiddenElement);
           editList.appendChild(enterButton);
 
           // Add an event listener for the "Enter" button
@@ -409,6 +421,10 @@
                   editButtons.forEach((el) => {
                     el.style.display = "inline";
                   });
+
+                  let tempPass = inputElement.value;
+                  hiddenElement.value = tempPass;
+                  hiddenElement.id = "confirmedPassword";
                   inputElement.disabled = true;
                   enterButton.style.display = "none";
                 } else if (data.error) {
@@ -427,6 +443,7 @@
         const addItemButton = document.getElementById("addItemButton");
 
         addItemButton.addEventListener("click", () => {
+          const pass = document.getElementById("confirmedPassword");
           addRow(listName, listContainer);
         });
 
@@ -438,17 +455,18 @@
             lastListItem = document.getElementById("listContainer");
             lastListItem.lastChild.scrollIntoView({ behavior: "smooth" });
           });
-      });
-      //// temp save all button
-      const saveAllButton = document.getElementById("saveAllButton");
-      const saveAllButtonTop = document.getElementById("saveAllButtonTop");
 
-      saveAllButton.addEventListener("click", () => {
-        saveAll(listName, listContainer);
-      });
+        //// temp save all button
+        const saveAllButton = document.getElementById("saveAllButton");
+        const saveAllButtonTop = document.getElementById("saveAllButtonTop");
 
-      saveAllButtonTop.addEventListener("click", () => {
-        saveAll(listName, listContainer);
+        saveAllButton.addEventListener("click", () => {
+          saveAll(listName, listContainer);
+        });
+
+        saveAllButtonTop.addEventListener("click", () => {
+          saveAll(listName, listContainer);
+        });
       });
     </script>
   </body>
