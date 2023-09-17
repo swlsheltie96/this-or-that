@@ -425,7 +425,7 @@ app.post('/vote', (req, res) => {
       runQuery(sqlUpdateLoserRating, paramsUpdateLoserRating, `Elo rating for "${loser}" updated successfully.`, `Failed to update Elo rating for "${loser}".`, res);
 
       // Insert a record in the list_votes table to track the vote
-      const userId = 123; // Replace with the actual user ID or authentication logic
+      const userId = req.headers.has('x-forwarded-for') ? req.headers.get('x-forwarded-for') : 0;
       const sqlInsertVote = 'INSERT INTO list_votes (list_name, user_id) VALUES (?, ?)';
       const paramsInsertVote = [listName, userId];
 

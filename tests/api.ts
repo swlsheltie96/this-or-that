@@ -38,6 +38,9 @@ export async function deleteList(listName, password) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ listName: listName, password: password }) // Include the password
   });
+  if (!response.ok) {
+    throw new Error(`Failed: ${response.statusText}`);
+  }
   const data = await response.json();
   log(data);
   return data;
@@ -50,6 +53,9 @@ export async function addItem(listName, item, password) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ listName: listName, item: item, password: password }) // Include the password
   });
+  if (!response.ok) {
+    throw new Error(`Failed: ${response.statusText}`);
+  }
   const data = await response.json();
   log(data);
   return data;
@@ -62,6 +68,9 @@ export async function deleteItem(listName, itemName, password) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ listName: listName, itemName: itemName, password: password }) // Include the password
   });
+  if (!response.ok) {
+    throw new Error(`Failed: ${response.statusText}`);
+  }
   const data = await response.json();
   log(data);
   return data;
@@ -70,6 +79,9 @@ export async function deleteItem(listName, itemName, password) {
 // Get a random pair of items for voting
 export async function getPairForVoting(listName) {
   const response = await fetch(`http://${SERVER}:${PORT}/get-pair?listName=${encodeURIComponent(listName)}`);
+  if (!response.ok) {
+    throw new Error(`Failed: ${response.statusText}`);
+  }
   const data = await response.json();
   log(data);
   return data;
@@ -82,14 +94,20 @@ export async function vote(listName, winner, loser) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ listName: listName, winner: winner, loser: loser })
   });
+  if (!response.ok) {
+    throw new Error(`Failed: ${response.statusText}`);
+  }
   const data = await response.json();
   log(data);
   return data;
 }
 
 // Test function for the /get-sorted-list endpoint
-export async function testGetSortedList(listName) {
+export async function getSortedList(listName) {
   const response = await fetch(`http://${SERVER}:${PORT}/get-sorted-list?listName=${encodeURIComponent(listName)}`);
+  if (!response.ok) {
+    throw new Error(`Failed: ${response.statusText}`);
+  }
   const data = await response.json();
 
   if (response.ok) {
@@ -103,19 +121,14 @@ export async function testGetSortedList(listName) {
 
 // Function to test the get-lists endpoint
 export async function getListsWithPopularity() {
-  try {
-    const response = await fetch(`http://${SERVER}:${PORT}/get-lists`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch lists: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    log(data);
-    return data;
-  } catch (error) {
-    console.error(`Error: ${error.message}`);
+  const response = await fetch(`http://${SERVER}:${PORT}/get-lists`);
+  if (!response.ok) {
+    throw new Error(`Failed: ${response.statusText}`);
   }
-  return null;
+
+  const data = await response.json();
+  log(data);
+  return data;
 }
 
 // Change the password for a list
@@ -129,6 +142,9 @@ export async function changePassword(listName, currentPassword, newPassword) {
       newPassword: newPassword // Provide the new password
     })
   });
+  if (!response.ok) {
+    throw new Error(`Failed: ${response.statusText}`);
+  }
   const data = await response.json();
   log(data);
   return data;

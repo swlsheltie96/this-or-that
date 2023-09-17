@@ -9,6 +9,8 @@ const stats = {
   deleteList: { count: 0, time: 0},
   addItem: { count: 0, time: 0},
   deleteItem: { count: 0, time: 0},
+  getSortedList: { count: 0, time: 0},
+  getListsWithPopularity: { count: 0, time: 0},
 };
 
 function genStr(length) {
@@ -34,10 +36,14 @@ async function track(name, fn) {
 
 async function randomVote(list) {
   const out = await track('getPair', async () => {
-      return await api.getPairForVoting(list);
+      try {
+        return await api.getPairForVoting(list);
+      } catch (e) {
+        return null;
+      }
   });
   // not enough items to vote with
-  if (!out.item1) {
+  if (!out) {
     return;
   }
   const winner = Math.random() > 0.5;
@@ -115,11 +121,21 @@ async function randomActions() {
   if (Math.random() < 0.2) {
     await randomDeleteItem(getRandomList());
   }
-  if (Math.random() < 9) {
+  if (Math.random() < 0.8) {
     await randomVote(getRandomList());
   }
   if (Math.random() < 0.1) {
     await randomPasswordChange(getRandomList());
+  }
+  if (Math.random() < 0.5) {
+    track('getSortedList', async () => {
+        await api.getSortedList(getRandomList());
+    });
+  }
+  if (Math.random() < 0.5) {
+    track('getListsWithPopularity', async () => {
+        await api.getListsWithPopularity();
+    });
   }
   if (Math.random() < 0.1) {
     await deleteList(getRandomList());
@@ -140,5 +156,5 @@ await cleanup();
 
 for (let stat of Object.keys(stats)) {
   const obj = stats[stat];
-  console.log(`${stat}: ${obj.count * 1e3 / obj.time} iter/sec`)
+  console.log(`${stat.padStart(25,' ')}: \t${obj.count * 1e3 / obj.time} iter/sec`)
 }
