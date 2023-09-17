@@ -10,6 +10,17 @@ async function createList(listName) {
   console.log(data);
 }
 
+// Delete a list and its associated items
+async function deleteList(listName) {
+  const response = await fetch(`localhost:${PORT}/delete-list`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ listName: listName })
+  });
+  const data = await response.json();
+  console.log(data);
+}
+
 // Add an item to a list
 async function addItem(listName, item) {
   const response = await fetch(`localhost:${PORT}/add-item`, {
@@ -89,3 +100,5 @@ await vote("pokemon", "Charizard", "Pikachu");
 await deleteItem("pokemon", "Ekans");
 await testGetSortedList("pokemon");
 await getListsWithPopularity();
+await deleteList("random");
+

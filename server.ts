@@ -111,6 +111,43 @@ app.post('/add-item', (req, res) => {
   });
 });
 
+// Endpoint to delete a list and its associated items
+app.delete('/delete-list', (req, res) => {
+  const listName = req.body.listName;
+
+  // Fetch the list ID from the 'lists' table
+  db.get('SELECT id FROM lists WHERE name = ?', [listName], (err, row) => {
+    if (err || !row) {
+      return res.status(400).json({ error: `List "${listName}" does not exist.` });
+    }
+
+    const listId = row.id;
+
+    // Delete the items associated with the list from the 'items' table
+    db.run('DELETE FROM items WHERE list_id = ?', [listId], (err) => {
+      if (err) {
+        return res.status(400).json({ error: `Failed to delete items from list "${listName}".` });
+      }
+
+      // Delete the Elo ratings for the items from the 'elo_ratings' table
+      db.run('DELETE FROM elo_ratings WHERE list_name = ?', [listName], (err) => {
+        if (err) {
+          return res.status(400).json({ error: `Failed to delete Elo ratings for list "${listName}".` });
+        }
+
+        // Delete the list from the 'lists' table
+        db.run('DELETE FROM lists WHERE name = ?', [listName], (err) => {
+          if (err) {
+            return res.status(400).json({ error: `Failed to delete list "${listName}".` });
+          }
+
+          res.status(200).json({ message: `List "${listName}" and its items deleted successfully.` });
+        });
+      });
+    });
+  });
+});
+
 app.post('/delete-item', (req, res) => {
   const listName = req.body.listName;
   const itemName = req.body.itemName;
