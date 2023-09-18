@@ -160,7 +160,7 @@ async function cleanup() {
   }
 }
 
-for (let i of api.viter(100)) {
+for (let i of api.viter(1000)) {
   await randomActions();
 }
 

@@ -1,10 +1,74 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const { Database } = require('bun:sqlite'); // Import bun:sqlite
+import { Database } from 'bun:sqlite';
 
-const app = express();
-app.use(bodyParser.json());
-app.use(express.static('public'));
+const PORT = process.env.PORT || 3000;
+
+class Server {
+  get_map = {};
+  post_map = {};
+  delete_map = {};
+
+  get(path, callback) {
+    this.get_map[path] = callback;
+  }
+
+  get_static(path, file, content_type) {
+    this.get(path, async (req) => {
+      return new Response(Bun.file(file), {
+        headers: new Headers({
+          "Content-Type": content_type,
+        })
+      });
+    });
+  }
+
+  post(path, callback) {
+    this.post_map[path] = callback;
+  }
+
+  delete(path, callback) {
+    this.delete_map[path] = callback;
+  }
+
+  serve() {
+    console.log(`Serving on port ${PORT}`);
+    const self = this;
+    Bun.serve({
+        port: PORT,
+        async fetch(req) {
+          const url = new URL(req.url);
+          switch (req.method) {
+            case 'GET':
+              if (url.pathname in self.get_map) {
+                return await self.get_map[url.pathname](req);
+              }
+              break;
+            case 'POST':
+              if (url.pathname in self.post_map) {
+                return await self.post_map[url.pathname](req);
+              }
+              break;
+            case 'DELETE':
+              if (url.pathname in self.delete_map) {
+                return await self.delete_map[url.pathname](req);
+              }
+              break;
+          }
+          return new Response('Invalid path or method', {status:400});
+        },
+    });
+  }
+};
+
+const app = new Server();
+
+app.get_static('/', 'public/index.html', 'text/html; charset=utf-8');
+app.get_static('/index.html', 'public/index.html', 'text/html; charset=utf-8');
+app.get_static('/create.html', 'public/create.html', 'text/html; charset=utf-8');
+app.get_static('/list.html', 'public/list.html', 'text/html; charset=utf-8');
+app.get_static('/vote.html', 'public/vote.html', 'text/html; charset=utf-8');
+app.get_static('/style.css', 'public/style.css', 'text/css');
+app.get_static('/script.js', 'public/script.js', 'text/javascript');
+app.get_static('/list.js', 'public/list.js', 'text/javascript');
 
 const db = new Database('lists.db');
 
@@ -53,8 +117,12 @@ db.query(`
 // Placeholder Elo ranking parameters (adjust as needed)
 const K = 32; // Elo constant, controls rating update magnitude
 
+function jsonError(msg, error_status=400) {
+  return Response.json({error: msg}, {status: error_status});
+}
+
 // Helper function to wrap bun:sqlite queries and handle errors
-function runQueries(sql, params, successMessage, errorMessage, res) {
+function runQueries(sql, params, successMessage, errorMessage) {
   try {
     if (sql.length != params.length) {
       throw Error('Invalid input to runQueries');
@@ -69,33 +137,35 @@ function runQueries(sql, params, successMessage, errorMessage, res) {
       }
     });
     transaction(queries, params);
-    res.status(200).json({ message: successMessage });
+    return Response.json({ message: successMessage });
   } catch (error) {
-    res.status(400).json({ error: errorMessage });
+    return jsonError(errorMessage);
   }
 }
 
-function runQuery(sql, params, successMessage, errorMessage, res) {
-  runQueries([sql], [params], successMessage, errorMessage, res);
+function runQuery(sql, params, successMessage, errorMessage) {
+  return runQueries([sql], [params], successMessage, errorMessage);
 }
 
 // Endpoint to create a new list
-app.post('/create-list', (req, res) => {
-  const listName = req.body.listName;
-  const password = req.body.password; // Add password parameter
+app.post('/create-list', async (req) => {
+  const body = await req.json();
+  const listName = body.listName;
+  const password = body.password; // Add password parameter
 
   const sql = 'INSERT INTO lists (name, password) VALUES (?, ?)';
   const params = [listName, password];
   const successMessage = `List "${listName}" created successfully.`;
   const errorMessage = `Failed to create list "${listName}".`;
 
-  runQuery(sql, params, successMessage, errorMessage, res);
+  return runQuery(sql, params, successMessage, errorMessage);
 });
 
 // Endpoint to check the password for a list
-app.post('/check-password', (req, res) => {
-  const listName = req.body.listName;
-  const password = req.body.password;
+app.post('/check-password', async (req) => {
+  const body = await req.json();
+  const listName = body.listName;
+  const password = body.password;
 
   // Query the database to retrieve the stored password for the given list
   const sqlGetListPassword = 'SELECT password FROM lists WHERE name = ?';
@@ -105,24 +175,25 @@ app.post('/check-password', (req, res) => {
   const resultGetListPassword = queryGetListPassword.get(paramsGetListPassword);
 
   if (!resultGetListPassword) {
-    return res.status(400).json({ error: `List "${listName}" does not exist.` });
+    return jsonError(`List "${listName}" does not exist.`);
   }
 
   const storedPassword = resultGetListPassword.password;
 
   // Compare the provided password with the stored password
   if (password === storedPassword) {
-    return res.status(200).json({ message: 'Password is valid.' });
+    return Response.json({ message: 'Password is valid.' });
   } else {
-    return res.status(401).json({ error: 'Invalid password for this list.' });
+    return jsonError('Invalid password for this list.', 401);
   }
 });
 
 // Endpoint to change the password for a list
-app.post('/change-password', (req, res) => {
-  const listName = req.body.listName;
-  const currentPassword = req.body.currentPassword; // Current password
-  const newPassword = req.body.newPassword; // New password
+app.post('/change-password', async (req) => {
+  const body = await req.json();
+  const listName = body.listName;
+  const currentPassword = body.currentPassword; // Current password
+  const newPassword = body.newPassword; // New password
 
   // Query the database to retrieve the stored password for the given list
   const sqlGetListPassword = 'SELECT password FROM lists WHERE name = ?';
@@ -132,30 +203,31 @@ app.post('/change-password', (req, res) => {
   const resultGetListPassword = queryGetListPassword.get(paramsGetListPassword);
 
   if (!resultGetListPassword) {
-    return res.status(400).json({ error: `List "${listName}" does not exist.` });
+    return jsonError(`List "${listName}" does not exist.`);
   }
 
   const storedPassword = resultGetListPassword.password;
 
   // Compare the provided current password with the stored password
   if (currentPassword !== storedPassword) {
-    return res.status(401).json({ error: 'Invalid current password for this list.' });
+    return jsonError('Invalid current password for this list.', 401);
   }
 
   // Update the password in the 'lists' table
   const sqlUpdatePassword = 'UPDATE lists SET password = ? WHERE name = ?';
   const paramsUpdatePassword = [newPassword, listName];
-
-  runQuery(sqlUpdatePassword, paramsUpdatePassword, `Password for list "${listName}" changed successfully.`, `Failed to change password for list "${listName}".`, res);
+   
+  return runQuery(sqlUpdatePassword, paramsUpdatePassword, `Password for list "${listName}" changed successfully.`, `Failed to change password for list "${listName}".`);
 });
 
 
 
 // Endpoint to add items to a list (with uniqueness check)
-app.post('/add-item', (req, res) => {
-  const listName = req.body.listName;
-  const newItem = req.body.item;
-  const password = req.body.password; // Add password parameter
+app.post('/add-item', async (req) => {
+  const body = await req.json();
+  const listName = body.listName;
+  const newItem = body.item;
+  const password = body.password; // Add password parameter
 
   const sqlGetListId = 'SELECT id, password FROM lists WHERE name = ?';
   const paramsGetListId = [listName];
@@ -163,7 +235,7 @@ app.post('/add-item', (req, res) => {
   const queryGetListId = db.query(sqlGetListId);
   const resultGetListId = queryGetListId.get(paramsGetListId);
   if (!resultGetListId) {
-    return res.status(400).json({ error: `List "${listName}" does not exist.` });
+    return jsonError(`List "${listName}" does not exist.`);
   }
 
   const listId = resultGetListId.id;
@@ -171,7 +243,7 @@ app.post('/add-item', (req, res) => {
 
   // Check if the provided password matches the stored password
   if (password !== storedPassword) {
-    return res.status(401).json({ error: 'Invalid password for this list.' });
+    return jsonError('Invalid password for this list.', 401);
   }
 
   // Check for existing items with the same name in the 'items' table
@@ -182,20 +254,21 @@ app.post('/add-item', (req, res) => {
   const resultCheckExistingItem = queryCheckExistingItem.get(paramsCheckExistingItem);
 
   if (resultCheckExistingItem) {
-    return res.status(400).json({ error: `Item "${newItem.name}" already exists in list "${listName}".` });
+    return jsonError(`Item "${newItem.name}" already exists in list "${listName}".`);
   }
 
   // Insert the new item into the 'items' table with JSON data
   const sqlInsertNewItem = 'INSERT INTO items (list_id, name, data) VALUES (?, ?, ?)';
   const paramsInsertNewItem = [listId, newItem.name, JSON.stringify(newItem.data)];
 
-  runQuery(sqlInsertNewItem, paramsInsertNewItem, `Item "${newItem.name}" added to list "${listName}" successfully.`, `Failed to add item to list "${listName}".`, res);
+  return runQuery(sqlInsertNewItem, paramsInsertNewItem, `Item "${newItem.name}" added to list "${listName}" successfully.`, `Failed to add item to list "${listName}".`);
 });
 
 // Endpoint to delete a list and its associated items
-app.delete('/delete-list', (req, res) => {
-  const listName = req.body.listName;
-  const password = req.body.password; // Add password parameter
+app.delete('/delete-list', async (req) => {
+  const body = await req.json();
+  const listName = body.listName;
+  const password = body.password; // Add password parameter
 
   const sqlGetListId = 'SELECT id, password FROM lists WHERE name = ?';
   const paramsGetListId = [listName];
@@ -203,7 +276,7 @@ app.delete('/delete-list', (req, res) => {
   const queryGetListId = db.query(sqlGetListId);
   const resultGetListId = queryGetListId.get(paramsGetListId);
   if (!resultGetListId) {
-    return res.status(400).json({ error: `List "${listName}" does not exist.` });
+    return jsonError(`List "${listName}" does not exist.`);
   }
 
   const listId = resultGetListId.id;
@@ -211,7 +284,7 @@ app.delete('/delete-list', (req, res) => {
 
   // Check if the provided password matches the stored password
   if (password !== storedPassword) {
-    return res.status(401).json({ error: 'Invalid password for this list.' });
+    return jsonError('Invalid password for this list.', 401);
   }
 
   // Delete the items associated with the list from the 'items' table
@@ -222,7 +295,7 @@ app.delete('/delete-list', (req, res) => {
     const queryDeleteItems = db.query(sqlDeleteItems);
     queryDeleteItems.run(paramsDeleteItems);
   } catch (error) {
-    return res.status(400).json({ error: `Failed to delete items from list "${listName}".` });
+    return jsonError(`Failed to delete items from list "${listName}".`);
   }
 
   // Delete the Elo ratings for the items from the 'elo_ratings' table
@@ -233,20 +306,21 @@ app.delete('/delete-list', (req, res) => {
     const queryDeleteEloRatings = db.query(sqlDeleteEloRatings);
     queryDeleteEloRatings.run(paramsDeleteEloRatings);
   } catch (error) {
-    return res.status(400).json({ error: `Failed to delete Elo ratings for list "${listName}".` });
+    return jsonError(`Failed to delete Elo ratings for list "${listName}".` );
   }
 
   // Delete the list from the 'lists' table
   const sqlDeleteList = 'DELETE FROM lists WHERE name = ?';
   const paramsDeleteList = [listName];
 
-  runQuery(sqlDeleteList, paramsDeleteList, `List "${listName}" and its items deleted successfully.`, `Failed to delete list "${listName}".`, res);
+  return runQuery(sqlDeleteList, paramsDeleteList, `List "${listName}" and its items deleted successfully.`, `Failed to delete list "${listName}".`);
 });
 
-app.post('/delete-item', (req, res) => {
-  const listName = req.body.listName;
-  const itemName = req.body.itemName;
-  const password = req.body.password; // Add password parameter
+app.post('/delete-item', async (req) => {
+  const body = await req.json();
+  const listName = body.listName;
+  const itemName = body.itemName;
+  const password = body.password; // Add password parameter
 
   const sqlGetListId = 'SELECT id, password FROM lists WHERE name = ?';
   const paramsGetListId = [listName];
@@ -255,7 +329,7 @@ app.post('/delete-item', (req, res) => {
     const queryGetListId = db.query(sqlGetListId);
     const resultGetListId = queryGetListId.get(paramsGetListId);
     if (!resultGetListId) {
-      return res.status(400).json({ error: `List "${listName}" does not exist.` });
+      return jsonError(`List "${listName}" does not exist.`);
     }
 
     const listId = resultGetListId.id;
@@ -263,22 +337,26 @@ app.post('/delete-item', (req, res) => {
 
     // Check if the provided password matches the stored password
     if (password !== storedPassword) {
-      return res.status(401).json({ error: 'Invalid password for this list.' });
+      return jsonError('Invalid password for this list.', 401);
     }
 
     // Delete the item from the 'items' table
     const sqlDeleteItem = 'DELETE FROM items WHERE list_id = ? AND name = ?';
     const paramsDeleteItem = [listId, itemName];
 
-    runQuery(sqlDeleteItem, paramsDeleteItem, `Item "${itemName}" deleted from list "${listName}" successfully.`, `Failed to delete item "${itemName}" from list "${listName}".`, res);
+    return runQuery(sqlDeleteItem, paramsDeleteItem, `Item "${itemName}" deleted from list "${listName}" successfully.`, `Failed to delete item "${itemName}" from list "${listName}".`);
   } catch (error) {
-    res.status(400).json({ error: `Failed to fetch list ID for list "${listName}".` });
+    return jsonError(`Failed to fetch list ID for list "${listName}".`);
   }
 });
 
 // Endpoint to get a random pair of items for voting
-app.get('/get-pair', (req, res) => {
-  const listName = req.query.listName;
+app.get('/get-pair', (req) => {
+  const params = (new URL(req.url)).searchParams;
+  if (!params.has("listName")) {
+    return jsonError(`Invalid query, listName= required`);
+  }
+  const listName = params.get("listName");
 
   const sqlGetListId = 'SELECT id FROM lists WHERE name = ?';
   const paramsGetListId = [listName];
@@ -287,7 +365,7 @@ app.get('/get-pair', (req, res) => {
     const queryGetListId = db.query(sqlGetListId);
     const resultGetListId = queryGetListId.get(paramsGetListId);
     if (!resultGetListId) {
-      return res.status(400).json({ error: `List "${listName}" does not exist.` });
+      return jsonError(`List "${listName}" does not exist.`);
     }
 
     const listId = resultGetListId.id;
@@ -311,21 +389,25 @@ app.get('/get-pair', (req, res) => {
         const item1 = resultsGetItems[randomIndex1];
         const item2 = resultsGetItems[randomIndex2];
 
-        res.status(200).json({ item1, item2 });
+        return Response.json({ item1, item2 });
       } else {
-        res.status(400).json({ error: `Not enough items in list "${listName}" for voting.`, data: resultsGetItems });
+        return jsonError(`Not enough items in list "${listName}" for voting.`);
       }
     } catch (error) {
-      res.status(400).json({ error: `Failed to retrieve items from list "${listName}".` });
+      return jsonError(`Failed to retrieve items from list "${listName}".`);
     }
   } catch (error) {
-    res.status(400).json({ error: `Failed to fetch list ID for list "${listName}".` });
+    jsonError(`Failed to fetch list ID for list "${listName}".`);
   }
 });
 
 // Endpoint to get items in a list sorted by Elo rating
-app.get('/get-sorted-list', (req, res) => {
-  const listName = req.query.listName;
+app.get('/get-sorted-list', (req) => {
+  const params = (new URL(req.url)).searchParams;
+  if (!params.has("listName")) {
+    return jsonError(`Invalid query, listName= required`);
+  }
+  const listName = params.get("listName");
 
   const sqlGetListId = 'SELECT id FROM lists WHERE name = ?';
   const paramsGetListId = [listName];
@@ -333,7 +415,7 @@ app.get('/get-sorted-list', (req, res) => {
   const queryGetListId = db.query(sqlGetListId);
   const resultGetListId = queryGetListId.get(paramsGetListId);
   if (!resultGetListId) {
-    return res.status(400).json({ error: `List "${listName}" does not exist.` });
+    return jsonError(`List "${listName}" does not exist.`);
   }
 
   const listId = resultGetListId.id;
@@ -346,7 +428,7 @@ app.get('/get-sorted-list', (req, res) => {
   const resultsGetItems = queryGetItems.all(paramsGetItems);
 
   if (!resultsGetItems) {
-    res.status(400).json({ error: `Failed to retrieve items from list "${listName}".` });
+    return jsonError(`Failed to retrieve items from list "${listName}".`);
   }
 
   // Fetch Elo ratings for items from the 'elo_ratings' table
@@ -356,7 +438,7 @@ app.get('/get-sorted-list', (req, res) => {
   const queryGetEloRatings = db.query(sqlGetEloRatings);
   const eloRows = queryGetEloRatings.all(paramsGetEloRatings);
   if (!eloRows) {
-    res.status(400).json({ error: `Failed to fetch Elo ratings for list "${listName}".` });
+    return jsonError(`Failed to fetch Elo ratings for list "${listName}".`);
   }
 
   const eloRatings = {};
@@ -375,13 +457,14 @@ app.get('/get-sorted-list', (req, res) => {
     item.elo = eloRatings[item.name] || 1000;
   });
 
-  res.status(200).json({ list: sortedItems });
+  return Response.json({ list: sortedItems });
 });
 
-app.post('/vote', (req, res) => {
-  const listName = req.body.listName;
-  const winner = req.body.winner; // Winner item from the pair
-  const loser = req.body.loser;   // Loser item from the pair
+app.post('/vote', async (req) => {
+  const body = await req.json();
+  const listName = body.listName;
+  const winner = body.winner; // Winner item from the pair
+  const loser = body.loser;   // Loser item from the pair
 
 
   const sqlGetWinnerRating = 'SELECT rating FROM elo_ratings WHERE list_name = ? AND item_name = ?';
@@ -417,7 +500,7 @@ app.post('/vote', (req, res) => {
   const sqlInsertVote = 'INSERT INTO list_votes (list_name, user_id) VALUES (?, ?)';
   const paramsInsertVote = [listName, userId];
 
-  runQueries(
+  return runQueries(
       [
         sqlUpdateWinnerRating,
         sqlUpdateLoserRating,
@@ -429,13 +512,12 @@ app.post('/vote', (req, res) => {
         paramsInsertVote,
       ],
       `Elo for "${winner}" and "${loser}" updated successfully.`,
-      `Failed to update Elo for "${winner}" and "${loser}".`,
-      res
+      `Failed to update Elo for "${winner}" and "${loser}".`
       );
 });
 
 // Endpoint to get the names of all available lists
-app.get('/get-lists', (req, res) => {
+app.get('/get-lists', (req) => {
   const sqlGetLists = `
     SELECT lists.name, COUNT(list_votes.id) as vote_count
     FROM lists
@@ -447,7 +529,7 @@ app.get('/get-lists', (req, res) => {
   const queryGetLists = db.query(sqlGetLists);
   const resultsGetLists = queryGetLists.all([]);
   if (!resultsGetLists) {
-  res.status(400).json({ error: 'Failed to fetch list names.' });
+  return jsonError('Failed to fetch list names.');
   }
 
   const sortedLists = resultsGetLists.map((row) => ({
@@ -455,11 +537,8 @@ app.get('/get-lists', (req, res) => {
     voteCount: row.vote_count
   }));
 
-  res.status(200).json({ lists: sortedLists });
+  return Response.json({ lists: sortedLists });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
 
+app.serve();
