@@ -101,24 +101,20 @@ app.post('/check-password', (req, res) => {
   const sqlGetListPassword = 'SELECT password FROM lists WHERE name = ?';
   const paramsGetListPassword = [listName];
 
-  try {
-    const queryGetListPassword = db.query(sqlGetListPassword);
-    const resultGetListPassword = queryGetListPassword.get(paramsGetListPassword);
+  const queryGetListPassword = db.query(sqlGetListPassword);
+  const resultGetListPassword = queryGetListPassword.get(paramsGetListPassword);
 
-    if (!resultGetListPassword) {
-      return res.status(400).json({ error: `List "${listName}" does not exist.` });
-    }
+  if (!resultGetListPassword) {
+    return res.status(400).json({ error: `List "${listName}" does not exist.` });
+  }
 
-    const storedPassword = resultGetListPassword.password;
+  const storedPassword = resultGetListPassword.password;
 
-    // Compare the provided password with the stored password
-    if (password === storedPassword) {
-      return res.status(200).json({ message: 'Password is valid.' });
-    } else {
-      return res.status(401).json({ error: 'Invalid password for this list.' });
-    }
-  } catch (error) {
-    res.status(400).json({ error: `Failed to check the password for list "${listName}".` });
+  // Compare the provided password with the stored password
+  if (password === storedPassword) {
+    return res.status(200).json({ message: 'Password is valid.' });
+  } else {
+    return res.status(401).json({ error: 'Invalid password for this list.' });
   }
 });
 
@@ -132,29 +128,25 @@ app.post('/change-password', (req, res) => {
   const sqlGetListPassword = 'SELECT password FROM lists WHERE name = ?';
   const paramsGetListPassword = [listName];
 
-  try {
-    const queryGetListPassword = db.query(sqlGetListPassword);
-    const resultGetListPassword = queryGetListPassword.get(paramsGetListPassword);
+  const queryGetListPassword = db.query(sqlGetListPassword);
+  const resultGetListPassword = queryGetListPassword.get(paramsGetListPassword);
 
-    if (!resultGetListPassword) {
-      return res.status(400).json({ error: `List "${listName}" does not exist.` });
-    }
-
-    const storedPassword = resultGetListPassword.password;
-
-    // Compare the provided current password with the stored password
-    if (currentPassword !== storedPassword) {
-      return res.status(401).json({ error: 'Invalid current password for this list.' });
-    }
-
-    // Update the password in the 'lists' table
-    const sqlUpdatePassword = 'UPDATE lists SET password = ? WHERE name = ?';
-    const paramsUpdatePassword = [newPassword, listName];
-
-    runQuery(sqlUpdatePassword, paramsUpdatePassword, `Password for list "${listName}" changed successfully.`, `Failed to change password for list "${listName}".`, res);
-  } catch (error) {
-    res.status(400).json({ error: `Failed to change the password for list "${listName}".` });
+  if (!resultGetListPassword) {
+    return res.status(400).json({ error: `List "${listName}" does not exist.` });
   }
+
+  const storedPassword = resultGetListPassword.password;
+
+  // Compare the provided current password with the stored password
+  if (currentPassword !== storedPassword) {
+    return res.status(401).json({ error: 'Invalid current password for this list.' });
+  }
+
+  // Update the password in the 'lists' table
+  const sqlUpdatePassword = 'UPDATE lists SET password = ? WHERE name = ?';
+  const paramsUpdatePassword = [newPassword, listName];
+
+  runQuery(sqlUpdatePassword, paramsUpdatePassword, `Password for list "${listName}" changed successfully.`, `Failed to change password for list "${listName}".`, res);
 });
 
 
@@ -346,57 +338,52 @@ app.get('/get-sorted-list', (req, res) => {
   const sqlGetListId = 'SELECT id FROM lists WHERE name = ?';
   const paramsGetListId = [listName];
 
-  try {
-    const queryGetListId = db.query(sqlGetListId);
-    const resultGetListId = queryGetListId.get(paramsGetListId);
-    if (!resultGetListId) {
-      return res.status(400).json({ error: `List "${listName}" does not exist.` });
-    }
-
-    const listId = resultGetListId.id;
-
-    // Fetch items associated with the list from the 'items' table
-    const sqlGetItems = 'SELECT * FROM items WHERE list_id = ?';
-    const paramsGetItems = [listId];
-
-    try {
-      const queryGetItems = db.query(sqlGetItems);
-      const resultsGetItems = queryGetItems.all(paramsGetItems);
-
-      // Fetch Elo ratings for items from the 'elo_ratings' table
-      const sqlGetEloRatings = 'SELECT item_name, rating FROM elo_ratings WHERE list_name = ?';
-      const paramsGetEloRatings = [listName];
-
-      try {
-        const queryGetEloRatings = db.query(sqlGetEloRatings);
-        const eloRows = queryGetEloRatings.all(paramsGetEloRatings);
-
-        const eloRatings = {};
-        eloRows.forEach((row) => {
-          eloRatings[row.item_name] = row.rating;
-        });
-
-        // Sort items based on Elo ratings
-        const sortedItems = resultsGetItems.slice().sort((itemA, itemB) => {
-          const ratingA = eloRatings[itemA.name] || 1000; // Default rating if not available
-          const ratingB = eloRatings[itemB.name] || 1000;
-          return ratingB - ratingA; // Sort in descending order
-        });
-
-        sortedItems.forEach((item) => {
-          item.elo = eloRatings[item.name] || 1000;
-        });
-
-        res.status(200).json({ list: sortedItems });
-      } catch (error) {
-        res.status(400).json({ error: `Failed to fetch Elo ratings for list "${listName}".` });
-      }
-    } catch (error) {
-      res.status(400).json({ error: `Failed to retrieve items from list "${listName}".` });
-    }
-  } catch (error) {
-    res.status(400).json({ error: `Failed to fetch list ID for list "${listName}".` });
+  const queryGetListId = db.query(sqlGetListId);
+  const resultGetListId = queryGetListId.get(paramsGetListId);
+  if (!resultGetListId) {
+    return res.status(400).json({ error: `List "${listName}" does not exist.` });
   }
+
+  const listId = resultGetListId.id;
+
+  // Fetch items associated with the list from the 'items' table
+  const sqlGetItems = 'SELECT * FROM items WHERE list_id = ?';
+  const paramsGetItems = [listId];
+
+  const queryGetItems = db.query(sqlGetItems);
+  const resultsGetItems = queryGetItems.all(paramsGetItems);
+
+  if (!resultsGetItems) {
+    res.status(400).json({ error: `Failed to retrieve items from list "${listName}".` });
+  }
+
+  // Fetch Elo ratings for items from the 'elo_ratings' table
+  const sqlGetEloRatings = 'SELECT item_name, rating FROM elo_ratings WHERE list_name = ?';
+  const paramsGetEloRatings = [listName];
+
+  const queryGetEloRatings = db.query(sqlGetEloRatings);
+  const eloRows = queryGetEloRatings.all(paramsGetEloRatings);
+  if (!eloRows) {
+    res.status(400).json({ error: `Failed to fetch Elo ratings for list "${listName}".` });
+  }
+
+  const eloRatings = {};
+  eloRows.forEach((row) => {
+    eloRatings[row.item_name] = row.rating;
+  });
+
+  // Sort items based on Elo ratings
+  const sortedItems = resultsGetItems.slice().sort((itemA, itemB) => {
+    const ratingA = eloRatings[itemA.name] || 1000; // Default rating if not available
+    const ratingB = eloRatings[itemB.name] || 1000;
+    return ratingB - ratingA; // Sort in descending order
+  });
+
+  sortedItems.forEach((item) => {
+    item.elo = eloRatings[item.name] || 1000;
+  });
+
+  res.status(200).json({ list: sortedItems });
 });
 
 app.post('/vote', (req, res) => {
@@ -405,39 +392,19 @@ app.post('/vote', (req, res) => {
   const loser = req.body.loser;   // Loser item from the pair
 
 
-  const winnerRating = (() => {
-    try {
-      const sqlGetWinnerRating = 'SELECT rating FROM elo_ratings WHERE list_name = ? AND item_name = ?';
-      const paramsGetWinnerRating = [listName, winner];
+  const sqlGetWinnerRating = 'SELECT rating FROM elo_ratings WHERE list_name = ? AND item_name = ?';
+  const paramsGetWinnerRating = [listName, winner];
 
-      const queryGetWinnerRating = db.query(sqlGetWinnerRating);
-      const resultGetWinnerRating = queryGetWinnerRating.get(paramsGetWinnerRating);
-      return resultGetWinnerRating ? resultGetWinnerRating.rating : 1000; // Default rating if not available
-    } catch (e) {
-      return null;
-    }
-  })();
+  const queryGetWinnerRating = db.query(sqlGetWinnerRating);
+  const resultGetWinnerRating = queryGetWinnerRating.get(paramsGetWinnerRating);
+  const winnerRating = resultGetWinnerRating ? resultGetWinnerRating.rating : 1000; // Default rating if not available
 
-  if (winnerRating === null) {
-    return res.status(400).json({ error: `Failed to find winner "${winner}".` });
-  }
+  const sqlGetLoserRating = 'SELECT rating FROM elo_ratings WHERE list_name = ? AND item_name = ?';
+  const paramsGetLoserRating = [listName, loser];
 
-  const loserRating = (() => {
-    try {
-
-      const sqlGetLoserRating = 'SELECT rating FROM elo_ratings WHERE list_name = ? AND item_name = ?';
-      const paramsGetLoserRating = [listName, loser];
-
-      const queryGetLoserRating = db.query(sqlGetLoserRating);
-      const resultGetLoserRating = queryGetLoserRating.get(paramsGetLoserRating);
-      return resultGetLoserRating ? resultGetLoserRating.rating : 1000;
-    } catch (e) {
-      return null;
-    }
-  })();
-  if (loserRating === null) {
-    res.status(400).json({ error: `Failed to find loser "${loser}".` });
-  }
+  const queryGetLoserRating = db.query(sqlGetLoserRating);
+  const resultGetLoserRating = queryGetLoserRating.get(paramsGetLoserRating);
+  const loserRating = resultGetLoserRating ? resultGetLoserRating.rating : 1000;
 
   // Calculate Elo updates
   const winnerExpected = 1 / (1 + 10 ** ((loserRating - winnerRating) / 400));
@@ -485,19 +452,18 @@ app.get('/get-lists', (req, res) => {
     ORDER BY vote_count DESC
   `;
 
-  try {
-    const queryGetLists = db.query(sqlGetLists);
-    const resultsGetLists = queryGetLists.all([]);
-
-    const sortedLists = resultsGetLists.map((row) => ({
-      name: row.name,
-      voteCount: row.vote_count
-    }));
-
-    res.status(200).json({ lists: sortedLists });
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to fetch list names.' });
+  const queryGetLists = db.query(sqlGetLists);
+  const resultsGetLists = queryGetLists.all([]);
+  if (!resultsGetLists) {
+  res.status(400).json({ error: 'Failed to fetch list names.' });
   }
+
+  const sortedLists = resultsGetLists.map((row) => ({
+    name: row.name,
+    voteCount: row.vote_count
+  }));
+
+  res.status(200).json({ lists: sortedLists });
 });
 
 const PORT = process.env.PORT || 3000;
