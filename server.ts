@@ -333,7 +333,6 @@ app.get('/get-sorted-list', (req, res) => {
   const queryGetListId = db.query(sqlGetListId);
   const resultGetListId = queryGetListId.get(paramsGetListId);
   if (!resultGetListId) {
-    console.log('no list ', listName);
     return res.status(400).json({ error: `List "${listName}" does not exist.` });
   }
 
@@ -347,7 +346,6 @@ app.get('/get-sorted-list', (req, res) => {
   const resultsGetItems = queryGetItems.all(paramsGetItems);
 
   if (!resultsGetItems) {
-    console.log('no items');
     res.status(400).json({ error: `Failed to retrieve items from list "${listName}".` });
   }
 
@@ -358,7 +356,6 @@ app.get('/get-sorted-list', (req, res) => {
   const queryGetEloRatings = db.query(sqlGetEloRatings);
   const eloRows = queryGetEloRatings.all(paramsGetEloRatings);
   if (!eloRows) {
-    console.log('elo no fetch');
     res.status(400).json({ error: `Failed to fetch Elo ratings for list "${listName}".` });
   }
 
