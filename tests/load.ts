@@ -106,6 +106,31 @@ async function deleteList(list) {
   delete lists[list];
 }
 
+async function getSortedList(list) {
+  await track('getSortedList', async () => {
+      await api.getSortedList(list);
+  });
+}
+
+async function getListsWithPopularity() {
+  await track('getListsWithPopularity', async () => {
+    await api.getListsWithPopularity();
+  });
+}
+
+function getRandomLists(size) {
+  const list_keys = Object.keys(lists);
+  const shuffled = list_keys.slice(0);
+  let i = list_keys.length;
+  while (i--) {
+      const index = Math.floor((i + 1) * Math.random());
+      const temp = shuffled[index];
+      shuffled[index] = shuffled[i];
+      shuffled[i] = temp;
+  }
+  return shuffled.slice(0, size);
+}
+
 function getRandomList() {
   const list_keys = Object.keys(lists);
   const list_key = list_keys[Math.floor(Math.random() * list_keys.length)]
@@ -120,31 +145,13 @@ async function randomActions() {
   if (Math.random() < 0.15) {
     await randomCreateList();
   }
-  if (Math.random() < 0.7) {
-    await randomAddItem(getRandomList());
-  }
-  if (Math.random() < 0.2) {
-    await randomDeleteItem(getRandomList());
-  }
-  if (Math.random() < 0.8) {
-    await randomVote(getRandomList());
-  }
-  if (Math.random() < 0.1) {
-    await randomPasswordChange(getRandomList());
-  }
-  if (Math.random() < 0.5) {
-    await track('getSortedList', async () => {
-        await api.getSortedList(getRandomList());
-    });
-  }
-  if (Math.random() < 0.5) {
-    await track('getListsWithPopularity', async () => {
-        await api.getListsWithPopularity();
-    });
-  }
-  if (Math.random() < 0.1) {
-    await deleteList(getRandomList());
-  }
+  await Promise.all(getRandomLists(Math.floor(Math.random() * 8)).map(randomAddItem))
+  await Promise.all(getRandomLists(Math.floor(Math.random() * 2)).map(randomDeleteItem))
+  await Promise.all(getRandomLists(Math.floor(Math.random() * 50)).map(randomVote))
+  await Promise.all(getRandomLists(Math.floor(Math.random() * 2)).map(randomPasswordChange))
+  await Promise.all(getRandomLists(Math.floor(Math.random() * 20)).map(getSortedList))
+  await Promise.all(getRandomLists(Math.floor(Math.random() * 20)).map(getListsWithPopularity))
+  await Promise.all(getRandomLists(Math.floor(Math.random() * 2)).map(deleteList))
 }
 
 async function cleanup() {
@@ -153,7 +160,7 @@ async function cleanup() {
   }
 }
 
-for (let i of api.viter(1000)) {
+for (let i of api.viter(100)) {
   await randomActions();
 }
 
