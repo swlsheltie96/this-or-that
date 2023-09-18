@@ -495,8 +495,7 @@ app.post('/vote', async (req) => {
   const sqlUpdateLoserRating = 'INSERT OR REPLACE INTO elo_ratings (list_name, item_name, rating) VALUES (?, ?, ?)';
   const paramsUpdateLoserRating = [listName, loser, loserNewRating];
 
-  const userId = 0;
-  //const userId = req.headers.has('x-forwarded-for') ? req.headers.get('x-forwarded-for') : 0;
+  const userId = req.headers.has('x-forwarded-for') ? req.headers.get('x-forwarded-for') : 0;
   const sqlInsertVote = 'INSERT INTO list_votes (list_name, user_id) VALUES (?, ?)';
   const paramsInsertVote = [listName, userId];
 
