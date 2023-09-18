@@ -1,6 +1,5 @@
-const PORT = process.env.PORT || 3000;
-const SERVER = process.env.SERVER || 'localhost';
-const DEBUG = process.env.DEBUG || false;//(SERVER == 'localhost');
+const SERVER = process.env.SERVER || 'http://localhost:3000';
+const DEBUG = process.env.DEBUG || false;
 
 function log(...args) {
   if (DEBUG) {
@@ -10,7 +9,7 @@ function log(...args) {
 
 // Create a new list with a password
 export async function createList(listName, password) {
-  const response = await fetch(`http://${SERVER}:${PORT}/create-list`, {
+  const response = await fetch(`${SERVER}/create-list`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ listName: listName, password: password }) // Include the password
@@ -22,7 +21,7 @@ export async function createList(listName, password) {
 
 // Check the password for a list
 export async function checkPassword(listName, password) {
-  const response = await fetch(`http://${SERVER}:${PORT}/check-password`, {
+  const response = await fetch(`${SERVER}/check-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ listName: listName, password: password })
@@ -33,7 +32,7 @@ export async function checkPassword(listName, password) {
 
 // Delete a list and its associated items with a password
 export async function deleteList(listName, password) {
-  const response = await fetch(`http://${SERVER}:${PORT}/delete-list`, {
+  const response = await fetch(`${SERVER}/delete-list`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ listName: listName, password: password }) // Include the password
@@ -48,7 +47,7 @@ export async function deleteList(listName, password) {
 
 // Add an item to a list with a password
 export async function addItem(listName, item, password) {
-  const response = await fetch(`http://${SERVER}:${PORT}/add-item`, {
+  const response = await fetch(`${SERVER}/add-item`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ listName: listName, item: item, password: password }) // Include the password
@@ -63,7 +62,7 @@ export async function addItem(listName, item, password) {
 
 // Delete an item from a list with a password
 export async function deleteItem(listName, itemName, password) {
-  const response = await fetch(`http://${SERVER}:${PORT}/delete-item`, {
+  const response = await fetch(`${SERVER}/delete-item`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ listName: listName, itemName: itemName, password: password }) // Include the password
@@ -78,7 +77,7 @@ export async function deleteItem(listName, itemName, password) {
 
 // Get a random pair of items for voting
 export async function getPairForVoting(listName) {
-  const response = await fetch(`http://${SERVER}:${PORT}/get-pair?listName=${encodeURIComponent(listName)}`);
+  const response = await fetch(`${SERVER}/get-pair?listName=${encodeURIComponent(listName)}`);
   if (!response.ok) {
     throw new Error(`Failed: ${response.statusText}`);
   }
@@ -89,7 +88,7 @@ export async function getPairForVoting(listName) {
 
 // Vote on a pair of items
 export async function vote(listName, winner, loser) {
-  const response = await fetch(`http://${SERVER}:${PORT}/vote`, {
+  const response = await fetch(`${SERVER}/vote`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ listName: listName, winner: winner, loser: loser })
@@ -104,7 +103,7 @@ export async function vote(listName, winner, loser) {
 
 // Test function for the /get-sorted-list endpoint
 export async function getSortedList(listName) {
-  const response = await fetch(`http://${SERVER}:${PORT}/get-sorted-list?listName=${encodeURIComponent(listName)}`);
+  const response = await fetch(`${SERVER}/get-sorted-list?listName=${encodeURIComponent(listName)}`);
   if (!response.ok) {
     throw new Error(`Failed: ${response.statusText}`);
   }
@@ -121,7 +120,7 @@ export async function getSortedList(listName) {
 
 // Function to test the get-lists endpoint
 export async function getListsWithPopularity() {
-  const response = await fetch(`http://${SERVER}:${PORT}/get-lists`);
+  const response = await fetch(`${SERVER}/get-lists`);
   if (!response.ok) {
     throw new Error(`Failed: ${response.statusText}`);
   }
@@ -133,7 +132,7 @@ export async function getListsWithPopularity() {
 
 // Change the password for a list
 export async function changePassword(listName, currentPassword, newPassword) {
-  const response = await fetch(`http://${SERVER}:${PORT}/change-password`, {
+  const response = await fetch(`${SERVER}/change-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
