@@ -160,40 +160,36 @@ app.post('/add-item', (req, res) => {
   const sqlGetListId = 'SELECT id, password FROM lists WHERE name = ?';
   const paramsGetListId = [listName];
 
-  try {
-    const queryGetListId = db.query(sqlGetListId);
-    const resultGetListId = queryGetListId.get(paramsGetListId);
-    if (!resultGetListId) {
-      return res.status(400).json({ error: `List "${listName}" does not exist.` });
-    }
-
-    const listId = resultGetListId.id;
-    const storedPassword = resultGetListId.password;
-
-    // Check if the provided password matches the stored password
-    if (password !== storedPassword) {
-      return res.status(401).json({ error: 'Invalid password for this list.' });
-    }
-
-    // Check for existing items with the same name in the 'items' table
-    const sqlCheckExistingItem = 'SELECT * FROM items WHERE list_id = ? AND name = ?';
-    const paramsCheckExistingItem = [listId, newItem.name];
-
-    const queryCheckExistingItem = db.query(sqlCheckExistingItem);
-    const resultCheckExistingItem = queryCheckExistingItem.get(paramsCheckExistingItem);
-
-    if (resultCheckExistingItem) {
-      return res.status(400).json({ error: `Item "${newItem.name}" already exists in list "${listName}".` });
-    }
-
-    // Insert the new item into the 'items' table with JSON data
-    const sqlInsertNewItem = 'INSERT INTO items (list_id, name, data) VALUES (?, ?, ?)';
-    const paramsInsertNewItem = [listId, newItem.name, JSON.stringify(newItem.data)];
-
-    runQuery(sqlInsertNewItem, paramsInsertNewItem, `Item "${newItem.name}" added to list "${listName}" successfully.`, `Failed to add item to list "${listName}".`, res);
-  } catch (error) {
-    res.status(400).json({ error: `Failed to check for existing item.` });
+  const queryGetListId = db.query(sqlGetListId);
+  const resultGetListId = queryGetListId.get(paramsGetListId);
+  if (!resultGetListId) {
+    return res.status(400).json({ error: `List "${listName}" does not exist.` });
   }
+
+  const listId = resultGetListId.id;
+  const storedPassword = resultGetListId.password;
+
+  // Check if the provided password matches the stored password
+  if (password !== storedPassword) {
+    return res.status(401).json({ error: 'Invalid password for this list.' });
+  }
+
+  // Check for existing items with the same name in the 'items' table
+  const sqlCheckExistingItem = 'SELECT * FROM items WHERE list_id = ? AND name = ?';
+  const paramsCheckExistingItem = [listId, newItem.name];
+
+  const queryCheckExistingItem = db.query(sqlCheckExistingItem);
+  const resultCheckExistingItem = queryCheckExistingItem.get(paramsCheckExistingItem);
+
+  if (resultCheckExistingItem) {
+    return res.status(400).json({ error: `Item "${newItem.name}" already exists in list "${listName}".` });
+  }
+
+  // Insert the new item into the 'items' table with JSON data
+  const sqlInsertNewItem = 'INSERT INTO items (list_id, name, data) VALUES (?, ?, ?)';
+  const paramsInsertNewItem = [listId, newItem.name, JSON.stringify(newItem.data)];
+
+  runQuery(sqlInsertNewItem, paramsInsertNewItem, `Item "${newItem.name}" added to list "${listName}" successfully.`, `Failed to add item to list "${listName}".`, res);
 });
 
 // Endpoint to delete a list and its associated items
@@ -204,51 +200,47 @@ app.delete('/delete-list', (req, res) => {
   const sqlGetListId = 'SELECT id, password FROM lists WHERE name = ?';
   const paramsGetListId = [listName];
 
-  try {
-    const queryGetListId = db.query(sqlGetListId);
-    const resultGetListId = queryGetListId.get(paramsGetListId);
-    if (!resultGetListId) {
-      return res.status(400).json({ error: `List "${listName}" does not exist.` });
-    }
-
-    const listId = resultGetListId.id;
-    const storedPassword = resultGetListId.password;
-
-    // Check if the provided password matches the stored password
-    if (password !== storedPassword) {
-      return res.status(401).json({ error: 'Invalid password for this list.' });
-    }
-
-    // Delete the items associated with the list from the 'items' table
-    const sqlDeleteItems = 'DELETE FROM items WHERE list_id = ?';
-    const paramsDeleteItems = [listId];
-
-    try {
-      const queryDeleteItems = db.query(sqlDeleteItems);
-      queryDeleteItems.run(paramsDeleteItems);
-    } catch (error) {
-      return res.status(400).json({ error: `Failed to delete items from list "${listName}".` });
-    }
-
-    // Delete the Elo ratings for the items from the 'elo_ratings' table
-    const sqlDeleteEloRatings = 'DELETE FROM elo_ratings WHERE list_name = ?';
-    const paramsDeleteEloRatings = [listName];
-
-    try {
-      const queryDeleteEloRatings = db.query(sqlDeleteEloRatings);
-      queryDeleteEloRatings.run(paramsDeleteEloRatings);
-    } catch (error) {
-      return res.status(400).json({ error: `Failed to delete Elo ratings for list "${listName}".` });
-    }
-
-    // Delete the list from the 'lists' table
-    const sqlDeleteList = 'DELETE FROM lists WHERE name = ?';
-    const paramsDeleteList = [listName];
-
-    runQuery(sqlDeleteList, paramsDeleteList, `List "${listName}" and its items deleted successfully.`, `Failed to delete list "${listName}".`, res);
-  } catch (error) {
-    res.status(400).json({ error: `Failed to fetch list ID for list "${listName}".` });
+  const queryGetListId = db.query(sqlGetListId);
+  const resultGetListId = queryGetListId.get(paramsGetListId);
+  if (!resultGetListId) {
+    return res.status(400).json({ error: `List "${listName}" does not exist.` });
   }
+
+  const listId = resultGetListId.id;
+  const storedPassword = resultGetListId.password;
+
+  // Check if the provided password matches the stored password
+  if (password !== storedPassword) {
+    return res.status(401).json({ error: 'Invalid password for this list.' });
+  }
+
+  // Delete the items associated with the list from the 'items' table
+  const sqlDeleteItems = 'DELETE FROM items WHERE list_id = ?';
+  const paramsDeleteItems = [listId];
+
+  try {
+    const queryDeleteItems = db.query(sqlDeleteItems);
+    queryDeleteItems.run(paramsDeleteItems);
+  } catch (error) {
+    return res.status(400).json({ error: `Failed to delete items from list "${listName}".` });
+  }
+
+  // Delete the Elo ratings for the items from the 'elo_ratings' table
+  const sqlDeleteEloRatings = 'DELETE FROM elo_ratings WHERE list_name = ?';
+  const paramsDeleteEloRatings = [listName];
+
+  try {
+    const queryDeleteEloRatings = db.query(sqlDeleteEloRatings);
+    queryDeleteEloRatings.run(paramsDeleteEloRatings);
+  } catch (error) {
+    return res.status(400).json({ error: `Failed to delete Elo ratings for list "${listName}".` });
+  }
+
+  // Delete the list from the 'lists' table
+  const sqlDeleteList = 'DELETE FROM lists WHERE name = ?';
+  const paramsDeleteList = [listName];
+
+  runQuery(sqlDeleteList, paramsDeleteList, `List "${listName}" and its items deleted successfully.`, `Failed to delete list "${listName}".`, res);
 });
 
 app.post('/delete-item', (req, res) => {
@@ -341,6 +333,7 @@ app.get('/get-sorted-list', (req, res) => {
   const queryGetListId = db.query(sqlGetListId);
   const resultGetListId = queryGetListId.get(paramsGetListId);
   if (!resultGetListId) {
+    console.log('no list ', listName);
     return res.status(400).json({ error: `List "${listName}" does not exist.` });
   }
 
@@ -354,6 +347,7 @@ app.get('/get-sorted-list', (req, res) => {
   const resultsGetItems = queryGetItems.all(paramsGetItems);
 
   if (!resultsGetItems) {
+    console.log('no items');
     res.status(400).json({ error: `Failed to retrieve items from list "${listName}".` });
   }
 
@@ -364,6 +358,7 @@ app.get('/get-sorted-list', (req, res) => {
   const queryGetEloRatings = db.query(sqlGetEloRatings);
   const eloRows = queryGetEloRatings.all(paramsGetEloRatings);
   if (!eloRows) {
+    console.log('elo no fetch');
     res.status(400).json({ error: `Failed to fetch Elo ratings for list "${listName}".` });
   }
 

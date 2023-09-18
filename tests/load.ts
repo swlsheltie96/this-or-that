@@ -133,12 +133,12 @@ async function randomActions() {
     await randomPasswordChange(getRandomList());
   }
   if (Math.random() < 0.5) {
-    track('getSortedList', async () => {
+    await track('getSortedList', async () => {
         await api.getSortedList(getRandomList());
     });
   }
   if (Math.random() < 0.5) {
-    track('getListsWithPopularity', async () => {
+    await track('getListsWithPopularity', async () => {
         await api.getListsWithPopularity();
     });
   }
