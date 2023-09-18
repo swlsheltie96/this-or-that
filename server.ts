@@ -54,14 +54,29 @@ db.query(`
 const K = 32; // Elo constant, controls rating update magnitude
 
 // Helper function to wrap bun:sqlite queries and handle errors
-function runQuery(sql, params, successMessage, errorMessage, res) {
+function runQueries(sql, params, successMessage, errorMessage, res) {
   try {
-    const query = db.query(sql);
-    const result = query.run(params);
+    if (sql.length != params.length) {
+      throw Error('Invalid input to runQueries');
+    }
+    const queries = [];
+    for (let q of sql) {
+      queries.push(db.query(q));
+    }
+    const transaction = db.transaction((queries, params) => {
+      for (let i = 0; i < queries.length; ++i) {
+        const result = queries[i].run(params[i]);
+      }
+    });
+    transaction(queries, params);
     res.status(200).json({ message: successMessage });
   } catch (error) {
     res.status(400).json({ error: errorMessage });
   }
+}
+
+function runQuery(sql, params, successMessage, errorMessage, res) {
+  runQueries([sql], [params], successMessage, errorMessage, res);
 }
 
 // Endpoint to create a new list
@@ -389,53 +404,75 @@ app.post('/vote', (req, res) => {
   const winner = req.body.winner; // Winner item from the pair
   const loser = req.body.loser;   // Loser item from the pair
 
-  const sqlGetWinnerRating = 'SELECT rating FROM elo_ratings WHERE list_name = ? AND item_name = ?';
-  const paramsGetWinnerRating = [listName, winner];
 
-  try {
-    const queryGetWinnerRating = db.query(sqlGetWinnerRating);
-    const resultGetWinnerRating = queryGetWinnerRating.get(paramsGetWinnerRating);
-
-    const winnerRating = resultGetWinnerRating ? resultGetWinnerRating.rating : 1000; // Default rating if not available
-
-    const sqlGetLoserRating = 'SELECT rating FROM elo_ratings WHERE list_name = ? AND item_name = ?';
-    const paramsGetLoserRating = [listName, loser];
-
+  const winnerRating = (() => {
     try {
+      const sqlGetWinnerRating = 'SELECT rating FROM elo_ratings WHERE list_name = ? AND item_name = ?';
+      const paramsGetWinnerRating = [listName, winner];
+
+      const queryGetWinnerRating = db.query(sqlGetWinnerRating);
+      const resultGetWinnerRating = queryGetWinnerRating.get(paramsGetWinnerRating);
+      return resultGetWinnerRating ? resultGetWinnerRating.rating : 1000; // Default rating if not available
+    } catch (e) {
+      return null;
+    }
+  })();
+
+  if (winnerRating === null) {
+    return res.status(400).json({ error: `Failed to find winner "${winner}".` });
+  }
+
+  const loserRating = (() => {
+    try {
+
+      const sqlGetLoserRating = 'SELECT rating FROM elo_ratings WHERE list_name = ? AND item_name = ?';
+      const paramsGetLoserRating = [listName, loser];
+
       const queryGetLoserRating = db.query(sqlGetLoserRating);
       const resultGetLoserRating = queryGetLoserRating.get(paramsGetLoserRating);
-
-      const loserRating = resultGetLoserRating ? resultGetLoserRating.rating : 1000;
-
-      // Calculate Elo updates
-      const winnerExpected = 1 / (1 + 10 ** ((loserRating - winnerRating) / 400));
-      const loserExpected = 1 - winnerExpected;
-
-      const winnerNewRating = winnerRating + K * (1 - winnerExpected);
-      const loserNewRating = loserRating + K * (0 - loserExpected);
-
-      // Update or insert Elo ratings in the database
-      const sqlUpdateWinnerRating = 'INSERT OR REPLACE INTO elo_ratings (list_name, item_name, rating) VALUES (?, ?, ?)';
-      const paramsUpdateWinnerRating = [listName, winner, winnerNewRating];
-
-      const sqlUpdateLoserRating = 'INSERT OR REPLACE INTO elo_ratings (list_name, item_name, rating) VALUES (?, ?, ?)';
-      const paramsUpdateLoserRating = [listName, loser, loserNewRating];
-
-      runQuery(sqlUpdateWinnerRating, paramsUpdateWinnerRating, `Elo rating for "${winner}" updated successfully.`, `Failed to update Elo rating for "${winner}".`, res);
-      runQuery(sqlUpdateLoserRating, paramsUpdateLoserRating, `Elo rating for "${loser}" updated successfully.`, `Failed to update Elo rating for "${loser}".`, res);
-
-      // Insert a record in the list_votes table to track the vote
-      const userId = req.headers.has('x-forwarded-for') ? req.headers.get('x-forwarded-for') : 0;
-      const sqlInsertVote = 'INSERT INTO list_votes (list_name, user_id) VALUES (?, ?)';
-      const paramsInsertVote = [listName, userId];
-
-      runQuery(sqlInsertVote, paramsInsertVote, 'Vote recorded successfully.', 'Failed to record the vote.', res);
-    } catch (error) {
-      res.status(400).json({ error: `Failed to fetch Elo rating for "${loser}".` });
+      return resultGetLoserRating ? resultGetLoserRating.rating : 1000;
+    } catch (e) {
+      return null;
     }
-  } catch (error) {
-    res.status(400).json({ error: `Failed to fetch Elo rating for "${winner}".` });
+  })();
+  if (loserRating === null) {
+    res.status(400).json({ error: `Failed to find loser "${loser}".` });
   }
+
+  // Calculate Elo updates
+  const winnerExpected = 1 / (1 + 10 ** ((loserRating - winnerRating) / 400));
+  const loserExpected = 1 - winnerExpected;
+
+  const winnerNewRating = winnerRating + K * (1 - winnerExpected);
+  const loserNewRating = loserRating + K * (0 - loserExpected);
+
+  // Update or insert Elo ratings in the database
+  const sqlUpdateWinnerRating = 'INSERT OR REPLACE INTO elo_ratings (list_name, item_name, rating) VALUES (?, ?, ?)';
+  const paramsUpdateWinnerRating = [listName, winner, winnerNewRating];
+
+  const sqlUpdateLoserRating = 'INSERT OR REPLACE INTO elo_ratings (list_name, item_name, rating) VALUES (?, ?, ?)';
+  const paramsUpdateLoserRating = [listName, loser, loserNewRating];
+
+  const userId = 0;
+  //const userId = req.headers.has('x-forwarded-for') ? req.headers.get('x-forwarded-for') : 0;
+  const sqlInsertVote = 'INSERT INTO list_votes (list_name, user_id) VALUES (?, ?)';
+  const paramsInsertVote = [listName, userId];
+
+  runQueries(
+      [
+        sqlUpdateWinnerRating,
+        sqlUpdateLoserRating,
+        sqlInsertVote,
+      ],
+      [
+        paramsUpdateWinnerRating,
+        paramsUpdateLoserRating,
+        paramsInsertVote,
+      ],
+      `Elo for "${winner}" and "${loser}" updated successfully.`,
+      `Failed to update Elo for "${winner}" and "${loser}".`,
+      res
+      );
 });
 
 // Endpoint to get the names of all available lists
