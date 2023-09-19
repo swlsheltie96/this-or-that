@@ -288,12 +288,10 @@ window.addEventListener("load", async () => {
 
   getList(listName).then((data) => {
     listContainer.innerHTML = ""; // Clear the existing table
-    // makeList(data.list, listName, listContainer);
-    console.log(data);
 
     const table = new Tabulator("#listContainer", {
       height: "100%", // set height of table (in CSS or here), this enables the Virtual DOM and improves render speed dramatically (can be any valid css height value)
-      data: data.list, //assign data to table
+      data: data.list.map((d) => ({name: d.name, picture: null})), //assign data to table
       layout: "fitColumns", //fit columns to width of table (optional)
       columns: [
         //Define Table Columns
@@ -305,6 +303,9 @@ window.addEventListener("load", async () => {
       clipboard: true,
       clipboardPasteAction: "update",
       history: true,
+    });
+    table.on("dataChanged", function(data){
+      console.log('datachange', data);
     });
   });
 
