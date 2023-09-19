@@ -302,6 +302,9 @@ window.addEventListener("load", async () => {
         { title: "Elo", field: "elo" },
       ],
       tabEndNewRow: true,
+      clipboard: true,
+      clipboardPasteAction: "update",
+      history: true,
     });
   });
 
