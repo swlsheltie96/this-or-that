@@ -297,7 +297,7 @@ window.addEventListener("load", async () => {
       layout: "fitColumns", //fit columns to width of table (optional)
       columns: [
         //Define Table Columns
-        { title: "Item", field: "name" },
+        { title: "Item", field: "name",  editor:"input" },
         { title: "Elo", field: "elo" },
       ],
     });
