@@ -4,7 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" type="text/css" href="style.css" />
-
+    <link
+      href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css"
+      rel="stylesheet"
+    />
     <title>List</title>
     <style>
       .listSettings {
@@ -35,7 +38,11 @@
         max-width: fit-content;
       }
     </style>
-    <script src="list.js"> </script>
+
+    <script
+      type="text/javascript"
+      src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"
+    ></script>
   </head>
   <body>
     <div class="headerContent">
@@ -62,11 +69,11 @@
     <div id="listTable">
       <div class="listRow listHeader">
         <div class="listCell delete">Delete</div>
+        <div class="listCell save">Save</div>
         <div class="listCell">Rank</div>
         <div class="listCell">Item</div>
         <div class="listCell">Elo</div>
         <div class="listCell">Picture</div>
-        <div class="listCell save">Save</div>
       </div>
       <div class="listContainer" id="listContainer"></div>
     </div>
@@ -74,5 +81,9 @@
     <button type="button" class="edit" id="addItemButton">Add Item</button>
 
     <button type="button" class="edit" id="saveAllButton">Save All</button>
+
+    <div id="example-table"></div>
+    <script src="list.js"></script>
+    <!-- <script src="list-tabulator.js"></script> -->
   </body>
 </html>

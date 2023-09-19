@@ -1,4 +1,6 @@
-function deleteCell(listName, elName, listBody) {
+//DATABASE EDITING FUNCTIONS
+
+function deleteItem(listName, elName, listBody) {
   const inputtedPassword = document.getElementById("confirmedPassword").value;
 
   fetch("/delete-item", {
@@ -83,32 +85,72 @@ function saveAll(listName, listBody) {
     });
 }
 
-function saveAndReloadTable(listName, listBody) {
-  const unsavedRows = [];
-  listBody.querySelectorAll(".listRow.unsaved").forEach((row) => {
-    const unsavedRow = {
-      name: row.querySelector("#nameInput").value,
-      picture: row.querySelector("#pictureInput").value,
-    };
-    unsavedRows.push(unsavedRow);
-  });
+function saveItem(listName, listBody, itemName, itemPicture) {
+  const inputtedPassword = document.getElementById("confirmedPassword").value;
+  const newItemName = itemNameInput.value;
+  const newItemPicture = pictureInput.value;
 
-  getList(listName)
+  console.log("saving", newItemName, newItemPicture);
+
+  fetch("/add-item", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      listName,
+      item: {
+        name: newItemName,
+        data: {
+          image: newItemPicture,
+        },
+      },
+      password: inputtedPassword,
+    }),
+  })
+    .then((response) => response.json())
     .then((data) => {
-      listBody.innerHTML = ""; // Clear the existing table
-      makeList(data.list, listName, listBody);
+      if (data.error) {
+        console.error(data.error);
+      } else {
+        console.log(data.message);
+        listBody.removeChild(newRow);
 
-      unsavedRows.forEach((row) => {
-        addRow(listName, listBody, row.name, row.picture);
-      });
+        //if anything else is unsaved, store that, and regenerate it
+        const unsavedRows = [];
+        listBody.querySelectorAll(".listRow.unsaved").forEach((row) => {
+          const unsavedRow = {
+            name: row.querySelector("#nameInput").value,
+            picture: row.querySelector("#pictureInput").value,
+          };
+          unsavedRows.push(unsavedRow);
+        });
+
+        getList(listName)
+          .then((data) => {
+            listBody.innerHTML = ""; // Clear the existing table
+            makeList(data.list, listName, listBody);
+
+            unsavedRows.forEach((row) => {
+              addRow(listName, listBody, row.name, row.picture);
+            });
+          })
+          .catch((error) => {
+            console.error("Error fetching updated data:", error);
+          });
+      }
     })
     .catch((error) => {
-      console.error("Error fetching updated data:", error);
+      console.error("Error:", error);
     });
 }
 
+//LIST GETTERS
+
 async function getList(listName) {
-  const response = await fetch(`/get-sorted-list?listName=${encodeURIComponent(listName)}`);
+  const response = await fetch(
+    `/get-sorted-list?listName=${encodeURIComponent(listName)}`
+  );
   const data = await response.json();
   console.log(data);
   return data;
@@ -130,7 +172,7 @@ function makeList(data, listName, listBody) {
     const deleteButton = document.createElement("button");
     deleteButton.textContent = "Delete";
     deleteButton.addEventListener("click", () => {
-      deleteCell(listName, element.name, listBody);
+      deleteItem(listName, element.name, listBody);
     });
     deleteCell.appendChild(deleteButton);
 
@@ -158,20 +200,9 @@ function makeList(data, listName, listBody) {
 
     listBody.appendChild(listItem);
   });
-
-  // Remove the "Picture" column if no items have an image
-  // if (!hasImage) {
-  //   const tableHeader = document.querySelector("#listTable thead tr");
-  //   const pictureHeader = tableHeader.querySelector("th:nth-child(4)");
-  //   pictureHeader.style.display = "none";
-
-  //   const tableRows = document.querySelectorAll("#listTable tbody tr");
-  //   tableRows.forEach((row) => {
-  //     const pictureCell = row.querySelector("td:nth-child(4)");
-  //     pictureCell.style.display = "none";
-  //   });
-  // }
 }
+
+//DOM CREATION
 
 function createCell(className, text = "") {
   const cell = document.createElement("div");
@@ -188,52 +219,26 @@ function addRow(listName, listBody, unsavedName = "", unsavedPicture = "") {
   const deleteCell = createCell("listCell", "");
   const rankCell = createCell("listCell");
   const itemCell = createCell("listCell");
-  const itemNameInput = createInput("text", "nameInput", unsavedName || "Item Name");
+  const itemNameInput = createInput(
+    "text",
+    "nameInput",
+    unsavedName || "Item Name"
+  );
   const eloCell = createCell("listCell", "");
   const pictureCell = createCell("listCell");
-  const pictureInput = createInput("text", "pictureInput", unsavedPicture || "Picture URL");
+  const pictureInput = createInput(
+    "text",
+    "pictureInput",
+    unsavedPicture || "Picture URL"
+  );
   const saveCell = createCell("listCell", "");
 
-  const cancelButton = createButton("button", "Cancel", () => {
+  const cancelButton = createButton(false, "Cancel", () => {
     listBody.removeChild(newRow);
   });
 
-  const saveButton = createButton("button", "Save", () => {
-    const inputtedPassword = document.getElementById("confirmedPassword").value;
-    const newItemName = itemNameInput.value;
-    const newItemPicture = pictureInput.value;
-
-    console.log("saving", newItemName, newItemPicture);
-
-    fetch("/add-item", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        listName,
-        item: {
-          name: newItemName,
-          data: {
-            image: newItemPicture,
-          },
-        },
-        password: inputtedPassword,
-      }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.error) {
-          console.error(data.error);
-        } else {
-          console.log(data.message);
-          listBody.removeChild(newRow);
-          saveAndReloadTable(listName, listBody);
-        }
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-      });
+  const saveButton = createButton(false, "Save", () => {
+    saveItem(listName, listBody, unsavedName, unsavedPicture);
   });
 
   deleteCell.appendChild(cancelButton);
@@ -258,12 +263,21 @@ function createInput(type, id, placeholder) {
   return input;
 }
 
-function createButton(type, text, clickHandler) {
-  const button = document.createElement("button");
-  button.type = type;
-  button.textContent = text;
-  button.addEventListener("click", clickHandler);
-  return button;
+function createButton(existing, buttonTxt_Id, clickHandler) {
+  if (!existing) {
+    const button = document.createElement("button");
+    button.type = type;
+    button.textContent = buttonTxt_Id;
+    button.addEventListener("click", clickHandler);
+    return button;
+  } else {
+    const button = document.getElementById(buttonTxt_Id);
+    if (button) {
+      button.addEventListener("click", clickHandler);
+    } else {
+      console.error("button or parent does not exist");
+    }
+  }
 }
 
 window.addEventListener("load", async () => {
@@ -274,7 +288,19 @@ window.addEventListener("load", async () => {
 
   getList(listName).then((data) => {
     listContainer.innerHTML = ""; // Clear the existing table
-    makeList(data.list, listName, listContainer);
+    // makeList(data.list, listName, listContainer);
+    console.log(data);
+
+    const table = new Tabulator("#listContainer", {
+      height: "100%", // set height of table (in CSS or here), this enables the Virtual DOM and improves render speed dramatically (can be any valid css height value)
+      data: data.list, //assign data to table
+      layout: "fitColumns", //fit columns to width of table (optional)
+      columns: [
+        //Define Table Columns
+        { title: "Item", field: "name" },
+        { title: "Elo", field: "elo" },
+      ],
+    });
   });
 
   const backButton = document.getElementById("backButton");
