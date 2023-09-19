@@ -1,11 +1,45 @@
 import { Database } from 'bun:sqlite';
 
 const PORT = process.env.PORT || 3000;
+const LRU_SIZE = process.env.LRU_SIZE || 1024 * 1024;
+const BENCHMARK = process.env.BENCHMARK || false;
+
+class LRUCache {
+  constructor(capacity) {
+    this.capacity = capacity;
+    this.cache = new Map();
+  }
+
+  get(key) {
+    if (this.cache.has(key)) {
+      // To implement LRU, we delete and re-insert the key to update its position
+      const value = this.cache.get(key);
+      this.cache.delete(key);
+      this.cache.set(key, value);
+      return value;
+    }
+    return -1;
+  }
+
+  put(key, value) {
+    if (this.cache.has(key)) {
+      // If the key already exists, update its value and re-insert it
+      this.cache.delete(key);
+    } else if (this.cache.size >= this.capacity) {
+      // If the cache is at capacity, remove the least recently used item (first key in the map)
+      const lruKey = this.cache.keys().next().value;
+      this.cache.delete(lruKey);
+    }
+    this.cache.set(key, value);
+  }
+}
+
 
 class Server {
   get_map = {};
   post_map = {};
   delete_map = {};
+  rate_limit_map = {};
 
   get(path, callback) {
     this.get_map[path] = callback;
@@ -21,12 +55,27 @@ class Server {
     });
   }
 
-  post(path, callback) {
-    this.post_map[path] = callback;
+  post(path, rate_limit, callback) {
+    this.post_map[path] = [callback, rate_limit];
+    this.rate_limit_map[path] = new LRUCache(LRU_SIZE);
   }
 
   delete(path, callback) {
     this.delete_map[path] = callback;
+  }
+
+  check_rate_limit(req, path, rate) {
+    const userId = req.headers.has('x-forwarded-for') ? req.headers.get('x-forwarded-for') : 0;
+    const map = this.rate_limit_map[path];
+    const now = performance.timeOrigin + performance.now();
+    if (!BENCHMARK && map.get(userId) >= 0) {
+      const diff = now - map.get(userId);
+      if (diff < rate) {
+        return true;
+      }
+    }
+    map.put(userId, now);
+    return false;
   }
 
   serve() {
@@ -44,7 +93,11 @@ class Server {
               break;
             case 'POST':
               if (url.pathname in self.post_map) {
-                return await self.post_map[url.pathname](req);
+                const [callback, rate_limit] = self.post_map[url.pathname];
+                if (self.check_rate_limit(req, url.pathname, rate_limit)) {
+                  return jsonError('Rate limited');
+                }
+                return await callback(req);
               }
               break;
             case 'DELETE':
@@ -148,7 +201,7 @@ function runQuery(sql, params, successMessage, errorMessage) {
 }
 
 // Endpoint to create a new list
-app.post('/create-list', async (req) => {
+app.post('/create-list', 10000, async (req) => {
   const body = await req.json();
   const listName = body.listName;
   const password = body.password; // Add password parameter
@@ -162,7 +215,7 @@ app.post('/create-list', async (req) => {
 });
 
 // Endpoint to check the password for a list
-app.post('/check-password', async (req) => {
+app.post('/check-password', 0, async (req) => {
   const body = await req.json();
   const listName = body.listName;
   const password = body.password;
@@ -189,7 +242,7 @@ app.post('/check-password', async (req) => {
 });
 
 // Endpoint to change the password for a list
-app.post('/change-password', async (req) => {
+app.post('/change-password', 0, async (req) => {
   const body = await req.json();
   const listName = body.listName;
   const currentPassword = body.currentPassword; // Current password
@@ -223,7 +276,7 @@ app.post('/change-password', async (req) => {
 
 
 // Endpoint to add items to a list (with uniqueness check)
-app.post('/add-item', async (req) => {
+app.post('/add-item', 0, async (req) => {
   const body = await req.json();
   const listName = body.listName;
   const newItem = body.item;
@@ -316,7 +369,7 @@ app.delete('/delete-list', async (req) => {
   return runQuery(sqlDeleteList, paramsDeleteList, `List "${listName}" and its items deleted successfully.`, `Failed to delete list "${listName}".`);
 });
 
-app.post('/delete-item', async (req) => {
+app.post('/delete-item', 0, async (req) => {
   const body = await req.json();
   const listName = body.listName;
   const itemName = body.itemName;
@@ -460,7 +513,7 @@ app.get('/get-sorted-list', (req) => {
   return Response.json({ list: sortedItems });
 });
 
-app.post('/vote', async (req) => {
+app.post('/vote', 1000, async (req) => {
   const body = await req.json();
   const listName = body.listName;
   const winner = body.winner; // Winner item from the pair
