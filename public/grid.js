@@ -33,6 +33,7 @@ var cardContainer = document.getElementById("card-container");
 const queryString = window.location.search;
 const searchParams = new URLSearchParams(queryString);
 const listName = searchParams.get("listName");
+document.getElementById('listName').textContent = listName;
 
 // Create and append cards for each item in the JSON data
 getSortedList(listName).then((data) => {
