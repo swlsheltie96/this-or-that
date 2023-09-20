@@ -43,7 +43,7 @@
                 description: description,
                 password: password
             };
-            createList(title, password).then((resp) => {
+            createList(title, {description: description}, password).then((resp) => {
                 if (resp.error) {
                   alert(resp.error);
                 }

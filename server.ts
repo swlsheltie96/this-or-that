@@ -281,7 +281,6 @@ app.post("/change-password", 0, async (req) => {
 
   // Compare the provided current password with the stored password
   if (currentPassword !== storedPassword) {
-    console.log(currentPassword, storedPassword);
     return jsonError("Invalid current password for this list.", 401);
   }
 
