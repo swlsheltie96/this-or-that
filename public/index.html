@@ -121,7 +121,7 @@
               listImg.src = items[0].data.picture;
           });
           onlineStatus.classList.add("onlineStatus", "online");
-          listLink.href = `list.html?listName=${list.name}`;
+          listLink.href = `grid.html?listName=${list.name}`;
           listLink.textContent = list.name + " 🔥";
           listData.appendChild(listImg);
           listData.appendChild(listLink);
@@ -137,7 +137,7 @@
           const voteButton = document.createElement("a");
           viewButton.textContent = "[View]";
           voteButton.textContent = "[Vote]";
-          viewButton.href = `list.html?listName=${list.name}`;
+          viewButton.href = `grid.html?listName=${list.name}`;
           voteButton.href = `vote.html?listName=${list.name}`;
           listActions.appendChild(viewButton);
           listActions.appendChild(voteButton);
