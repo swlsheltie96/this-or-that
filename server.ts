@@ -131,6 +131,7 @@ db.query(`
   CREATE TABLE IF NOT EXISTS lists (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE,
+    data JSON, -- Add a column to store JSON data
     password TEXT -- Add a column to store list passwords
   )
 `).run();
@@ -205,10 +206,11 @@ function runQuery(sql, params, successMessage, errorMessage) {
 app.post('/create-list', 10000, async (req) => {
   const body = await req.json();
   const listName = body.listName;
+  const data = body.data;
   const password = body.password; // Add password parameter
 
-  const sql = 'INSERT INTO lists (name, password) VALUES (?, ?)';
-  const params = [listName, password];
+  const sql = 'INSERT INTO lists (name, data, password) VALUES (?, ?, ?)';
+  const params = [listName, JSON.stringify(data), password];
   const successMessage = `List "${listName}" created successfully.`;
   const errorMessage = `Failed to create list "${listName}".`;
 
@@ -264,6 +266,7 @@ app.post('/change-password', 0, async (req) => {
 
   // Compare the provided current password with the stored password
   if (currentPassword !== storedPassword) {
+    console.log(currentPassword, storedPassword);
     return jsonError('Invalid current password for this list.', 401);
   }
 
@@ -314,7 +317,6 @@ app.post('/add-item', 0, async (req) => {
   // Insert the new item into the 'items' table with JSON data
   const sqlInsertNewItem = 'INSERT INTO items (list_id, name, data) VALUES (?, ?, ?)';
   const paramsInsertNewItem = [listId, newItem.name, JSON.stringify(newItem.data)];
-  console.log(paramsInsertNewItem)
 
   return runQuery(sqlInsertNewItem, paramsInsertNewItem, `Item "${newItem.name}" added to list "${listName}" successfully.`, `Failed to add item to list "${listName}".`);
 });

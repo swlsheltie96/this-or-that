@@ -1,11 +1,11 @@
 const server = window.location.origin;
 
 // Create a new list with a password
-async function createList(listName, password) {
+async function createList(listName, listData, password) {
   const response = await fetch(`${server}/create-list`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ listName: listName, password: password }) // Include the password
+    body: JSON.stringify({ listName: listName, data: listData, password: password }) // Include the password
   });
   const data = await response.json();
   return data;

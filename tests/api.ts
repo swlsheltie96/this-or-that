@@ -8,15 +8,15 @@ function log(...args) {
 }
 
 // Create a new list with a password
-export async function createList(listName, password) {
+export async function createList(listName, data, password) {
   const response = await fetch(`${SERVER}/create-list`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ listName: listName, password: password }) // Include the password
+    body: JSON.stringify({ listName: listName, data: data, password: password }) // Include the password
   });
-  const data = await response.json();
-  log(data);
-  return data;
+  const resp_data = await response.json();
+  log(resp_data);
+  return resp_data;
 }
 
 // Check the password for a list

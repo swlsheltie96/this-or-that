@@ -93,7 +93,7 @@ async function randomCreateList() {
   const pwd = genStr(32);
   lists[list] = { items: [], password: pwd }
   await track('createList', async () => {
-    await api.createList(list, pwd);
+    await api.createList(list, {}, pwd);
   });
   await randomAddItem(list);
   await randomAddItem(list);

@@ -2,15 +2,15 @@ import * as api from "./api";
 
 // Usage example
 try {
-  await api.deleteList("pokemon", "your_list_password");
-  await api.deleteList("random", "your_list_password");
+  await api.deleteList("pokemon", "pwd");
+  await api.deleteList("random", "pwd");
 } catch (e) {}
-await api.createList("pokemon", "your_list_password");
-await api.changePassword("pokemon", "your_list_password", "new_password");
+await api.createList("pokemon", {}, "pwd");
+await api.changePassword("pokemon", "pwd", "new_password");
 await api.changePassword("pokemon", "new_password", "pwd");
 console.assert(await api.checkPassword("pokemon", "pwd"));
 console.assert(!(await api.checkPassword("pokemon", "wrong_pass")));
-await api.createList("random", "your_list_password");
+await api.createList("random", {}, "your_list_password");
 await api.addItem(
   "pokemon",
   {
