@@ -66,6 +66,7 @@ function createButton(existing, buttonTxt_Id, clickHandler) {
   }
 }
 
+let dirty = false;
 window.addEventListener("load", async () => {
   const listContainer = document.getElementById("listContainer");
   const queryString = window.location.search;
@@ -117,8 +118,16 @@ window.addEventListener("load", async () => {
       history: true,
     });
     table.on("dataChanged", function(data){
-        const saveButtons = document.querySelectorAll(".saveButton");
-        Array.from(saveButtons).map((b) => {b.style.fontWeight = 'bold'})
+        const diffs = findObjectDifference(initial_data, table.getData());
+        if (diffs.added.length || diffs.removed.length || diffs.updated.length) {
+          dirty = true;
+          const saveButtons = document.querySelectorAll(".saveButton");
+          Array.from(saveButtons).map((b) => {b.style.fontWeight = 'bold'})
+        } else {
+          dirty = false;
+          const saveButtons = document.querySelectorAll(".saveButton");
+          Array.from(saveButtons).map((b) => {b.style.fontWeight = 'normal'})
+        }
     });
 
     const addItemButton = document.getElementById("addItemButton");
@@ -151,10 +160,21 @@ window.addEventListener("load", async () => {
           }
           const saveButtons = document.querySelectorAll(".saveButton");
           Array.from(saveButtons).map((b) => {b.style.fontWeight = 'normal'})
+          dirty = false;
         }
       });
     }));
   });
+});
 
+window.addEventListener("beforeunload", function (e) {
+    if (!dirty) {
+      return undefined;
+    }
 
+    var confirmationMessage = 'It looks like you have been editing something. '
+    + 'If you leave before saving, your changes will be lost.';
+
+    (e || window.event).returnValue = confirmationMessage; //Gecko + IE
+    return confirmationMessage; //Gecko + Webkit, Safari, Chrome etc.
 });
