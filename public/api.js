@@ -122,7 +122,6 @@ async function vote(listName, winner, loser) {
     return data;
 }
 
-// Test function for the /get-sorted-list endpoint
 async function getSortedList(listName) {
     const response = await fetch(`${server}/get-sorted-list?listName=${encodeURIComponent(listName)}`);
     if (!response.ok) {
@@ -131,7 +130,6 @@ async function getSortedList(listName) {
     const data = await response.json();
 
     if (response.ok) {
-        console.log('dlist', data.list);
         return data.list.map((d) => ({
             name: d.name,
             elo: d.elo,
@@ -140,6 +138,19 @@ async function getSortedList(listName) {
     } else {
         console.error('Error:', data.error);
     }
+    return null;
+}
+
+async function getListInfo(listName) {
+    const response = await fetch(`${server}/get-list-info?listName=${encodeURIComponent(listName)}`);
+    if (!response.ok) {
+        throw new Error(`Failed: ${response.statusText}`);
+    }
+    const data = await response.json();
+    if (response.ok) {
+      return data;
+    }
+    console.error('Error:', data.error);
     return null;
 }
 

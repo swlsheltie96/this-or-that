@@ -50,8 +50,8 @@
     <div class="titleContainer">
       <a id="backButton">←</a>
       <a href="index.html"><h5>Elo Chamber</h5></a>
-      <h1 class="voteTitle">List Title</h1>
-      <h2 class="voteTitle">vote prompt</h2>
+      <h1 class="voteTitle" id="listName"></h1>
+      <h2 class="voteTitle" id="listPrompt"></h2>
     </div>
 
     <div id="elementVoteContainer">
@@ -64,6 +64,7 @@
         src="https://media.istockphoto.com/id/1016827568/photo/standing-isolated-election-i-voted-sticker.jpg?s=612x612&w=0&k=20&c=sYfOzBM8x7FN9xaMRH1bJqWF7TzoTgXcKroG191jztU="
       />
     </div>
+    <script src="api.js"></script>
     <script>
       // Create clickable elements
       function createVote(list, data) {
@@ -138,6 +139,11 @@
 
         // 3. Get the value of a specific query parameter
         const listName = searchParams.get(`listName`);
+        document.getElementById('listName').textContent = listName;
+        getListInfo(listName).then((d) => {
+console.log(d);
+            document.getElementById('listPrompt').textContent = d.prompt;
+        });
 
         const backButton = document.getElementById("backButton");
         backButton.href = `list.html?listName=${listName}`;

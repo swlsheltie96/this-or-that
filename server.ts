@@ -515,6 +515,27 @@ app.get("/get-pair", (req) => {
     }
 });
 
+// Endpoint to get list metadata
+app.get("/get-list-info", (req) => {
+    const params = new URL(req.url).searchParams;
+    if (!params.has("listName")) {
+        return jsonError(`Invalid query, listName= required`);
+    }
+    const listName = params.get("listName");
+
+    const sqlGetListData = "SELECT data FROM lists WHERE name = ?";
+    const paramsGetListData = [listName];
+
+    const queryGetListData = db.query(sqlGetListData);
+    const resultGetListData = queryGetListData.get(paramsGetListData);
+    if (!resultGetListData) {
+        return jsonError(`List "${listName}" does not exist.`);
+    }
+
+    const listData = resultGetListData.data;
+    return Response.json(JSON.parse(listData));
+});
+
 // Endpoint to get items in a list sorted by Elo rating
 app.get("/get-sorted-list", (req) => {
     const params = new URL(req.url).searchParams;
