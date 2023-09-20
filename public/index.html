@@ -21,8 +21,6 @@
         align-items: center;
       }
       li a {
-        text-decoration: none;
-        color: #333;
         cursor: pointer;
         font-size: 20px;
       }
@@ -133,10 +131,12 @@
 
           listItem.appendChild(listData);
 
-          const viewButton = document.createElement("button");
-          const voteButton = document.createElement("button");
-          viewButton.textContent = "view";
-          voteButton.textContent = "vote";
+          const viewButton = document.createElement("a");
+          const voteButton = document.createElement("a");
+          viewButton.textContent = "[View]";
+          voteButton.textContent = "[Vote]";
+          viewButton.href = `list.html?listName=${list.name}`;
+          voteButton.href = `vote.html?listName=${list.name}`;
           listActions.appendChild(viewButton);
           listActions.appendChild(voteButton);
 

@@ -98,3 +98,11 @@ jsonData.forEach(function (item, index) {
   var card = createCard(item, index);
   cardContainer.appendChild(card);
 });
+
+const queryString = window.location.search;
+const searchParams = new URLSearchParams(queryString);
+const listName = searchParams.get("listName");
+const voteButton = document.getElementById("voteButton");
+const viewButton = document.getElementById("viewButton");
+viewButton.href = `list.html?listName=${listName}`;
+voteButton.href = `vote.html?listName=${listName}`;

@@ -145,6 +145,11 @@ window.addEventListener("load", async () => {
       }
     });
 
+    const viewButton = document.getElementById("viewButton");
+    const voteButton = document.getElementById("voteButton");
+    viewButton.href = `grid.html?listName=${listName}`;
+    voteButton.href = `vote.html?listName=${listName}`;
+
     const addItemButton = document.getElementById("addItemButton");
     addItemButton.addEventListener("click", () => {
       table.addRow();
