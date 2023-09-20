@@ -1,3 +1,4 @@
+console.log("list");
 function findObjectDifference(oldList, newList) {
   const oldMap = new Map();
   const newMap = new Map();
@@ -73,15 +74,15 @@ window.addEventListener("load", async () => {
   const searchParams = new URLSearchParams(queryString);
   const listName = searchParams.get("listName");
 
-  let password = '';
+  let password = "";
   async function login() {
-    if (password != '') {
+    if (password != "") {
       return password;
     }
-    const possible_pw = prompt('Enter password:');
-    console.log('posdd', possible_pw);
+    const possible_pw = prompt("Enter password:");
+    console.log("posdd", possible_pw);
     if (possible_pw === null) {
-      return '';
+      return "";
     }
     const valid = await checkPassword(listName, possible_pw);
     if (!valid) {
@@ -96,11 +97,16 @@ window.addEventListener("load", async () => {
     listContainer.innerHTML = ""; // Clear the existing table
 
     let initial_data = list.map((d) => {
-        return {name: d.name, picture: d.data.picture, description: d.data.description, elo: d.elo};
-    })
+      return {
+        name: d.name,
+        picture: d.data.picture,
+        description: d.data.description,
+        elo: d.elo,
+      };
+    });
     const table = new Tabulator("#listContainer", {
       height: "100%", // set height of table (in CSS or here), this enables the Virtual DOM and improves render speed dramatically (can be any valid css height value)
-      data: initial_data.map(x => Object.assign({}, x)),
+      data: initial_data.map((x) => Object.assign({}, x)),
       layout: "fitColumns", //fit columns to width of table (optional)
       columns: [
         //Define Table Columns
@@ -108,26 +114,35 @@ window.addEventListener("load", async () => {
         { title: "Picture", field: "picture", editor: "input" },
         { title: "Description", field: "description", editor: "input" },
         { title: "Elo", field: "elo" },
-        {formatter:"buttonCross", width:40, align:"center", cellClick:function(e, cell){
-        cell.getRow().delete();
-        }},
+        {
+          formatter: "buttonCross",
+          width: 40,
+          align: "center",
+          cellClick: function (e, cell) {
+            cell.getRow().delete();
+          },
+        },
       ],
       tabEndNewRow: true,
       clipboard: true,
       clipboardPasteAction: "update",
       history: true,
     });
-    table.on("dataChanged", function(data){
-        const diffs = findObjectDifference(initial_data, table.getData());
-        if (diffs.added.length || diffs.removed.length || diffs.updated.length) {
-          dirty = true;
-          const saveButtons = document.querySelectorAll(".saveButton");
-          Array.from(saveButtons).map((b) => {b.style.fontWeight = 'bold'})
-        } else {
-          dirty = false;
-          const saveButtons = document.querySelectorAll(".saveButton");
-          Array.from(saveButtons).map((b) => {b.style.fontWeight = 'normal'})
-        }
+    table.on("dataChanged", function (data) {
+      const diffs = findObjectDifference(initial_data, table.getData());
+      if (diffs.added.length || diffs.removed.length || diffs.updated.length) {
+        dirty = true;
+        const saveButtons = document.querySelectorAll(".saveButton");
+        Array.from(saveButtons).map((b) => {
+          b.style.fontWeight = "bold";
+        });
+      } else {
+        dirty = false;
+        const saveButtons = document.querySelectorAll(".saveButton");
+        Array.from(saveButtons).map((b) => {
+          b.style.fontWeight = "normal";
+        });
+      }
     });
 
     const addItemButton = document.getElementById("addItemButton");
@@ -137,44 +152,49 @@ window.addEventListener("load", async () => {
     const saveButtons = document.querySelectorAll(".saveButton");
     function rowToItem(row) {
       return {
-          name: row.name,
-          data: {
-            picture: row.picture,
-            description: row.description,
-          }
-        };
+        name: row.name,
+        data: {
+          picture: row.picture,
+          description: row.description,
+        },
+      };
     }
-    Array.from(saveButtons).map((b) => b.addEventListener("click", () => {
-      login().then((pw) => {
-        if (pw) {
-          const diffs = findObjectDifference(initial_data, table.getData());
-          for (let row of diffs.removed) {
-            deleteItem(listName, row.name, pw);
+    Array.from(saveButtons).map((b) =>
+      b.addEventListener("click", () => {
+        login().then((pw) => {
+          if (pw) {
+            const diffs = findObjectDifference(initial_data, table.getData());
+            for (let row of diffs.removed) {
+              deleteItem(listName, row.name, pw);
+            }
+            for (let row of diffs.added) {
+              addItem(listName, rowToItem(row), pw);
+            }
+            for (let row of diffs.updated) {
+              deleteItem(listName, row.name, pw);
+              addItem(listName, rowToItem(row), pw);
+            }
+            const saveButtons = document.querySelectorAll(".saveButton");
+            Array.from(saveButtons).map((b) => {
+              b.style.fontWeight = "normal";
+            });
+            dirty = false;
           }
-          for (let row of diffs.added) {
-            addItem(listName, rowToItem(row), pw);
-          }
-          for (let row of diffs.updated) {
-            deleteItem(listName, row.name, pw);
-            addItem(listName, rowToItem(row), pw);
-          }
-          const saveButtons = document.querySelectorAll(".saveButton");
-          Array.from(saveButtons).map((b) => {b.style.fontWeight = 'normal'})
-          dirty = false;
-        }
-      });
-    }));
+        });
+      })
+    );
   });
 });
 
 window.addEventListener("beforeunload", function (e) {
-    if (!dirty) {
-      return undefined;
-    }
+  if (!dirty) {
+    return undefined;
+  }
 
-    var confirmationMessage = 'It looks like you have been editing something. '
-    + 'If you leave before saving, your changes will be lost.';
+  var confirmationMessage =
+    "It looks like you have been editing something. " +
+    "If you leave before saving, your changes will be lost.";
 
-    (e || window.event).returnValue = confirmationMessage; //Gecko + IE
-    return confirmationMessage; //Gecko + Webkit, Safari, Chrome etc.
+  (e || window.event).returnValue = confirmationMessage; //Gecko + IE
+  return confirmationMessage; //Gecko + Webkit, Safari, Chrome etc.
 });

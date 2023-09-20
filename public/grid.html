@@ -10,32 +10,29 @@
     />
     <title>List</title>
     <style>
-      .listSettings {
+      #card-container {
         display: flex;
-        justify-content: space-between;
-      }
-
-      .headerContent {
-        position: relative;
-        display: flex;
-        align-items: center;
         gap: 10px;
+        flex-wrap: wrap;
       }
-
-      .edit,
-      .delete,
-      .save {
-        display: none;
+      .card {
+        flex: 1 0 20%;
+        border: 1px solid #ccc;
+        padding: 10px;
       }
-
-      img {
-        max-width: 40px;
-        aspect-ratio: 1;
-        object-fit: cover;
-      }
-      .listCell input {
+      .card img {
         width: 100%;
-        max-width: fit-content;
+        max-width: unset;
+        aspect-ratio: 1;
+      }
+      .card .index {
+        padding: 5px;
+        text-align: center;
+        width: 1em;
+        height: 1em;
+        background-color: black;
+        color: white;
+        border-radius: 100px;
       }
     </style>
 
@@ -51,22 +48,12 @@
     </div>
     <br />
     <a class="voteButton">[vote]</a>
-    <a class="voteButton">[Grid View]</a>
+    <a class="voteButton">[List View]</a>
     <h1>List Title</h1>
-    <div class="listSettings">
-      <span></span>
-      <a class="saveButton">[save]</a>
-    </div>
-
-    <div class="listContainer" id="listContainer"></div>
-
-    <div class="listSettings">
-      <a id="addItemButton">+</a>
-      <a class="saveButton">[save]</a>
-    </div>
+    <div id="card-container"></div>
 
     <script src="api.js"></script>
 
-    <script src="list.js"></script>
+    <script src="grid.js"></script>
   </body>
 </html>
