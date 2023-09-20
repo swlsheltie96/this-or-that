@@ -46,34 +46,23 @@
   </head>
   <body>
     <div class="headerContent">
-      <a id="backButton">←</a>
+      <a id="backButton" href="index.html">←</a>
       <a href="index.html"><h5>Elo Chamber</h5></a>
     </div>
-    <div class="listData">
-      <h1 id="listName"></h1>
-      <div class="listSettings">
-        <div class="editList">
-          <a id="editButton">Edit List</a>
-          <button type="button" class="edit" id="addItemButtonTop">
-            Add Item
-          </button>
-
-          <button type="button" class="edit" id="saveAllButtonTop">
-            Save All
-          </button>
-        </div>
-        <a id="voteButton">Vote</a>
-      </div>
+    <br>
+    <div class="listSettings">
+    <span></span>
+      <a class="saveButton">[save]</a>
     </div>
 
     <div class="listContainer" id="listContainer"></div>
 
-    <button type="button" class="edit" id="addItemButton">Add Item</button>
+    <div class="listSettings">
+      <a id="addItemButton">+</a>
+      <a class="saveButton">[save]</a>
+    </div>
 
-    <button type="button" class="edit" id="saveAllButton">Save All</button>
-
-    <div id="example-table"></div>
+    <script src="api.js"></script>
     <script src="list.js"></script>
-    <!-- <script src="list-tabulator.js"></script> -->
   </body>
 </html>

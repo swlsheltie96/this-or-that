@@ -122,6 +122,7 @@ app.get_static('/vote.html', 'public/vote.html', 'text/html; charset=utf-8');
 app.get_static('/style.css', 'public/style.css', 'text/css');
 app.get_static('/script.js', 'public/script.js', 'text/javascript');
 app.get_static('/list.js', 'public/list.js', 'text/javascript');
+app.get_static('/api.js', 'public/api.js', 'text/javascript');
 
 const db = new Database('lists.db');
 
@@ -313,6 +314,7 @@ app.post('/add-item', 0, async (req) => {
   // Insert the new item into the 'items' table with JSON data
   const sqlInsertNewItem = 'INSERT INTO items (list_id, name, data) VALUES (?, ?, ?)';
   const paramsInsertNewItem = [listId, newItem.name, JSON.stringify(newItem.data)];
+  console.log(paramsInsertNewItem)
 
   return runQuery(sqlInsertNewItem, paramsInsertNewItem, `Item "${newItem.name}" added to list "${listName}" successfully.`, `Failed to add item to list "${listName}".`);
 });
