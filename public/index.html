@@ -16,21 +16,15 @@
         margin: 5px 0;
         padding: 10px;
         cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
       }
       li a {
         text-decoration: none;
         color: #333;
         cursor: pointer;
-      }
-      button,
-      #submitNewList {
-        font-size: 12px;
-        color: #333;
-        background-color: white;
-        border: 1px black solid;
-        padding: 5px 10px;
-        border-radius: 25px;
-        cursor: pointer;
+        font-size: 20px;
       }
 
       label {
@@ -49,10 +43,20 @@
         box-sizing: border-box;
         width: 100%;
       }
+      img {
+        width: 50px;
+        aspect-ratio: 1 / 1;
+      }
       #itemFields > div,
       #listTitle {
         margin: 1em 0;
         /* display: flex; */
+      }
+      .listData,
+      .listActions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
       }
       .itemContainer {
         display: flex;
@@ -73,6 +77,14 @@
         margin-right: 0;
         margin-left: auto;
         display: block;
+      }
+      .onlineStatus {
+        width: 10px;
+        height: 10px;
+        border-radius: 100px;
+      }
+      .online {
+        background-color: lightgreen;
       }
     </style>
   </head>
@@ -98,10 +110,38 @@
         data.lists.forEach((list) => {
           console.log(data.lists);
           const listItem = document.createElement("li");
+
+          const listData = document.createElement("div");
+          const listActions = document.createElement("div");
+          const listPreview = document.createElement("div");
+
           const listLink = document.createElement("a");
+          const onlineStatus = document.createElement("div");
+          const listImg = document.createElement("img");
+          listImg.src =
+            "https://www.sideshow.com/cdn-cgi/image/height=850,quality=90,f=auto/https://www.sideshow.com/storage/product-images/907125/poke-ball_pokemon_gallery_5fbe976c2f7a0.jpg";
+          onlineStatus.classList.add("onlineStatus", "online");
           listLink.href = `list.html?listName=${list.name}`;
-          listLink.textContent = list.name;
-          listItem.appendChild(listLink);
+          listLink.textContent = list.name + " 🔥";
+          listData.appendChild(listImg);
+          listData.appendChild(listLink);
+          listData.appendChild(onlineStatus);
+          listData.appendChild(listPreview);
+          listData.classList.add("listData");
+
+          listActions.classList.add("listActions");
+
+          listItem.appendChild(listData);
+
+          const viewButton = document.createElement("button");
+          const voteButton = document.createElement("button");
+          viewButton.textContent = "view";
+          voteButton.textContent = "vote";
+          listActions.appendChild(viewButton);
+          listActions.appendChild(voteButton);
+
+          listItem.appendChild(listActions);
+
           listOfLists.appendChild(listItem);
         });
       }

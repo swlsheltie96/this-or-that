@@ -3,10 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" type="text/css" href="style.css" />
 
     <title>Vote for Item</title>
     <style>
+      h2 {
+        margin-bottom: unset;
+        text-align: center;
+      }
+      p {
+        margin-bottom: unset;
+        margin-top: 10px;
+      }
       #elementVoteContainer {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
@@ -22,8 +30,9 @@
         aspect-ratio: 1 / 1;
         max-width: 100%;
         object-fit: contain;
+        margin-top: 10px;
       }
-      .voteTitle{
+      .voteTitle {
         text-align: center;
         font-weight: normal;
       }
@@ -34,7 +43,8 @@
   </head>
   <body>
     <div class="titleContainer">
-      <a id="backButton">←</a><h1 class="voteTitle">vote</h1>
+      <a id="backButton">←</a>
+      <h1 class="voteTitle">vote</h1>
     </div>
 
     <div id="elementVoteContainer">
@@ -55,10 +65,16 @@
           voteBoxes[i].appendChild(h2_el);
           if (data[el].data) {
             let parsedData = JSON.parse(data[el].data);
-            if (parsedData.image) {
+            console.log(parsedData);
+            if (parsedData.picture) {
               const image = document.createElement("img");
-              image.src = parsedData.image;
+              image.src = parsedData.picture;
               voteBoxes[i].appendChild(image);
+            }
+            if (parsedData.info) {
+              const info = document.createElement("p");
+              info.textContent = parsedData.info;
+              voteBoxes[i].appendChild(info);
             }
           }
         });

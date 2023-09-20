@@ -78,10 +78,6 @@ a:hover {
 }
 
 /* Style unordered and ordered lists */
-ul,
-ol {
-  margin-left: 20px;
-}
 
 /* Style list items */
 li {
