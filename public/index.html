@@ -95,6 +95,7 @@
     <a id="creatListInitButton" href="create.html">Create New List</a>
 
     <!-- JavaScript code to handle form submission and populate the list of lists -->
+    <script src="api.js"></script>
     <script>
       async function populateListOfLists() {
         const response = await fetch("/get-lists"); // Fetch the list of lists
@@ -116,8 +117,9 @@
           const listLink = document.createElement("a");
           const onlineStatus = document.createElement("div");
           const listImg = document.createElement("img");
-          listImg.src =
-            "https://www.sideshow.com/cdn-cgi/image/height=850,quality=90,f=auto/https://www.sideshow.com/storage/product-images/907125/poke-ball_pokemon_gallery_5fbe976c2f7a0.jpg";
+          getSortedList(list.name).then((items) => {
+              listImg.src = items[0].data.picture;
+          });
           onlineStatus.classList.add("onlineStatus", "online");
           listLink.href = `list.html?listName=${list.name}`;
           listLink.textContent = list.name + " 🔥";
