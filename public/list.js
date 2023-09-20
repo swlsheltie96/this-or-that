@@ -68,30 +68,36 @@ function createButton(existing, buttonTxt_Id, clickHandler) {
 }
 
 let dirty = false;
+let password = "";
 window.addEventListener("load", async () => {
   const listContainer = document.getElementById("listContainer");
   const queryString = window.location.search;
   const searchParams = new URLSearchParams(queryString);
   const listName = searchParams.get("listName");
 
-  let password = "";
+  const pw_enter = document.getElementById('passwordEnterForm');
+  const cancelButton = document.getElementById("cancel-button");
+
+  cancelButton.addEventListener("click", () => {
+      pw_enter.style.display = "none";
+  });
   async function login() {
     if (password != "") {
       return password;
     }
-    const possible_pw = prompt("Enter password:");
-    console.log("posdd", possible_pw);
-    if (possible_pw === null) {
-      return "";
-    }
-    const valid = await checkPassword(listName, possible_pw);
-    if (!valid) {
-      await login();
-    } else {
-      password = possible_pw;
-    }
-    return password;
+    pw_enter.style.display = 'block';
   }
+  pw_enter.addEventListener('submit', function(event) {
+       event.preventDefault();
+       console.log(event);
+       const possible_pw = document.getElementById('password').value;
+       checkPassword(listName, possible_pw).then((valid) => {
+           if (valid) {
+               password = possible_pw;
+               pw_enter.style.display = 'none';
+           }
+       });
+  });
 
   getSortedList(listName).then((list) => {
     listContainer.innerHTML = ""; // Clear the existing table

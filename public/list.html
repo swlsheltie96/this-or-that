@@ -21,21 +21,17 @@
         align-items: center;
         gap: 10px;
       }
-
-      .edit,
-      .delete,
-      .save {
-        display: none;
-      }
-
-      img {
-        max-width: 40px;
-        aspect-ratio: 1;
-        object-fit: cover;
-      }
-      .listCell input {
-        width: 100%;
-        max-width: fit-content;
+      #passwordEnterForm {
+            display: none;
+            width: 300px;
+            padding: 20px;
+            background-color: #f2f2f2;
+            border: 1px solid #ccc;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
       }
     </style>
 
@@ -45,6 +41,7 @@
     ></script>
   </head>
   <body>
+
     <div class="headerContent">
       <a id="backButton" href="index.html">←</a>
       <a href="index.html"><h5>Elo Chamber</h5></a>
@@ -61,12 +58,18 @@
     <div class="listContainer" id="listContainer"></div>
 
     <div class="listSettings">
-      <a id="addItemButton">+</a>
+      <a id="addItemButton">+ (add item)</a>
       <a class="saveButton">[save]</a>
     </div>
 
     <script src="api.js"></script>
-
     <script src="list.js"></script>
+    <form id="passwordEnterForm">
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required><br><br>
+
+        <input type="submit" value="Submit">
+        <button type="button" id="cancel-button">Cancel</button>
+    </form>
   </body>
 </html>
