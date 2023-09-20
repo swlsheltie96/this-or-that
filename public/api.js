@@ -100,6 +100,7 @@ async function getSortedList(listName) {
     console.log('dlist', data.list);
     return data.list.map((d) => ({
       name: d.name,
+      elo: d.elo,
       data: d.data ? JSON.parse(d.data) : {},
     }));
   } else {

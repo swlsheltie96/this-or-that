@@ -96,7 +96,7 @@ window.addEventListener("load", async () => {
     listContainer.innerHTML = ""; // Clear the existing table
 
     let initial_data = list.map((d) => {
-        return {name: d.name, picture: d.data.picture, description: d.data.description};
+        return {name: d.name, picture: d.data.picture, description: d.data.description, elo: d.elo};
     })
     const table = new Tabulator("#listContainer", {
       height: "100%", // set height of table (in CSS or here), this enables the Virtual DOM and improves render speed dramatically (can be any valid css height value)
