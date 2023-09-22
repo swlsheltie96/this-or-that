@@ -15,7 +15,7 @@
     <ul id="listOfLists">
       <!-- Existing list items will be populated here -->
     </ul>
-    <br />
+    <div class="footer"></div>
 
     <!-- JavaScript code to handle form submission and populate the list of lists -->
     <script src="api.js"></script>
@@ -31,6 +31,8 @@
         // Populate the list of lists
         data.lists.forEach((list) => {
           console.log(data.lists);
+          const listInner = document.createElement("div");
+
           let horizontal_transform = Math.random() * (10 - -10) + -10;
           console.log(horizontal_transform);
           const listItem = document.createElement("li");
@@ -66,8 +68,8 @@
           listData.classList.add("listData");
 
           listActions.classList.add("listActions");
-
-          listItem.appendChild(listData);
+          listInner.appendChild(listData);
+          listInner.appendChild(listActions);
 
           const viewButton = document.createElement("a");
           const voteButton = document.createElement("a");
@@ -78,7 +80,7 @@
           listActions.appendChild(viewButton);
           listActions.appendChild(voteButton);
 
-          listItem.appendChild(listActions);
+          listItem.appendChild(listInner);
 
           listOfLists.appendChild(listItem);
         });
