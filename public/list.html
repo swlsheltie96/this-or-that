@@ -4,36 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" type="text/css" href="style.css" />
+
     <link
       href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css"
       rel="stylesheet"
     />
+    <link rel="stylesheet" type="text/css" href="list.css" />
     <title>List</title>
-    <style>
-      .listSettings {
-        display: flex;
-        justify-content: space-between;
-      }
-
-      .headerContent {
-        position: relative;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-      #passwordEnterForm {
-            display: none;
-            width: 300px;
-            padding: 20px;
-            background-color: #f2f2f2;
-            border: 1px solid #ccc;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 1000;
-      }
-    </style>
 
     <script
       type="text/javascript"
@@ -41,35 +18,46 @@
     ></script>
   </head>
   <body>
-
     <div class="headerContent">
       <a id="backButton" href="index.html">←</a>
       <a href="index.html"><h5>Elo Chamber</h5></a>
     </div>
-    <br />
-    <a id="voteButton">[vote]</a>
-    <a id="viewButton">[Grid View]</a>
-    <h1>List Title</h1>
-    <div class="listSettings">
-      <span></span>
-      <a class="saveButton">[save]</a>
-    </div>
 
-    <div class="listContainer" id="listContainer"></div>
+    <div class="elo-page">
+      <h1 id="listTitle"></h1>
+      <h2 id="listPrompt"></h2>
 
-    <div class="listSettings">
-      <a id="addItemButton">+ (add item)</a>
-      <a class="saveButton">[save]</a>
+      <div class="listSettings">
+        <div class="listLinks">
+          <a id="voteButton">[Vote]</a>
+          <a id="viewButton">[Grid View]</a>
+        </div>
+
+        <a class="saveButton">[Save]</a>
+      </div>
+
+      <div class="listContainer" id="listContainer"></div>
+
+      <div class="listSettings">
+        <a id="addItemButton">+ (Add item)</a>
+        <a class="saveButton">[Save]</a>
+      </div>
     </div>
 
     <script src="api.js"></script>
     <script src="list.js"></script>
-    <form id="passwordEnterForm">
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required><br><br>
 
-        <input type="submit" value="Submit">
-        <button type="button" id="cancel-button">Cancel</button>
+    <form id="passwordEnterForm">
+      <label for="password">Password:</label>
+      <input
+        type="password"
+        id="password"
+        name="password"
+        required
+      /><br /><br />
+
+      <input type="submit" value="Submit" />
+      <button type="button" id="cancel-button">Cancel</button>
     </form>
   </body>
 </html>

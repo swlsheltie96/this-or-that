@@ -1,3 +1,9 @@
+:root {
+  --page-shadow: 0 0 10px #ccc;
+  --body-size: 20px;
+  --border-color: #333;
+  --page-color: rgba(128, 255, 0, 1);
+}
 /* Reset some default styles */
 body,
 h1,
@@ -21,37 +27,31 @@ a {
 /* Apply a basic background color and font styles */
 body {
   font-family: Arial, Helvetica, sans-serif;
-  background-color: #f8f9fa;
+  background-color: #eeeeee;
   margin: 0 auto;
   max-width: 800px;
   padding: 20px;
-}
-
-/* Apply Wikipedia-like content container */
-#content {
-  background-color: #ffffff;
-  padding: 20px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 /* Style headings */
 h1,
 h2,
 h3,
-h4 {
+h4,
+h5 {
   font-family: "Times New Roman", Times, serif;
   margin-bottom: 10px;
 }
 
 h1 {
-  font-size: 28px;
+  font-size: 50px;
   text-align: center;
+  font-weight: bold;
 }
 
 h2 {
-  font-size: 24px;
+  font-size: 20px;
+  text-align: center;
 }
 
 h3 {
@@ -62,13 +62,14 @@ h4 {
   font-size: 18px;
 }
 h5 {
-  font-family: "Times New Roman", Times, serif;
   font-size: 18px;
 }
 
 /* Style links */
 a {
-  color: #0645ad;
+  font-family: "Times New Roman", Times, serif;
+
+  color: blue;
   text-decoration: none;
   cursor: pointer;
 }
@@ -88,42 +89,14 @@ li {
 p {
   margin-bottom: 15px;
 }
-
-/* Apply Wikipedia-like table styles */
-#listTable {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 10px auto;
-  border: 0.5px solid #ccc;
+.elo-logo {
+  background-image: url("https://win98icons.alexmeub.com/icons/png/cardfile-1.png");
+  display: inline-block;
+  height: 50px;
+  width: 50px;
+  background-size: auto;
+  background-repeat: no-repeat;
 }
-
-/* Style table headers */
-.listHeader {
-  background-color: #f2f2f2;
-}
-
-.listRow {
-  display: flex;
-  justify-content: space-between;
-  padding: 3px 6px;
-  border: 0.5px solid #ccc;
-  height: 1.2em;
-  align-items: center;
-}
-.listCell {
-  flex: 1;
-  text-align: left;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-/* Add hover effect to table rows */
-.listRow:hover {
-  background-color: #e0e0e0;
-}
-
 /* Apply a light gray background to code blocks */
 pre,
 code {
@@ -140,11 +113,6 @@ blockquote {
   margin-left: 10px;
   padding-left: 10px;
   color: #777;
-}
-
-/* Apply a slight shadow to images */
-img {
-  box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
 }
 
 /* Style horizontal rules */

@@ -4,95 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" type="text/css" href="style.css" />
+    <link rel="stylesheet" type="text/css" href="index.css" />
 
     <title>Elo Chamber</title>
-    <style>
-      ul {
-        list-style: none;
-        padding: 0;
-      }
-      li {
-        border: 1px solid #ccc;
-        margin: 5px 0;
-        padding: 10px;
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      li a {
-        cursor: pointer;
-        font-size: 20px;
-      }
-
-      label {
-        display: block;
-        flex-grow: 1;
-        padding-bottom: 5px;
-        /* width: 15%; */
-      }
-      input {
-        display: block;
-        flex-grow: 3;
-        font-size: 12px;
-        padding: 10px;
-        border-radius: 0;
-        border: solid 1px #ccc;
-        box-sizing: border-box;
-        width: 100%;
-      }
-      img {
-        width: 50px;
-        aspect-ratio: 1 / 1;
-      }
-      #itemFields > div,
-      #listTitle {
-        margin: 1em 0;
-        /* display: flex; */
-      }
-      .listData,
-      .listActions {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-      .itemContainer {
-        display: flex;
-        gap: 10px;
-        padding-top: 5px;
-      }
-      .itemName,
-      .itemImage {
-        width: 50%;
-      }
-      form {
-        border: solid 1px #ccc;
-        padding: 10px;
-        margin-top: 20px;
-        margin-bottom: 1em;
-      }
-      #addItemButton {
-        margin-right: 0;
-        margin-left: auto;
-        display: block;
-      }
-      .onlineStatus {
-        width: 10px;
-        height: 10px;
-        border-radius: 100px;
-      }
-      .online {
-        background-color: lightgreen;
-      }
-    </style>
   </head>
   <body>
-    <h1>Elo Chamber</h1>
+    <h1>Elo Chamber<span class="elo-logo"></span></h1>
+    <a id="creatListInitButton" href="create.html">Create New List</a>
+
     <ul id="listOfLists">
       <!-- Existing list items will be populated here -->
     </ul>
     <br />
-    <a id="creatListInitButton" href="create.html">Create New List</a>
 
     <!-- JavaScript code to handle form submission and populate the list of lists -->
     <script src="api.js"></script>
@@ -104,12 +27,25 @@
 
         // Clear the existing list items
         listOfLists.innerHTML = "";
-
+        console.log("hi");
         // Populate the list of lists
         data.lists.forEach((list) => {
           console.log(data.lists);
+          let horizontal_transform = Math.random() * (10 - -10) + -10;
+          console.log(horizontal_transform);
           const listItem = document.createElement("li");
-
+          listItem.style.transform =
+            "translate(" + horizontal_transform + "px, 0px)";
+          listItem.addEventListener("mouseenter", (e) => {
+            listItem.classList.add("hover");
+            listItem.style.transform =
+              "translate(" + horizontal_transform + "px, -10px)";
+          });
+          listItem.addEventListener("mouseleave", (e) => {
+            listItem.classList.remove("hover");
+            listItem.style.transform =
+              "translate(" + horizontal_transform + "px, 0px)";
+          });
           const listData = document.createElement("div");
           const listActions = document.createElement("div");
           const listPreview = document.createElement("div");
@@ -118,7 +54,7 @@
           const onlineStatus = document.createElement("div");
           const listImg = document.createElement("img");
           getSortedList(list.name).then((items) => {
-              listImg.src = items[0].data.picture;
+            listImg.src = items[0].data.picture;
           });
           onlineStatus.classList.add("onlineStatus", "online");
           listLink.href = `grid.html?listName=${list.name}`;
