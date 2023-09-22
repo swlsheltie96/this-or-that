@@ -1,0 +1,104 @@
+.elo-page {
+  box-shadow: var(--page-shadow);
+  background-color: white;
+  padding: 50px;
+}
+
+.tabulator {
+  font-family: "Times New Roman", Times, serif;
+  background-color: white;
+  border-color: var(--border-color);
+  margin: 20px auto;
+  border: none !important;
+}
+
+.tabulator .tabulator-header {
+  color: black;
+  border-bottom-color: var(--border-color);
+  border: none !important;
+}
+.tabulator .tabulator-header .tabulator-col {
+  background-color: var(--page-color);
+  font-size: var(--body-size);
+  border-right-color: var(--border-color);
+  font-weight: normal;
+  border: none !important;
+}
+
+.tabulator-row .tabulator-cell {
+  font-size: var(--body-size);
+  border-right-color: var(--border-color);
+  border: none !important;
+}
+.tabulator-row .tabulator-cell.tabulator-editable.tabulator-editing input {
+  font-family: "Times New Roman", Times, serif;
+  font-size: var(--body-size);
+  border-right-color: var(--border-color);
+  border: none !important;
+}
+.tabulator-row.tabulator-row-even {
+  background-color: rgba(0, 191, 0, 0.2);
+  background-color: white;
+  border: none !important;
+}
+
+.tabulator
+  .tabulator-header
+  .tabulator-col
+  .tabulator-col-content
+  .tabulator-col-sorter
+  .tabulator-arrow {
+  border-bottom-color: var(--border-color);
+}
+.tabulator
+  .tabulator-header
+  .tabulator-col.tabulator-sortable[aria-sort="none"]
+  .tabulator-col-content
+  .tabulator-col-sorter
+  .tabulator-arrow {
+  border-bottom-color: var(--border-color);
+}
+.tabulator
+  .tabulator-header
+  .tabulator-col.tabulator-sortable[aria-sort="ascending"]
+  .tabulator-col-content
+  .tabulator-col-sorter
+  .tabulator-arrow {
+  border-bottom-color: var(--border-color);
+}
+.tabulator
+  .tabulator-header
+  .tabulator-col.tabulator-sortable[aria-sort="descending"]
+  .tabulator-col-content
+  .tabulator-col-sorter
+  .tabulator-arrow {
+  border-bottom: none;
+  border-top: 6px solid;
+  border-top-color: var(--border-color);
+}
+.tabulator
+  .tabulator-header
+  .tabulator-col.tabulator-sortable.tabulator-col-sorter-element:hover {
+  background-color: var(--page-color);
+}
+.tabulator-row.tabulator-selectable:hover {
+  background-color: var(--page-color);
+}
+
+.listSettings {
+  display: flex;
+  justify-content: space-between;
+}
+
+#passwordEnterForm {
+  display: none;
+  width: 300px;
+  padding: 20px;
+  background-color: #f2f2f2;
+  border: 1px solid #ccc;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+}
