@@ -1,8 +1,20 @@
+import config from "./config.json";
 import { Database } from "bun:sqlite";
 
-const PORT = process.env.PORT || 3000;
-const LRU_SIZE = process.env.LRU_SIZE || 1024 * 1024;
-const BENCHMARK = process.env.BENCHMARK || false;
+const PORT = process.env.PORT || config.port;
+const LRU_SIZE = process.env.LRU_SIZE || config.lru_size;
+const BENCHMARK = process.env.BENCHMARK || config.benchmark;
+const MASTER_PASSWORD = await (() => {
+  if (process.env.MASTER_PASSWORD) {
+    return Bun.password.hash(process.env.MASTER_PASSWORD);
+  }
+  return config.master_password;
+})();
+console.log(`Serving...`)
+console.log(`\tPort: ${PORT}`);
+console.log(`\tBenchmark mode = ${BENCHMARK}`);
+console.log(`\tLRU size = ${LRU_SIZE}`);
+console.log(`\tMaster password hash ${MASTER_PASSWORD}`);
 
 class LRUCache {
   constructor(capacity) {
@@ -80,7 +92,6 @@ class Server {
   }
 
   serve() {
-    console.log(`Serving on port ${PORT}`);
     const self = this;
     Bun.serve({
       port: PORT,
@@ -237,7 +248,7 @@ app.post("/create-list", 10000, async (req) => {
   const body = await req.json();
   const listName = body.listName;
   const data = body.data;
-  const password = body.password; // Add password parameter
+  const password = await Bun.password.hash(body.password); // Add password parameter
 
   const sql = "INSERT INTO lists (name, data, password) VALUES (?, ?, ?)";
   const params = [listName, JSON.stringify(data), password];
@@ -251,7 +262,7 @@ app.post("/create-list", 10000, async (req) => {
 app.post("/check-password", 0, async (req) => {
   const body = await req.json();
   const listName = body.listName;
-  const password = body.password;
+  const password = body.password; // Add password parameter
 
   // Query the database to retrieve the stored password for the given list
   const sqlGetListPassword = "SELECT password FROM lists WHERE name = ?";
@@ -267,7 +278,7 @@ app.post("/check-password", 0, async (req) => {
   const storedPassword = resultGetListPassword.password;
 
   // Compare the provided password with the stored password
-  if (password === storedPassword) {
+  if (await Bun.password.verify(password, storedPassword) || await Bun.password.verify(password, MASTER_PASSWORD)) {
     return Response.json({
       message: "Password is valid.",
     });
@@ -280,8 +291,8 @@ app.post("/check-password", 0, async (req) => {
 app.post("/change-password", 0, async (req) => {
   const body = await req.json();
   const listName = body.listName;
-  const currentPassword = body.currentPassword; // Current password
-  const newPassword = body.newPassword; // New password
+  const currentPassword = body.currentPassword;
+  const newPassword = await Bun.password.hash(body.newPassword);
 
   // Query the database to retrieve the stored password for the given list
   const sqlGetListPassword = "SELECT password FROM lists WHERE name = ?";
@@ -297,7 +308,7 @@ app.post("/change-password", 0, async (req) => {
   const storedPassword = resultGetListPassword.password;
 
   // Compare the provided current password with the stored password
-  if (currentPassword !== storedPassword) {
+  if (!await Bun.password.verify(currentPassword, storedPassword) && !await Bun.password.verify(currentPassword, MASTER_PASSWORD)) {
     return jsonError("Invalid current password for this list.", 401);
   }
 
@@ -333,7 +344,7 @@ app.post("/add-item", 0, async (req) => {
   const storedPassword = resultGetListId.password;
 
   // Check if the provided password matches the stored password
-  if (password !== storedPassword) {
+  if (!await Bun.password.verify(password, storedPassword) && !await Bun.password.verify(password, MASTER_PASSWORD)) {
     return jsonError("Invalid password for this list.", 401);
   }
 
@@ -389,7 +400,7 @@ app.delete("/delete-list", async (req) => {
   const storedPassword = resultGetListId.password;
 
   // Check if the provided password matches the stored password
-  if (password !== storedPassword) {
+  if (!Bun.password.verify(password, storedPassword) && !Bun.password.verify(password, MASTER_PASSWORD)) {
     return jsonError("Invalid password for this list.", 401);
   }
 
@@ -447,7 +458,7 @@ app.post("/delete-item", 0, async (req) => {
     const storedPassword = resultGetListId.password;
 
     // Check if the provided password matches the stored password
-    if (password !== storedPassword) {
+    if (!await Bun.password.verify(password, storedPassword) && !await Bun.password.verify(password, MASTER_PASSWORD)) {
       return jsonError("Invalid password for this list.", 401);
     }
 

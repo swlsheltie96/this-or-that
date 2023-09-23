@@ -27,14 +27,11 @@
 
         // Clear the existing list items
         listOfLists.innerHTML = "";
-        console.log("hi");
         // Populate the list of lists
         data.lists.forEach((list) => {
-          console.log(data.lists);
           const listInner = document.createElement("div");
 
           let horizontal_transform = Math.random() * (10 - -10) + -10;
-          console.log(horizontal_transform);
           const listItem = document.createElement("li");
           listItem.style.transform =
             "translate(" + horizontal_transform + "px, 0px)";
@@ -56,7 +53,9 @@
           const onlineStatus = document.createElement("div");
           const listImg = document.createElement("img");
           getSortedList(list.name).then((items) => {
-            listImg.src = items[0].data.picture;
+            if (items.length && items[0].data && items[0].data.picture) {
+              listImg.src = items[0].data.picture;
+            }
           });
           onlineStatus.classList.add("onlineStatus", "online");
           listLink.href = `grid.html?listName=${list.name}`;

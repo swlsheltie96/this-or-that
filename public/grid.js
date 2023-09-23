@@ -37,7 +37,6 @@ document.getElementById('listName').textContent = listName;
 
 // Create and append cards for each item in the JSON data
 getSortedList(listName).then((data) => {
-  console.log(data);
   data.forEach(function(item, index) {
       var card = createCard(item, index);
       cardContainer.appendChild(card);

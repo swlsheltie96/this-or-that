@@ -1,7 +1,104 @@
 const server = window.location.origin;
 
+class CookieManager {
+  // Get a cookie by its name
+  static getCookie(name) {
+    const cookies = document.cookie.split('; ');
+    for (const cookie of cookies) {
+      const [cookieName, cookieValue] = cookie.split('=');
+      if (cookieName === name) {
+        return decodeURIComponent(cookieValue);
+      }
+    }
+    return null;
+  }
+
+  // Set a cookie with a specified name, value, and optional options
+  static setCookie(name, value, options = {}) {
+    const { expires, path, domain, secure } = options;
+    let cookieString = `${encodeURIComponent(name)}=${encodeURIComponent(value)}`;
+    
+    if (expires instanceof Date) {
+      cookieString += `; expires=${expires.toUTCString()}`;
+    }
+    if (path) {
+      cookieString += `; path=${path}`;
+    }
+    if (domain) {
+      cookieString += `; domain=${domain}`;
+    }
+    if (secure) {
+      cookieString += '; secure';
+    }
+    
+    document.cookie = cookieString;
+  }
+
+  // Delete a cookie by setting its expiration date to the past
+  static deleteCookie(name) {
+    const expirationDate = new Date(0);
+    this.setCookie(name, '', { expires: expirationDate });
+  }
+}
+
+function createCustomPrompt(prompt_text) {
+    return new Promise((resolve, reject) => {
+        // Create a form element
+        const form = document.createElement('form');
+
+        // Create a label and input field for the prompt
+        const label = document.createElement('label');
+        label.textContent = prompt_text;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.required = true;
+
+        // Create a submit button
+        const submitButton = document.createElement('button');
+        submitButton.type = 'submit';
+        submitButton.textContent = 'Submit';
+
+        // Append elements to the form
+        form.appendChild(label);
+        form.appendChild(input);
+        form.appendChild(submitButton);
+
+        // Handle form submission
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const userInput = input.value;
+            resolve(userInput); // Resolve the promise with the user input
+            document.body.removeChild(form); // Remove the form from the DOM
+        });
+
+        // Append the form to the body
+        document.body.appendChild(form);
+    });
+}
+
+async function login(listName) {
+  const password = CookieManager.getCookie(listName);
+  if (password) {
+    return password;
+  }
+  const login_prompt = () => {
+    const d = document.createElement('div');
+    return new Promise
+  };
+  let possible_pw = await createCustomPrompt('Enter password:');
+  while (possible_pw && !(await checkPassword(listName, possible_pw))) {
+    possible_pw = await createCustomPrompt('Enter password:');
+  }
+  if (possible_pw) {
+    CookieManager.setCookie(listName, possible_pw, { expires: new Date(Date.now() + 86400 * 1000), path: '/' });
+    return possible_pw;
+  }
+  return '';
+}
+
 // Create a new list with a password
-async function createList(listName, listData, password) {
+async function createList(listName, listData) {
+  const password = await login(listName);
   const response = await fetch(`${server}/create-list`, {
     method: "POST",
     headers: {
@@ -18,7 +115,8 @@ async function createList(listName, listData, password) {
 }
 
 // Check the password for a list
-async function checkPassword(listName, password) {
+async function checkPassword(listName) {
+  const password = await login(listName);
   const response = await fetch(`${server}/check-password`, {
     method: "POST",
     headers: {
@@ -34,7 +132,8 @@ async function checkPassword(listName, password) {
 }
 
 // Delete a list and its associated items with a password
-async function deleteList(listName, password) {
+async function deleteList(listName) {
+  const password = await login(listName);
   const response = await fetch(`${server}/delete-list`, {
     method: "DELETE",
     headers: {
@@ -53,7 +152,8 @@ async function deleteList(listName, password) {
 }
 
 // Add an item to a list with a password
-async function addItem(listName, item, password) {
+async function addItem(listName, item) {
+  const password = await login(listName);
   const response = await fetch(`${server}/add-item`, {
     method: "POST",
     headers: {
@@ -73,7 +173,8 @@ async function addItem(listName, item, password) {
 }
 
 // Delete an item from a list with a password
-async function deleteItem(listName, itemName, password) {
+async function deleteItem(listName, itemName) {
+  const password = await login(listName);
   const response = await fetch(`${server}/delete-item`, {
     method: "POST",
     headers: {

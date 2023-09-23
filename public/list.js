@@ -1,5 +1,3 @@
-console.log("list");
-
 function findObjectDifference(oldList, newList) {
   const oldMap = new Map();
   const newMap = new Map();
@@ -69,49 +67,29 @@ function createButton(existing, buttonTxt_Id, clickHandler) {
 }
 
 let dirty = false;
-let password = "";
 window.addEventListener("load", async () => {
-  console.log("hi");
-
   const listContainer = document.getElementById("listContainer");
   const queryString = window.location.search;
   const searchParams = new URLSearchParams(queryString);
   const listName = searchParams.get(`listName`);
 
   getListInfo(listName).then((d) => {
-    console.log(d);
     document.getElementById("listPrompt").textContent = d.description;
 
     document.getElementById("listTitle").textContent = listName;
   });
   getSortedList(listName).then((list) => {
-    console.log(list);
-    const pw_enter = document.getElementById("passwordEnterForm");
-    const cancelButton = document.getElementById("cancel-button");
-
-    cancelButton.addEventListener("click", () => {
-      pw_enter.style.display = "none";
-    });
-    async function login_and_save() {
-      if (password != "") {
-        await save(password);
-      }
-      pw_enter.style.display = "block";
-    }
-    async function save(pw) {
-      if (!pw) {
-        return;
-      }
+    async function save() {
       const diffs = findObjectDifference(initial_data, table.getData());
       for (let row of diffs.removed) {
-        await deleteItem(listName, row.name, pw);
+        await deleteItem(listName, row.name);
       }
       for (let row of diffs.added) {
-        await addItem(listName, rowToItem(row), pw);
+        await addItem(listName, rowToItem(row));
       }
       for (let row of diffs.updated) {
-        await deleteItem(listName, row.name, pw);
-        await addItem(listName, rowToItem(row), pw);
+        await deleteItem(listName, row.name);
+        await addItem(listName, rowToItem(row));
       }
       const saveButtons = document.querySelectorAll(".saveButton");
       Array.from(saveButtons).map((b) => {
@@ -119,19 +97,6 @@ window.addEventListener("load", async () => {
       });
       dirty = false;
     }
-    pw_enter.addEventListener("submit", function (event) {
-      event.preventDefault();
-      console.log(event);
-      const possible_pw = document.getElementById("password").value;
-      checkPassword(listName, possible_pw).then((valid) => {
-        if (valid) {
-          save(possible_pw).then(() => {
-            password = possible_pw;
-            pw_enter.style.display = "none";
-          });
-        }
-      });
-    });
 
     listContainer.innerHTML = ""; // Clear the existing table
 
@@ -220,7 +185,7 @@ window.addEventListener("load", async () => {
       };
     }
     Array.from(saveButtons).map((b) => {
-      b.addEventListener("click", login_and_save);
+      b.addEventListener("click", save);
     });
   });
 });
