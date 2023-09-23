@@ -97,8 +97,7 @@ async function login(listName) {
 }
 
 // Create a new list with a password
-async function createList(listName, listData) {
-  const password = await login(listName);
+async function createList(listName, listData, password) {
   const response = await fetch(`${server}/create-list`, {
     method: "POST",
     headers: {
