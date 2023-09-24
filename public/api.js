@@ -1,20 +1,41 @@
 const server = window.location.origin;
 
 class CookieManager {
-  // Get a cookie by its name
-  static getCookie(name) {
+  constructor() {
+    this.cookieCache = new Map();
+    this.loadCookies();
+  }
+
+  // Load existing cookies into the cache
+  loadCookies() {
+    const cookies = document.cookie.split('; ');
+    for (const cookie of cookies) {
+      const [cookieName, cookieValue] = cookie.split('=');
+      this.cookieCache.set(cookieName, decodeURIComponent(cookieValue));
+    }
+  }
+
+  // Get a cookie by its name from the cache or document.cookie
+  getCookie(name) {
+    if (this.cookieCache.has(name)) {
+      return this.cookieCache.get(name);
+    }
+
     const cookies = document.cookie.split('; ');
     for (const cookie of cookies) {
       const [cookieName, cookieValue] = cookie.split('=');
       if (cookieName === name) {
-        return decodeURIComponent(cookieValue);
+        const decodedValue = decodeURIComponent(cookieValue);
+        this.cookieCache.set(name, decodedValue);
+        return decodedValue;
       }
     }
+
     return null;
   }
 
-  // Set a cookie with a specified name, value, and optional options
-  static setCookie(name, value, options = {}) {
+  // Set a cookie in the cache and using document.cookie
+  setCookie(name, value, options = {}) {
     const { expires, path, domain, secure } = options;
     let cookieString = `${encodeURIComponent(name)}=${encodeURIComponent(value)}`;
     
@@ -31,20 +52,24 @@ class CookieManager {
       cookieString += '; secure';
     }
     
+    this.cookieCache.set(name, value);
     document.cookie = cookieString;
   }
 
-  // Delete a cookie by setting its expiration date to the past
-  static deleteCookie(name) {
+  // Delete a cookie from the cache and using document.cookie
+  deleteCookie(name) {
+    this.cookieCache.delete(name);
     const expirationDate = new Date(0);
     this.setCookie(name, '', { expires: expirationDate });
   }
 }
 
+
 function createCustomPrompt(prompt_text) {
     return new Promise((resolve, reject) => {
         // Create a form element
         const form = document.createElement('form');
+        form.classList.add('login');
 
         // Create a label and input field for the prompt
         const label = document.createElement('label');
@@ -76,8 +101,9 @@ function createCustomPrompt(prompt_text) {
     });
 }
 
+const cookieManager = new CookieManager();
 async function login(listName) {
-  const password = CookieManager.getCookie(listName);
+  const password = cookieManager.getCookie(listName);
   if (password) {
     return password;
   }
@@ -90,7 +116,7 @@ async function login(listName) {
     possible_pw = await createCustomPrompt('Enter password:');
   }
   if (possible_pw) {
-    CookieManager.setCookie(listName, possible_pw, { expires: new Date(Date.now() + 86400 * 1000), path: '/' });
+    cookieManager.setCookie(listName, possible_pw, { expires: new Date(Date.now() + 86400 * 1000), path: '/' });
     return possible_pw;
   }
   return '';
@@ -114,8 +140,7 @@ async function createList(listName, listData, password) {
 }
 
 // Check the password for a list
-async function checkPassword(listName) {
-  const password = await login(listName);
+async function checkPassword(listName, password) {
   const response = await fetch(`${server}/check-password`, {
     method: "POST",
     headers: {
