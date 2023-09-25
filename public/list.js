@@ -74,9 +74,9 @@ window.addEventListener("load", async () => {
   const listName = searchParams.get(`listName`);
 
   getListInfo(listName).then((d) => {
-    document.getElementById("listPrompt").textContent = d.description;
-
-    document.getElementById("listTitle").textContent = listName;
+    document.getElementById("listName").value = listName;
+    document.getElementById("listDescription").value = d.description;
+    document.getElementById("listPrompt").value = d.prompt;
   });
   getSortedList(listName).then((list) => {
     async function save() {

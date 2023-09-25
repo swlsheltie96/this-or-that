@@ -12,11 +12,22 @@ body,
 .tabulator > * {
   font-family: "VT323";
 }
-
+h1 {
+  font-weight: normal;
+  text-align: center;
+}
+h2 {
+  font-weight: normal;
+  text-align: center;
+}
+p {
+  margin-top: 10px;
+}
 a {
   color: blue;
   text-decoration: none;
   cursor: pointer;
+  text-align: center;
 }
 
 .flex-justify {
@@ -78,6 +89,7 @@ a {
   border-right: 2px solid #eee;
   border-left: 2px solid #ccc;
   border-top: 2px solid #ccc;
+  box-sizing: border-box;
 }
 .box {
   box-sizing: border-box;
@@ -97,28 +109,24 @@ a {
   padding: 0;
 }
 .listItem {
-  padding: 20px 20px 20px 20px;
+  padding: 10px;
   margin: 5px 0px;
-  height: 80px;
+  /* height: 80px; */
   cursor: pointer;
-  box-shadow: var(--page-shadow);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .listData a {
-  font-weight: thin;
   font-size: 1.5em;
   text-decoration: none;
   color: black;
-  margin-left: 150px;
+  text-align: left;
 }
 .listData img {
-  width: 80px;
+  width: 60px;
   aspect-ratio: 1 / 1;
-  position: absolute;
-  top: 20px;
 }
 
 .listActions a {

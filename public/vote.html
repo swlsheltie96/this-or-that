@@ -7,14 +7,6 @@
 
     <title>Vote for Item</title>
     <style>
-      h2 {
-        margin-bottom: unset;
-        text-align: center;
-      }
-      p {
-        margin-bottom: unset;
-        margin-top: 10px;
-      }
       #elementVoteContainer {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
@@ -27,17 +19,9 @@
       }
       img {
         aspect-ratio: 1 / 1;
-        max-width: 100%;
-        object-fit: contain;
-        margin-top: 10px;
+        width: 100%;
       }
-      .voteTitle {
-        text-align: center;
-        font-weight: normal;
-      }
-      #backButton {
-        float: left;
-      }
+
       .iVoted img {
         box-shadow: unset;
         width: 300px;
@@ -57,7 +41,7 @@
       <div class="voteElement clickable" id="element2"></div>
     </div>
     <br />
-    <div style="text-align: center; width: 70%; margin-left: 15%">
+    <div>
       <a class="clickable" id="skipButton">skip</a>
       <a class="clickable" id="resultsButton">results</a>
     </div>
