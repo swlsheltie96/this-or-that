@@ -9,8 +9,7 @@
       rel="stylesheet"
     />
     <title>List</title>
-    <style>
-    </style>
+    <style></style>
 
     <script
       type="text/javascript"
@@ -18,13 +17,17 @@
     ></script>
   </head>
   <body>
-    <div class='flex-justify'>
+    <div class="flex-justify">
       <h2>Elo Chamber<span class="elo-logo"></span></h2>
       <h1 id="listName"></h1>
       <a id="voteButton" class="clickable"><b>Vote!</b></a>
       <a id="viewButton" class="clickable">(list View)</a>
     </div>
-    <div id="card-container"></div>
+    <div class="gridType">
+      <button id="smallSquare" class="clickable">▪</button>
+      <button id="largeSquare" class="clickable clicked">⏹</button>
+    </div>
+    <div id="card-container" class="largeSquare"></div>
 
     <script src="api.js"></script>
     <script src="grid.js"></script>

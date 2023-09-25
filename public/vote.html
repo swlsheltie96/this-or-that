@@ -21,7 +21,6 @@
         grid-gap: 10px;
       }
       .voteElement {
-        border: 1px solid #ccc;
         padding: 10px;
         margin: 5px 0;
         cursor: pointer;
@@ -47,20 +46,20 @@
     </style>
   </head>
   <body>
-      <div class='flex-justify'>
-        <h2>Elo Chamber<span class="elo-logo"></span></h2>
-        <h1 id="listName"></h1>
-      </div>
-      <h1 class="voteTitle" id="listPrompt"></h1>
+    <div class="flex-justify">
+      <h2>Elo Chamber<span class="elo-logo"></span></h2>
+      <h1 id="listName"></h1>
+    </div>
+    <h1 class="voteTitle" id="listPrompt"></h1>
 
     <div id="elementVoteContainer">
       <div class="voteElement clickable" id="element1"></div>
       <div class="voteElement clickable" id="element2"></div>
     </div>
-    <br/>
-    <div style='text-align:center; width: 70%; margin-left: 15%;'>
-        <a class="clickable" id="skipButton">skip</a>
-        <a class="clickable" id="resultsButton">results</a>
+    <br />
+    <div style="text-align: center; width: 70%; margin-left: 15%">
+      <a class="clickable" id="skipButton">skip</a>
+      <a class="clickable" id="resultsButton">results</a>
     </div>
 
     <script src="api.js"></script>
@@ -139,11 +138,15 @@
         // 3. Get the value of a specific query parameter
         const listName = searchParams.get(`listName`);
         document.title = `${listName} 🗳️`;
-        document.getElementById('listName').textContent = `${listName}`;
-        document.getElementById('resultsButton').href = `grid.html?listName=${listName}`;
-        document.getElementById('skipButton').href = `vote.html?listName=${listName}`;
+        document.getElementById("listName").textContent = `${listName}`;
+        document.getElementById(
+          "resultsButton"
+        ).href = `grid.html?listName=${listName}`;
+        document.getElementById(
+          "skipButton"
+        ).href = `vote.html?listName=${listName}`;
         getListInfo(listName).then((d) => {
-            document.getElementById('listPrompt').textContent = d.prompt;
+          document.getElementById("listPrompt").textContent = d.prompt;
         });
 
         const response = await fetch(
