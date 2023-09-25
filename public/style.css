@@ -29,7 +29,19 @@ a {
   cursor: pointer;
   text-align: center;
 }
-
+input[type="text"] {
+  box-sizing: border-box;
+  background-color: white;
+  border-bottom: 1px solid #eee;
+  border-right: 1px solid #eee;
+  border-left: 1px solid #000;
+  border-top: 1px solid #000;
+  cursor: text;
+}
+input[type="text"]:focus-visible {
+  border-radius: 0;
+  outline: none;
+}
 .flex-justify {
   display: flex;
   justify-content: space-between;

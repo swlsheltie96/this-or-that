@@ -1,7 +1,5 @@
 .elo-page {
-  box-shadow: var(--page-shadow);
-  background-color: white;
-  padding: 50px;
+  margin: 20px auto;
 }
 
 .tabulator {

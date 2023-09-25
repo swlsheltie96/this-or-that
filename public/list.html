@@ -11,7 +11,20 @@
     />
     <link rel="stylesheet" type="text/css" href="list.css" />
     <title>List</title>
-
+    <style>
+      .listMetadata {
+        background-color: #ddd;
+        border-top: 2px solid #eee;
+        border-left: 2px solid #eee;
+        border-right: 2px solid #ccc;
+        border-bottom: 2px solid #ccc;
+        padding: 10px;
+      }
+      .data {
+        padding: 10px;
+        display: inline-block;
+      }
+    </style>
     <script
       type="text/javascript"
       src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"
@@ -21,20 +34,25 @@
     <div class="headerContent">
       <h1>Elo Chamber<span class="elo-logo"></span></h1>
     </div>
-
+    <a id="voteButton" class="clickable"><b>Vote!</b></a>
+    <a id="viewButton" class="clickable">(grid View)</a>
     <div class="elo-page">
-      <label for="listName">Title</label>
-      <input type="text" id="listName" name="listName"><br><br>
+      <div class="listMetadata">
+        <div class="data name">
+          <label for="listName">Title</label>
+          <input type="text" id="listName" name="listName" />
+        </div>
+        <div class="data description">
+          <label for="description">Description</label>
+          <input type="text" id="listDescription" name="description" />
+        </div>
+        <div class="data prompt">
+          <label for="prompt">Voting prompt</label>
+          <input type="text" id="listPrompt" name="prompt" />
+        </div>
+      </div>
 
-      <label for="description">Description</label>
-      <input type="text" id="listDescription" name="description"></input><br><br>
-
-      <label for="prompt">Vote prompt</label>
-      <input type="text" id="listPrompt" name="prompt"><br><br>
       <div class="flex-justify">
-        <a id="voteButton">[Vote]</a>
-        <a id="viewButton">[Grid View]</a>
-
         <a class="saveButton">[Save]</a>
       </div>
 
