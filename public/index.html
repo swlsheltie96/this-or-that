@@ -4,13 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" type="text/css" href="style.css" />
-    <link rel="stylesheet" type="text/css" href="index.css" />
 
     <title>Elo Chamber</title>
   </head>
   <body>
-    <h1>Elo Chamber<span class="elo-logo"></span></h1>
-    <a id="creatListInitButton" href="create.html">Create New List</a>
+    <div class='flex-justify'>
+      <h1>Elo Chamber<span class="elo-logo"></span></h1>
+      <a id="creatListInitButton" class="clickable" href="create.html">Create New List</a>
+    </div>
 
     <ul id="listOfLists">
       <!-- Existing list items will be populated here -->
@@ -29,57 +30,45 @@
         listOfLists.innerHTML = "";
         // Populate the list of lists
         data.lists.forEach((list) => {
-          const listInner = document.createElement("div");
 
-          let horizontal_transform = Math.random() * (10 - -10) + -10;
+          let horizontal_transform = 0;//Math.random() * (10 - -10) + -10;
           const listItem = document.createElement("li");
+          listItem.classList.add('listItem')
+          listItem.classList.add('box')
           listItem.style.transform =
             "translate(" + horizontal_transform + "px, 0px)";
-          listItem.addEventListener("mouseenter", (e) => {
-            listItem.classList.add("hover");
-            listItem.style.transform =
-              "translate(" + horizontal_transform + "px, -10px)";
-          });
-          listItem.addEventListener("mouseleave", (e) => {
-            listItem.classList.remove("hover");
-            listItem.style.transform =
-              "translate(" + horizontal_transform + "px, 0px)";
-          });
           const listData = document.createElement("div");
           const listActions = document.createElement("div");
           const listPreview = document.createElement("div");
 
           const listLink = document.createElement("a");
-          const onlineStatus = document.createElement("div");
           const listImg = document.createElement("img");
           getSortedList(list.name).then((items) => {
             if (items.length && items[0].data && items[0].data.picture) {
               listImg.src = items[0].data.picture;
             }
           });
-          onlineStatus.classList.add("onlineStatus", "online");
           listLink.href = `grid.html?listName=${list.name}`;
-          listLink.textContent = list.name + " 🔥";
+          listLink.textContent = list.name;
           listData.appendChild(listImg);
           listData.appendChild(listLink);
-          listData.appendChild(onlineStatus);
           listData.appendChild(listPreview);
           listData.classList.add("listData");
 
           listActions.classList.add("listActions");
-          listInner.appendChild(listData);
-          listInner.appendChild(listActions);
+          listItem.appendChild(listData);
+          listItem.appendChild(listActions);
 
           const viewButton = document.createElement("a");
           const voteButton = document.createElement("a");
-          viewButton.textContent = "[View]";
-          voteButton.textContent = "[Vote]";
+          viewButton.classList.add('clickable');
+          voteButton.classList.add('clickable');
+          viewButton.textContent = "View";
+          voteButton.textContent = "Vote";
           viewButton.href = `grid.html?listName=${list.name}`;
           voteButton.href = `vote.html?listName=${list.name}`;
           listActions.appendChild(viewButton);
           listActions.appendChild(voteButton);
-
-          listItem.appendChild(listInner);
 
           listOfLists.appendChild(listItem);
         });

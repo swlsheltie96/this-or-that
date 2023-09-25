@@ -1,143 +1,5 @@
 @import "https://fonts.googleapis.com/css?family=VT323";
 
-/*
-:root {
-  --page-shadow: 0 0 10px #ccc;
-  --body-size: 20px;
-  --border-color: #333;
-  --page-color: rgba(128, 255, 0, 1);
-}
-
-body,
-h1,
-h2,
-h3,
-h4,
-h5,
-p,
-ul,
-ol,
-li,
-a {
-  margin: 0;
-  padding: 0;
-  border: 0;
-  font-size: 100%;
-  font: inherit;
-  vertical-align: baseline;
-}
-
-
-body {
-  font-family: Arial, Helvetica, sans-serif;
-  background-color: #eeeeee;
-  margin: 0 auto;
-  max-width: 800px;
-  padding: 20px;
-}
-
-
-h1,
-h2,
-h3,
-h4,
-h5 {
-  font-family: "Times New Roman", Times, serif;
-  margin-bottom: 10px;
-}
-
-h1 {
-  font-size: 50px;
-  text-align: center;
-  font-weight: bold;
-}
-
-h2 {
-  font-size: 20px;
-  text-align: center;
-}
-
-h3 {
-  font-size: 20px;
-}
-
-h4 {
-  font-size: 18px;
-}
-h5 {
-  font-size: 18px;
-}
-
-
-a {
-  font-family: "Times New Roman", Times, serif;
-
-  color: blue;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-a:hover {
-  text-decoration: underline;
-}
-
-
-
-
-li {
-  margin: 6px 0;
-}
-
-
-p {
-  margin-bottom: 15px;
-}
-
-pre,
-code {
-  background-color: #f5f5f5;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  padding: 5px;
-  font-family: Consolas, Monaco, monospace;
-}
-
-
-blockquote {
-  border-left: 2px solid #ddd;
-  margin-left: 10px;
-  padding-left: 10px;
-  color: #777;
-}
-
-
-hr {
-  border: none;
-  border-top: 1px solid #ddd;
-  margin: 20px 0;
-}
-
-
-code {
-  font-family: Consolas, Monaco, monospace;
-}
-
-
-pre code {
-  display: block;
-  white-space: pre;
-}
-
-
-pre code::before {
-  content: attr(data-line);
-  display: inline-block;
-  width: 2em;
-  margin-right: 1em;
-  color: #999;
-}
-*/
-
 body {
   background-color: #eeeeee;
   margin: 0 auto;
@@ -153,6 +15,12 @@ a {
   color: blue;
   text-decoration: none;
   cursor: pointer;
+}
+
+.flex-justify {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .login {
@@ -176,3 +44,99 @@ a {
   background-repeat: no-repeat;
 }
 
+.clickable {
+  padding: 5px 20px;
+  background-color: #ddd;
+  border-top: 2px solid #eee;
+  border-left: 2px solid #eee;
+  border-right: 2px solid #ccc;
+  border-bottom: 2px solid #ccc;
+}
+.clickable:hover {
+  padding: 4px 19px;
+  margin: 1px;
+  background-color: #ddd;
+  border-bottom: 2px solid #eee;
+  border-right: 2px solid #eee;
+  border-left: 2px solid #ccc;
+  border-top: 2px solid #ccc;
+}
+.box {
+  background-color: #ddd;
+  border-top: 2px solid #eee;
+  border-left: 2px solid #eee;
+  border-right: 2px solid #ccc;
+  border-bottom: 2px solid #ccc;
+}
+#listOfLists{
+  padding: 0;
+}
+.listItem {
+  padding: 20px 20px 20px 20px;
+  margin: 5px 0px;
+  height: 80px;
+  cursor: pointer;
+  box-shadow: var(--page-shadow);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.listData a {
+  font-weight: thin;
+  font-size: 1.5em;
+  text-decoration: none;
+  color: black;
+  margin-left: 150px;
+}
+.listData img {
+  width: 80px;
+  aspect-ratio: 1 / 1;
+  position: absolute;
+  top: 20px;
+}
+
+.listActions a {
+  font-size: 20px;
+}
+
+.footer {
+  width: 100vw;
+  border-top: solid black 1px;
+  height: 150px;
+  z-index: 1;
+  position: absolute;
+  background-color: #eeeeee;
+  /* margin-left: -20px; */
+  left: 0;
+  display:none;
+}
+#addItemButton {
+  margin-right: 0;
+  margin-left: auto;
+  display: block;
+}
+.online {
+  background-color: lightgreen;
+}
+
+#itemFields > div,
+#listTitle {
+  margin: 1em 0;
+  /* display: flex; */
+}
+.listData,
+.listActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.itemContainer {
+  display: flex;
+  gap: 10px;
+  padding-top: 5px;
+}
+.itemName,
+.itemImage {
+  width: 50%;
+}

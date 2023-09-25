@@ -12,11 +12,11 @@
     <div id="createList">
 
     <form id="createListForm">
-        <label for="title">Title:</label>
-        <input type="text" id="title" name="title" required><br><br>
+        <label for="listName">Title:</label>
+        <input type="text" id="listName" name="listName" required><br><br>
 
         <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required><br><br>
+        <input type="text" id="password" name="password" required><br><br>
 
         <label for="description">Description:</label>
         <textarea id="description" name="description"></textarea><br><br>
@@ -34,7 +34,7 @@
             event.preventDefault();
 
             // Get the values from the form
-            const title = document.getElementById("title").value;
+            const listName = document.getElementById("listName").value;
             const description = document.getElementById("description").value;
             const vote_prompt = document.getElementById("prompt").value;
             const password = document.getElementById("password").value;
@@ -42,11 +42,12 @@
             // You can perform further validation here if needed
 
             // Create a new "thing" object with the form data
-            createList(title, {description: description, prompt: vote_prompt}, password).then((resp) => {
+            createList(listName, {description: description, prompt: vote_prompt}, password).then((resp) => {
                 if (resp.error) {
                   alert(resp.error);
                 }
-                window.location.href = `/list.html?listName=${encodeURIComponent(title)}`
+                cookieManager.setCookie(listName, password, { expires: new Date(Date.now() + 86400 * 1000), path: '/' });
+                window.location.href = `/list.html?listName=${encodeURIComponent(listName)}`
             });
 
             // Reset the form

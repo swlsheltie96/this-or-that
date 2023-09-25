@@ -139,7 +139,6 @@ app.get_static("/list.html", "public/list.html", "text/html; charset=utf-8");
 app.get_static("/grid.html", "public/grid.html", "text/html; charset=utf-8");
 app.get_static("/vote.html", "public/vote.html", "text/html; charset=utf-8");
 app.get_static("/style.css", "public/style.css", "text/css");
-app.get_static("/index.css", "public/index.css", "text/css");
 
 app.get_static("/list.css", "public/list.css", "text/css");
 
