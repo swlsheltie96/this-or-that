@@ -10,21 +10,6 @@
     />
     <title>List</title>
     <style>
-      #card-container {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-      }
-      .card {
-        flex: 1 0 20%;
-      }
-      .card img {
-        width: 90%;
-        margin: 5%;
-        transform: translate(-2px, -2px);
-        max-width: unset;
-        aspect-ratio: 1;
-      }
     </style>
 
     <script
@@ -33,14 +18,12 @@
     ></script>
   </head>
   <body>
-    <div class="headerContent">
-      <a id="backButton" href="index.html">←</a>
-      <a href="index.html"><h5>Elo Chamber</h5></a>
+    <div class='flex-justify'>
+      <h2>Elo Chamber<span class="elo-logo"></span></h2>
+      <h1 id="listName"></h1>
+      <a id="voteButton" class="clickable"><b>Vote!</b></a>
+      <a id="viewButton" class="clickable">(list View)</a>
     </div>
-    <br />
-    <a id="voteButton">[vote]</a>
-    <a id="viewButton">[List View]</a>
-    <h1 id="listName"></h1>
     <div id="card-container"></div>
 
     <script src="api.js"></script>

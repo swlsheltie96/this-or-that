@@ -47,23 +47,22 @@
     </style>
   </head>
   <body>
-    <div class="titleContainer">
-      <a id="backButton">←</a>
-      <a href="index.html"><h5>Elo Chamber</h5></a>
-      <h1 class="voteTitle" id="listName"></h1>
-      <h2 class="voteTitle" id="listPrompt"></h2>
-    </div>
+      <div class='flex-justify'>
+        <h2>Elo Chamber<span class="elo-logo"></span></h2>
+        <h1 id="listName"></h1>
+      </div>
+      <h1 class="voteTitle" id="listPrompt"></h1>
 
     <div id="elementVoteContainer">
-      <div class="voteElement" id="element1"></div>
-      <div class="voteElement" id="element2"></div>
+      <div class="voteElement clickable" id="element1"></div>
+      <div class="voteElement clickable" id="element2"></div>
+    </div>
+    <br/>
+    <div style='text-align:center; width: 70%; margin-left: 15%;'>
+        <a class="clickable" id="skipButton">skip</a>
+        <a class="clickable" id="resultsButton">results</a>
     </div>
 
-    <div class="iVoted">
-      <img
-        src="https://media.istockphoto.com/id/1016827568/photo/standing-isolated-election-i-voted-sticker.jpg?s=612x612&w=0&k=20&c=sYfOzBM8x7FN9xaMRH1bJqWF7TzoTgXcKroG191jztU="
-      />
-    </div>
     <script src="api.js"></script>
     <script>
       // Create clickable elements
@@ -139,14 +138,13 @@
 
         // 3. Get the value of a specific query parameter
         const listName = searchParams.get(`listName`);
-        document.getElementById('listName').textContent = listName;
+        document.title = `${listName} 🗳️`;
+        document.getElementById('listName').textContent = `${listName}`;
+        document.getElementById('resultsButton').href = `grid.html?listName=${listName}`;
+        document.getElementById('skipButton').href = `vote.html?listName=${listName}`;
         getListInfo(listName).then((d) => {
-console.log(d);
             document.getElementById('listPrompt').textContent = d.prompt;
         });
-
-        const backButton = document.getElementById("backButton");
-        backButton.href = `list.html?listName=${listName}`;
 
         const response = await fetch(
           `/get-pair?listName=${encodeURIComponent(listName)}`

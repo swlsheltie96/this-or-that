@@ -9,25 +9,27 @@
   </head>
 
   <body>
-    <div id="createList">
 
-    <form id="createListForm">
-        <label for="listName">Title:</label>
+    <div class='flex-justify'>
+      <h1>Elo Chamber<span class="elo-logo"></span></h1>
+      <a class="clickable" href="/">cancel</a>
+    </div>
+    <form id="createListForm" class="box" style="padding:2% 5%;">
+        <label for="listName">Title</label>
         <input type="text" id="listName" name="listName" required><br><br>
 
-        <label for="password">Password:</label>
+        <label for="password">Password</label>
         <input type="text" id="password" name="password" required><br><br>
 
-        <label for="description">Description:</label>
-        <textarea id="description" name="description"></textarea><br><br>
+        <label for="description">Description</label>
+        <input type="text" id="description" name="description"></input><br><br>
 
-        <label for="prompt">Vote prompt:</label>
-        <input type="prompt" id="prompt" name="prompt" required><br><br>
+        <label for="prompt">Vote prompt</label>
+        <input type="text" id="prompt" name="prompt" required><br><br>
 
-        <input type="submit" value="Create List">
+        <input type="submit" class="clickable" value="Create List">
     </form>
 
-    </div>
     <script src="api.js"></script>
     <script>
         document.getElementById("createListForm").addEventListener("submit", function(event) {
