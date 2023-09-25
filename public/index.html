@@ -43,6 +43,7 @@
 
           const listLink = document.createElement("a");
           const listImg = document.createElement("img");
+          listImg.classList.add('inner-box');
           getSortedList(list.name).then((items) => {
             if (items.length && items[0].data && items[0].data.picture) {
               listImg.src = items[0].data.picture;

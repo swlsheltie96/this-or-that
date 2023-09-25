@@ -1,29 +1,37 @@
 // Function to create a card element
 function createCard(item, index) {
     var card = document.createElement("div");
-    card.className = "card";
+    card.classList.add("card");
+    card.classList.add("box");
 
-    var nameElement = document.createElement("h2");
+    var nameElement = document.createElement("span");
     nameElement.textContent = item.name;
 
-    var eloElement = document.createElement("p");
-    eloElement.textContent = item.elo.toFixed(2);
+    var eloElement = document.createElement("div");
+    eloElement.style.padding = '0px 5px 5px 5px';
+    const description = item.data ? item.data.description ? item.data.description : '' : '';
+    eloElement.textContent = `${description} (Elo: ${item.elo.toFixed(2)})`;
 
-    var indexElement = document.createElement("p");
-    indexElement.textContent = index;
+    var indexElement = document.createElement("span");
+    indexElement.textContent = `#${index}`;
     indexElement.classList.add("index");
 
-    card.appendChild(indexElement);
-    card.appendChild(nameElement);
-    card.appendChild(eloElement);
+    const header = document.createElement('div');
+    header.classList.add('header');
+    header.classList.add('flex-justify');
+    header.appendChild(indexElement);
+    header.appendChild(nameElement);
+    card.appendChild(header)
 
     var data = item.data;
 
     if (data.picture) {
         var pictureElement = document.createElement("img");
         pictureElement.src = data.picture;
+        pictureElement.classList.add('inner-box')
         card.appendChild(pictureElement);
     }
+    card.appendChild(eloElement);
 
     return card;
 }

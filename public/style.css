@@ -61,12 +61,26 @@ a {
   border-left: 2px solid #ccc;
   border-top: 2px solid #ccc;
 }
+.inner-box {
+  background-color: #ddd;
+  border-bottom: 2px solid #eee;
+  border-right: 2px solid #eee;
+  border-left: 2px solid #ccc;
+  border-top: 2px solid #ccc;
+}
 .box {
   background-color: #ddd;
   border-top: 2px solid #eee;
   border-left: 2px solid #eee;
   border-right: 2px solid #ccc;
   border-bottom: 2px solid #ccc;
+}
+.header {
+  background-color: blue;
+  color: white;
+  font-weight: bold;
+  padding: 2px 10px;
+  font-size: 1.5em;
 }
 #listOfLists{
   padding: 0;
