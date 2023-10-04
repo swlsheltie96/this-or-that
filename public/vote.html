@@ -65,6 +65,7 @@
             if (parsedData.picture) {
               const image = document.createElement("img");
               image.src = parsedData.picture;
+              image.classList.add('inner-box');
               voteBoxes[i].appendChild(image);
             }
             if (parsedData.info) {
