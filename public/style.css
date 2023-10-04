@@ -232,6 +232,7 @@ input[type="submit"] {
   margin: 5%;
   max-width: unset;
   aspect-ratio: 1;
+  object-fit: contain;
 }
 .eloTag.smallSquare {
   display: flex;
