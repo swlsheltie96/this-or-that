@@ -55,7 +55,7 @@ document.getElementById("listName").textContent = listName;
 // Create and append cards for each item in the JSON data
 getSortedList(listName).then((data) => {
   data.forEach(function (item, index) {
-    var card = createCard(item, index);
+    var card = createCard(item, index + 1);
     cardContainer.appendChild(card);
   });
   loadViewTypes();
