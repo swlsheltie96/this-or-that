@@ -20,6 +20,7 @@
       img {
         aspect-ratio: 1 / 1;
         width: 100%;
+        object-fit: contain;
       }
 
       .iVoted img {
@@ -65,6 +66,7 @@
             if (parsedData.picture) {
               const image = document.createElement("img");
               image.src = parsedData.picture;
+              image.classList.add('inner-box');
               voteBoxes[i].appendChild(image);
             }
             if (parsedData.info) {
