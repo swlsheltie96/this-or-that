@@ -8,9 +8,16 @@
     <title>Elo Chamber</title>
   </head>
   <body>
-    <div class='flex-justify'>
-      <h1>Elo Chamber<span class="elo-logo"></span></h1>
-      <a id="creatListInitButton" class="clickable" href="create.html">Create New List</a>
+    <div class="flex-justify">
+      <h1>Elo Chamber</h1>
+      <img
+        class="elo-logo"
+        src="https://win98icons.alexmeub.com/icons/png/cardfile-1.png"
+        href="https://elochamber.com/"
+      />
+      <a id="creatListInitButton" class="clickable" href="create.html"
+        >Create New List</a
+      >
     </div>
 
     <ul id="listOfLists">
@@ -30,11 +37,10 @@
         listOfLists.innerHTML = "";
         // Populate the list of lists
         data.lists.forEach((list) => {
-
-          let horizontal_transform = 0;//Math.random() * (10 - -10) + -10;
+          let horizontal_transform = 0; //Math.random() * (10 - -10) + -10;
           const listItem = document.createElement("li");
-          listItem.classList.add('listItem')
-          listItem.classList.add('box')
+          listItem.classList.add("listItem");
+          listItem.classList.add("box");
           listItem.style.transform =
             "translate(" + horizontal_transform + "px, 0px)";
           const listData = document.createElement("div");
@@ -43,7 +49,7 @@
 
           const listLink = document.createElement("a");
           const listImg = document.createElement("img");
-          listImg.classList.add('inner-box');
+          listImg.classList.add("inner-box");
           getSortedList(list.name).then((items) => {
             if (items.length && items[0].data && items[0].data.picture) {
               listImg.src = items[0].data.picture;
@@ -62,8 +68,8 @@
 
           const viewButton = document.createElement("a");
           const voteButton = document.createElement("a");
-          viewButton.classList.add('clickable');
-          voteButton.classList.add('clickable');
+          viewButton.classList.add("clickable");
+          voteButton.classList.add("clickable");
           viewButton.textContent = "View";
           voteButton.textContent = "Vote";
           viewButton.href = `grid.html?listName=${list.name}`;
