@@ -1,7 +1,40 @@
 .elo-page {
   margin: 20px auto;
 }
+.listMetadata {
+  background-color: #ddd;
+  border-top: 2px solid #eee;
+  border-left: 2px solid #eee;
+  border-right: 2px solid #ccc;
+  border-bottom: 2px solid #ccc;
+  padding: 10px;
+}
+.data {
+  /* padding: 10px; */
+  display: inline-block;
+}
 
+.data.name label,
+.data.name input {
+  font-size: 2em;
+  font-family: "Times New Roman", Times, serif;
+}
+.data.description {
+  margin: 10px auto;
+}
+.data.description label,
+.data.prompt label,
+.data.description input,
+.data.prompt input {
+  font-size: 1.5em;
+  font-family: "Times New Roman", Times, serif;
+}
+
+.login button {
+  font-family: "Times New Roman", Times, serif;
+  color: blue;
+  font-size: 1em;
+}
 .tabulator {
   font-family: "Times New Roman", Times, serif;
   background-color: white;

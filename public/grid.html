@@ -17,15 +17,31 @@
     ></script>
   </head>
   <body>
-    <div class="flex-justify">
-      <h2>Elo Chamber<span class="elo-logo"></span></h2>
-      <h1 id="listName"></h1>
-      <a id="voteButton" class="clickable"><b>Vote!</b></a>
-      <a id="viewButton" class="clickable">(list View)</a>
+    <div class="flex-justify top">
+      <a href="https://elochamber.com/">
+        <img
+          class="elo-logo"
+          src="https://win98icons.alexmeub.com/icons/png/cardfile-1.png"
+        />
+      </a>
+      <h1 class="index-title">Elo Chamber</h1>
     </div>
-    <div class="gridType">
-      <button id="smallSquare" class="clickable">▪</button>
-      <button id="largeSquare" class="clickable clicked">⏹</button>
+    <div class="top">
+      <div class="flex-justify listTop">
+        <h1 id="listName"></h1>
+
+        <a id="voteButton" class="clickable"><b>Vote!</b></a>
+      </div>
+      <h2 id="listDescription"></h2>
+    </div>
+
+    <div class="gridType flex-justify">
+      <div class="viewSelect">
+        <button id="smallSquare" class="clickable">▪</button>
+        <button id="largeSquare" class="clickable clicked">⏹</button>
+      </div>
+
+      <a id="viewButton" class="clickable">(Edit)</a>
     </div>
     <div id="card-container" class="largeSquare"></div>
 

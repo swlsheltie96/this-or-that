@@ -52,6 +52,9 @@ const searchParams = new URLSearchParams(queryString);
 const listName = searchParams.get("listName");
 document.getElementById("listName").textContent = listName;
 
+getListInfo(listName).then((d) => {
+  document.getElementById("listDescription").textContent = d.description;
+});
 // Create and append cards for each item in the JSON data
 getSortedList(listName).then((data) => {
   data.forEach(function (item, index) {

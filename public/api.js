@@ -8,9 +8,9 @@ class CookieManager {
 
   // Load existing cookies into the cache
   loadCookies() {
-    const cookies = document.cookie.split('; ');
+    const cookies = document.cookie.split("; ");
     for (const cookie of cookies) {
-      const [cookieName, cookieValue] = cookie.split('=');
+      const [cookieName, cookieValue] = cookie.split("=");
       this.cookieCache.set(cookieName, decodeURIComponent(cookieValue));
     }
   }
@@ -21,9 +21,9 @@ class CookieManager {
       return this.cookieCache.get(name);
     }
 
-    const cookies = document.cookie.split('; ');
+    const cookies = document.cookie.split("; ");
     for (const cookie of cookies) {
-      const [cookieName, cookieValue] = cookie.split('=');
+      const [cookieName, cookieValue] = cookie.split("=");
       if (cookieName === name) {
         const decodedValue = decodeURIComponent(cookieValue);
         this.cookieCache.set(name, decodedValue);
@@ -37,8 +37,10 @@ class CookieManager {
   // Set a cookie in the cache and using document.cookie
   setCookie(name, value, options = {}) {
     const { expires, path, domain, secure } = options;
-    let cookieString = `${encodeURIComponent(name)}=${encodeURIComponent(value)}`;
-    
+    let cookieString = `${encodeURIComponent(name)}=${encodeURIComponent(
+      value
+    )}`;
+
     if (expires instanceof Date) {
       cookieString += `; expires=${expires.toUTCString()}`;
     }
@@ -49,9 +51,9 @@ class CookieManager {
       cookieString += `; domain=${domain}`;
     }
     if (secure) {
-      cookieString += '; secure';
+      cookieString += "; secure";
     }
-    
+
     this.cookieCache.set(name, value);
     document.cookie = cookieString;
   }
@@ -60,45 +62,44 @@ class CookieManager {
   deleteCookie(name) {
     this.cookieCache.delete(name);
     const expirationDate = new Date(0);
-    this.setCookie(name, '', { expires: expirationDate });
+    this.setCookie(name, "", { expires: expirationDate });
   }
 }
 
-
 function createCustomPrompt(prompt_text) {
-    return new Promise((resolve, reject) => {
-        // Create a form element
-        const form = document.createElement('form');
-        form.classList.add('login');
+  return new Promise((resolve, reject) => {
+    // Create a form element
+    const form = document.createElement("form");
+    form.classList.add("login");
 
-        // Create a label and input field for the prompt
-        const label = document.createElement('label');
-        label.textContent = prompt_text;
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.required = true;
+    // Create a label and input field for the prompt
+    const label = document.createElement("label");
+    label.textContent = prompt_text;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.required = true;
 
-        // Create a submit button
-        const submitButton = document.createElement('button');
-        submitButton.type = 'submit';
-        submitButton.textContent = 'Submit';
+    // Create a submit button
+    const submitButton = document.createElement("button");
+    submitButton.type = "submit";
+    submitButton.textContent = "Submit";
+    submitButton.classList.add("clickable");
+    // Append elements to the form
+    form.appendChild(label);
+    form.appendChild(input);
+    form.appendChild(submitButton);
 
-        // Append elements to the form
-        form.appendChild(label);
-        form.appendChild(input);
-        form.appendChild(submitButton);
-
-        // Handle form submission
-        form.addEventListener('submit', (event) => {
-            event.preventDefault();
-            const userInput = input.value;
-            resolve(userInput); // Resolve the promise with the user input
-            document.body.removeChild(form); // Remove the form from the DOM
-        });
-
-        // Append the form to the body
-        document.body.appendChild(form);
+    // Handle form submission
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const userInput = input.value;
+      resolve(userInput); // Resolve the promise with the user input
+      document.body.removeChild(form); // Remove the form from the DOM
     });
+
+    // Append the form to the body
+    document.body.appendChild(form);
+  });
 }
 
 const cookieManager = new CookieManager();
@@ -108,18 +109,21 @@ async function login(listName) {
     return password;
   }
   const login_prompt = () => {
-    const d = document.createElement('div');
-    return new Promise
+    const d = document.createElement("div");
+    return new Promise();
   };
-  let possible_pw = await createCustomPrompt('Enter password:');
+  let possible_pw = await createCustomPrompt("Enter password");
   while (possible_pw && !(await checkPassword(listName, possible_pw))) {
-    possible_pw = await createCustomPrompt('Enter password:');
+    possible_pw = await createCustomPrompt("Enter password");
   }
   if (possible_pw) {
-    cookieManager.setCookie(listName, possible_pw, { expires: new Date(Date.now() + 86400 * 1000), path: '/' });
+    cookieManager.setCookie(listName, possible_pw, {
+      expires: new Date(Date.now() + 86400 * 1000),
+      path: "/",
+    });
     return possible_pw;
   }
-  return '';
+  return "";
 }
 
 // Create a new list with a password

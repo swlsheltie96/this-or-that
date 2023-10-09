@@ -11,51 +11,48 @@
     />
     <link rel="stylesheet" type="text/css" href="list.css" />
     <title>List</title>
-    <style>
-      .listMetadata {
-        background-color: #ddd;
-        border-top: 2px solid #eee;
-        border-left: 2px solid #eee;
-        border-right: 2px solid #ccc;
-        border-bottom: 2px solid #ccc;
-        padding: 10px;
-      }
-      .data {
-        padding: 10px;
-        display: inline-block;
-      }
-    </style>
+
     <script
       type="text/javascript"
       src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"
     ></script>
   </head>
   <body>
-    <div class="headerContent">
-      <h1>Elo Chamber<span class="elo-logo"></span></h1>
+    <div class="flex-justify top">
+      <a href="https://elochamber.com/">
+        <img
+          class="elo-logo"
+          src="https://win98icons.alexmeub.com/icons/png/cardfile-1.png"
+        />
+      </a>
+      <h1 class="index-title">Elo Chamber</h1>
     </div>
-    <a id="voteButton" class="clickable"><b>Vote!</b></a>
-    <a id="viewButton" class="clickable">(grid View)</a>
-    <div class="elo-page">
-      <div class="listMetadata">
+
+    <div class="top">
+      <div class="flex-justify listTop">
         <div class="data name">
           <label for="listName">Title</label>
           <input type="text" id="listName" name="listName" />
         </div>
-        <div class="data description">
-          <label for="description">Description</label>
-          <input type="text" id="listDescription" name="description" />
-        </div>
-        <div class="data prompt">
-          <label for="prompt">Voting prompt</label>
-          <input type="text" id="listPrompt" name="prompt" />
-        </div>
+
+        <a id="voteButton" class="clickable"><b>Vote!</b></a>
+      </div>
+      <div class="data description">
+        <label for="description">Description</label>
+        <input type="text" id="listDescription" name="description" />
       </div>
 
-      <div class="flex-justify">
-        <a class="saveButton">[Save]</a>
+      <div class="data prompt">
+        <label for="prompt">Voting prompt</label>
+        <input type="text" id="listPrompt" name="prompt" />
       </div>
+    </div>
+    <div class="flex-justify">
+      <a class="saveButton">[Save]</a>
+      <a id="viewButton" class="clickable">Back to list</a>
+    </div>
 
+    <div class="elo-page">
       <div class="listContainer" id="listContainer"></div>
 
       <div class="flex-justify">
@@ -66,18 +63,5 @@
 
     <script src="api.js"></script>
     <script src="list.js"></script>
-
-    <form id="passwordEnterForm">
-      <label for="password">Password:</label>
-      <input
-        type="password"
-        id="password"
-        name="password"
-        required
-      /><br /><br />
-
-      <input type="submit" value="Submit" />
-      <button type="button" id="cancel-button">Cancel</button>
-    </form>
   </body>
 </html>
