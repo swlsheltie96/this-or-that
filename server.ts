@@ -10,7 +10,7 @@ const MASTER_PASSWORD = await (() => {
   }
   return config.master_password;
 })();
-console.log(`Serving...`)
+console.log(`Serving...`);
 console.log(`\tPort: ${PORT}`);
 console.log(`\tBenchmark mode = ${BENCHMARK}`);
 console.log(`\tLRU size = ${LRU_SIZE}`);
@@ -141,6 +141,7 @@ app.get_static("/vote.html", "public/vote.html", "text/html; charset=utf-8");
 app.get_static("/style.css", "public/style.css", "text/css");
 
 app.get_static("/list.css", "public/list.css", "text/css");
+app.get_static("/grid.css", "public/grid.css", "text/css");
 
 app.get_static("/script.js", "public/script.js", "text/javascript");
 app.get_static("/list.js", "public/list.js", "text/javascript");
@@ -277,7 +278,10 @@ app.post("/check-password", 0, async (req) => {
   const storedPassword = resultGetListPassword.password;
 
   // Compare the provided password with the stored password
-  if (await Bun.password.verify(password, storedPassword) || await Bun.password.verify(password, MASTER_PASSWORD)) {
+  if (
+    (await Bun.password.verify(password, storedPassword)) ||
+    (await Bun.password.verify(password, MASTER_PASSWORD))
+  ) {
     return Response.json({
       message: "Password is valid.",
     });
@@ -307,7 +311,10 @@ app.post("/change-password", 0, async (req) => {
   const storedPassword = resultGetListPassword.password;
 
   // Compare the provided current password with the stored password
-  if (!await Bun.password.verify(currentPassword, storedPassword) && !await Bun.password.verify(currentPassword, MASTER_PASSWORD)) {
+  if (
+    !(await Bun.password.verify(currentPassword, storedPassword)) &&
+    !(await Bun.password.verify(currentPassword, MASTER_PASSWORD))
+  ) {
     return jsonError("Invalid current password for this list.", 401);
   }
 
@@ -343,7 +350,10 @@ app.post("/add-item", 0, async (req) => {
   const storedPassword = resultGetListId.password;
 
   // Check if the provided password matches the stored password
-  if (!await Bun.password.verify(password, storedPassword) && !await Bun.password.verify(password, MASTER_PASSWORD)) {
+  if (
+    !(await Bun.password.verify(password, storedPassword)) &&
+    !(await Bun.password.verify(password, MASTER_PASSWORD))
+  ) {
     return jsonError("Invalid password for this list.", 401);
   }
 
@@ -399,7 +409,10 @@ app.delete("/delete-list", async (req) => {
   const storedPassword = resultGetListId.password;
 
   // Check if the provided password matches the stored password
-  if (!Bun.password.verify(password, storedPassword) && !Bun.password.verify(password, MASTER_PASSWORD)) {
+  if (
+    !Bun.password.verify(password, storedPassword) &&
+    !Bun.password.verify(password, MASTER_PASSWORD)
+  ) {
     return jsonError("Invalid password for this list.", 401);
   }
 
@@ -457,7 +470,10 @@ app.post("/delete-item", 0, async (req) => {
     const storedPassword = resultGetListId.password;
 
     // Check if the provided password matches the stored password
-    if (!await Bun.password.verify(password, storedPassword) && !await Bun.password.verify(password, MASTER_PASSWORD)) {
+    if (
+      !(await Bun.password.verify(password, storedPassword)) &&
+      !(await Bun.password.verify(password, MASTER_PASSWORD))
+    ) {
       return jsonError("Invalid password for this list.", 401);
     }
 

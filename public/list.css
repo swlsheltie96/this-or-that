@@ -1,75 +1,59 @@
-.elo-page {
-  margin: 20px auto;
+.actionButtons {
+  width: fit-content;
+  margin-right: 0;
+  margin-left: auto;
 }
-.listMetadata {
-  background-color: #ddd;
-  border-top: 2px solid #eee;
-  border-left: 2px solid #eee;
-  border-right: 2px solid #ccc;
-  border-bottom: 2px solid #ccc;
+.list-wrapper {
   padding: 10px;
 }
-.data {
-  /* padding: 10px; */
-  display: inline-block;
+.listContainer {
+  margin-bottom: 10px;
 }
-
-.data.name label,
-.data.name input {
-  font-size: 2em;
-  font-family: "Times New Roman", Times, serif;
-}
-.data.description {
-  margin: 10px auto;
-}
-.data.description label,
-.data.prompt label,
-.data.description input,
-.data.prompt input {
-  font-size: 1.5em;
-  font-family: "Times New Roman", Times, serif;
-}
-
 .login button {
   font-family: "Times New Roman", Times, serif;
   color: blue;
   font-size: 1em;
 }
 .tabulator {
-  font-family: "Times New Roman", Times, serif;
   background-color: white;
-  border-color: var(--border-color);
-  margin: 20px auto;
-  border: none !important;
 }
 
 .tabulator .tabulator-header {
   color: black;
-  border-bottom-color: var(--border-color);
   border: none !important;
 }
 .tabulator .tabulator-header .tabulator-col {
-  background-color: var(--page-color);
-  font-size: var(--body-size);
   border-right-color: var(--border-color);
-  font-weight: normal;
-  border: none !important;
-}
 
-.tabulator-row .tabulator-cell {
-  font-size: var(--body-size);
-  border-right-color: var(--border-color);
   border: none !important;
 }
-.tabulator-row .tabulator-cell.tabulator-editable.tabulator-editing input {
-  font-family: "Times New Roman", Times, serif;
-  font-size: var(--body-size);
-  border-right-color: var(--border-color);
-  border: none !important;
+.tabulator .tabulator-header .tabulator-col-content {
+  border-top: 2px solid #f4f4f4;
+  border-left: 2px solid #f4f4f4;
+  border-right: 2px solid #ccc;
+  border-bottom: 2px solid #ccc;
+}
+.tabulator-row {
+  /* border-bottom: 1px dotted black; */
 }
 .tabulator-row.tabulator-row-even {
-  background-color: rgba(0, 191, 0, 0.2);
+  /* background-color: #eee; */
   background-color: white;
+  /* border: none !important; */
+}
+.tabulator-row .tabulator-cell {
+  border-right-color: var(--border-color);
+  border: none !important;
+}
+.tabulator-row.tabulator-editing {
+  font-family: "Compagnon-Medium";
+
+  border: 1px dotted black;
+}
+
+.tabulator-row .tabulator-cell.tabulator-editable.tabulator-editing input {
+  font-family: "Compagnon-Medium";
+  border-right-color: var(--border-color);
   border: none !important;
 }
 
@@ -111,9 +95,12 @@
   .tabulator-header
   .tabulator-col.tabulator-sortable.tabulator-col-sorter-element:hover {
   background-color: var(--page-color);
+  background-color: #eee;
 }
 .tabulator-row.tabulator-selectable:hover {
-  background-color: var(--page-color);
+  background-color: #f4f4f4;
+
+  /* box-sizing: border-box; */
 }
 
 .listSettings {

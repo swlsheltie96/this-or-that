@@ -31,7 +31,7 @@
     </style>
   </head>
   <body>
-    <div class="flex-justify">
+    <div class="flex justify">
       <h2>Elo Chamber<span class="elo-logo"></span></h2>
       <h1 id="listName"></h1>
     </div>
@@ -66,7 +66,7 @@
             if (parsedData.picture) {
               const image = document.createElement("img");
               image.src = parsedData.picture;
-              image.classList.add('inner-box');
+              image.classList.add("inner-box");
               voteBoxes[i].appendChild(image);
             }
             if (parsedData.info) {

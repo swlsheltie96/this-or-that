@@ -5,27 +5,27 @@ function createCard(item, index) {
   card.classList.add("box");
   card.classList.add("largeSquare");
 
-  var nameElement = document.createElement("span");
+  var nameElement = document.createElement("h4");
   nameElement.textContent = item.name;
 
   var eloElement = document.createElement("div");
+  var eloElementP = document.createElement("p");
   eloElement.classList.add("eloTag", "largeSquare");
 
-  eloElement.style.padding = "0px 5px 5px 5px";
   const description = item.data
     ? item.data.description
       ? item.data.description
       : ""
     : "";
-  eloElement.textContent = `${description} (Elo: ${item.elo.toFixed(2)})`;
-
-  var indexElement = document.createElement("span");
+  eloElementP.textContent = `${description} (Elo: ${item.elo.toFixed(2)})`;
+  eloElement.appendChild(eloElementP);
+  var indexElement = document.createElement("h4");
   indexElement.textContent = `#${index}`;
   indexElement.classList.add("index");
 
   const header = document.createElement("div");
   header.classList.add("header");
-  header.classList.add("flex-justify");
+  header.classList.add("flex", "align");
   header.classList.add("largeSquare");
   header.appendChild(indexElement);
   header.appendChild(nameElement);
@@ -61,11 +61,12 @@ getSortedList(listName).then((data) => {
     var card = createCard(item, index + 1);
     cardContainer.appendChild(card);
   });
+  encodeURIComponent;
   loadViewTypes();
 });
-const voteButton = document.getElementById("voteButton");
-const viewButton = document.getElementById("viewButton");
-viewButton.href = `list.html?listName=${listName}`;
+const voteButton = document.getElementById("voteButtonA");
+const editButton = document.getElementById("editButtonA");
+editButton.href = `list.html?listName=${listName}`;
 voteButton.href = `vote.html?listName=${listName}`;
 
 function loadViewTypes() {

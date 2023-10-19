@@ -3,12 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" type="text/css" href="style.css" />
 
     <link
       href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css"
       rel="stylesheet"
     />
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <link rel="stylesheet" type="text/css" href="grid.css" />
     <link rel="stylesheet" type="text/css" href="list.css" />
     <title>List</title>
 
@@ -18,46 +19,61 @@
     ></script>
   </head>
   <body>
-    <div class="flex-justify top">
-      <a href="https://elochamber.com/">
+    <div class="home-small">
+      <a href="https://elochamber.com/" class="flex align">
         <img
-          class="elo-logo"
+          class="elo-logo small"
           src="https://win98icons.alexmeub.com/icons/png/cardfile-1.png"
         />
+
+        <h5 class="index-title">Elo Chamber</h5>
       </a>
-      <h1 class="index-title">Elo Chamber</h1>
     </div>
 
-    <div class="top">
-      <div class="flex-justify listTop">
+    <div class="listTop box">
+      <div class="listTop-inner">
+        <div class="data number">
+          <label for="listNumber">Number</label>
+          <input type="text" id="listNum" name="number" disabled />
+        </div>
         <div class="data name">
           <label for="listName">Title</label>
           <input type="text" id="listName" name="listName" />
         </div>
+        <div class="data description">
+          <label for="description">Description</label>
+          <input type="text" id="listDescription" name="description" />
+        </div>
 
-        <a id="voteButton" class="clickable"><b>Vote!</b></a>
+        <div class="data prompt">
+          <label for="prompt">Voting prompt</label>
+          <input type="text" id="listPrompt" name="prompt" />
+        </div>
+        <div class="data author">
+          <label for="author">Author</label>
+          <input type="text" id="listAuthor" name="author" />
+        </div>
       </div>
-      <div class="data description">
-        <label for="description">Description</label>
-        <input type="text" id="listDescription" name="description" />
-      </div>
-
-      <div class="data prompt">
-        <label for="prompt">Voting prompt</label>
-        <input type="text" id="listPrompt" name="prompt" />
+      <div class="actionButtons flex">
+        <button id="viewButton" class="clickable">
+          <a id="viewButtonA"><p>Back to list</p></a>
+        </button>
+        <button id="voteButton" class="clickable">
+          <a id="voteButtonA"><p>Vote!</p></a>
+        </button>
       </div>
     </div>
-    <div class="flex-justify">
-      <a class="saveButton">[Save]</a>
-      <a id="viewButton" class="clickable">Back to list</a>
-    </div>
 
-    <div class="elo-page">
-      <div class="listContainer" id="listContainer"></div>
+    <div class="list-wrapper box">
+      <div class="listContainer inner-box" id="listContainer"></div>
 
-      <div class="flex-justify">
-        <a id="addItemButton">+ (Add item)</a>
-        <a class="saveButton">[Save]</a>
+      <div class="flex justify">
+        <button id="addItemButton" class="clickable">
+          <p>+ Add item</p>
+        </button>
+        <button id="saveButton" class="clickable">
+          <p>Save</p>
+        </button>
       </div>
     </div>
 

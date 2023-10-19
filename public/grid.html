@@ -8,42 +8,55 @@
       href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css"
       rel="stylesheet"
     />
+    <link rel="stylesheet" type="text/css" href="grid.css" />
     <title>List</title>
-    <style></style>
 
     <script
       type="text/javascript"
       src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"
     ></script>
   </head>
+
   <body>
-    <div class="flex-justify top">
-      <a href="https://elochamber.com/">
+    <div class="home-small">
+      <a href="https://elochamber.com/" class="flex align">
         <img
-          class="elo-logo"
+          class="elo-logo small"
           src="https://win98icons.alexmeub.com/icons/png/cardfile-1.png"
         />
+
+        <h5 class="index-title">Elo Chamber</h5>
       </a>
-      <h1 class="index-title">Elo Chamber</h1>
     </div>
-    <div class="top">
-      <div class="flex-justify listTop">
+    <div class="listTop box">
+      <div class="listTop-inner">
+        <p id="listNumber">List #001</p>
         <h1 id="listName"></h1>
 
-        <a id="voteButton" class="clickable"><b>Vote!</b></a>
+        <h2 id="listDescription"></h2>
+        <h2 id="listAuthor">@swlsheltie</h2>
+        <h2 id="listNumVotes">199 votes</h2>
+        <h2 id="listTimeLastVoted">Last voted: 12:17 19 oct. 2023</h2>
       </div>
-      <h2 id="listDescription"></h2>
+      <button id="voteButton" class="clickable">
+        <a id="voteButtonA"><p>Vote!</p></a>
+      </button>
     </div>
-
-    <div class="gridType flex-justify">
-      <div class="viewSelect">
-        <button id="smallSquare" class="clickable">▪</button>
-        <button id="largeSquare" class="clickable clicked">⏹</button>
+    <div class="list-wrapper">
+      <div class="gridType flex align">
+        <div class="viewSelect flex">
+          <button id="smallSquare" class="visualtab">▪</button>
+          <button id="largeSquare" class="visualtab clicked">⏹</button>
+        </div>
       </div>
+      <div class="card-container-wrapper box">
+        <div id="card-container" class="largeSquare"></div>
 
-      <a id="viewButton" class="clickable">(Edit)</a>
+        <button id="editButton" class="clickable">
+          <a id="editButtonA"><p>(Edit)</p></a>
+        </button>
+      </div>
     </div>
-    <div id="card-container" class="largeSquare"></div>
 
     <script src="api.js"></script>
     <script src="grid.js"></script>

@@ -164,8 +164,8 @@ window.addEventListener("load", async () => {
       }
     });
 
-    const viewButton = document.getElementById("viewButton");
-    const voteButton = document.getElementById("voteButton");
+    const viewButton = document.getElementById("viewButtonA");
+    const voteButton = document.getElementById("voteButtonA");
     viewButton.href = `grid.html?listName=${listName}`;
     voteButton.href = `vote.html?listName=${listName}`;
 
