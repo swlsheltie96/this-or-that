@@ -17,8 +17,10 @@ function createCard(item, index) {
       ? item.data.description
       : ""
     : "";
-  eloElementP.textContent = `${description} ${item.elo.toFixed(2)}`;
+
+  eloElementP.textContent = `${item.elo.toFixed(2)}`;
   eloElement.appendChild(eloElementP);
+
   var indexElement = document.createElement("h4");
   indexElement.textContent = `#${index}`;
   indexElement.classList.add("index");
@@ -41,6 +43,14 @@ function createCard(item, index) {
     card.appendChild(pictureElement);
   }
   card.appendChild(eloElement);
+  if (description != "") {
+    var eloElementDes = document.createElement("div");
+    var eloElementDesP = document.createElement("p");
+    eloElementDesP.textContent = `${description}`;
+    eloElementDes.appendChild(eloElementDesP);
+    card.appendChild(eloElementDes);
+    eloElementDes.classList.add("eloTag", "description", "largeSquare");
+  }
 
   return card;
 }

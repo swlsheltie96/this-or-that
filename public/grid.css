@@ -54,7 +54,14 @@ h1 {
 .eloTag.largeSquare {
   padding: 0 5px;
 }
-
+.eloTag.description.smallSquare {
+  display: none;
+}
+.eloTag.description p {
+  font-size: 0.8em;
+  font-family: "Compagnon-Roman";
+  margin-bottom: 5px;
+}
 .header.smallSquare {
   justify-content: flex-start;
   gap: 5px;
