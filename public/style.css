@@ -1,21 +1,21 @@
 @font-face {
   font-family: "Compagnon-Bold";
-  src: url("fonts/Compagnon-Bold.woff2") format("woff2"),
-    url("fonts/Compagnon-Bold.woff") format("woff");
+  src: url("/fonts/Compagnon-Bold.woff2") format("woff2"),
+    url("/fonts/Compagnon-Bold.woff") format("woff");
   font-weight: 700;
 }
 
 @font-face {
   font-family: "Compagnon-Medium";
-  src: url("fonts/Compagnon-Medium.woff2") format("woff2"),
-    url("fonts/Compagnon-Medium.woff") format("woff");
+  src: url("/fonts/Compagnon-Medium.woff2") format("woff2"),
+    url("/fonts/Compagnon-Medium.woff") format("woff");
   font-weight: 500;
 }
 
 @font-face {
   font-family: "Compagnon-Roman";
-  src: url("fonts/Compagnon-Roman.woff2") format("woff2"),
-    url("fonts/Compagnon-Roman.woff") format("woff");
+  src: url("/fonts/Compagnon-Roman.woff2") format("woff2"),
+    url("/fonts/Compagnon-Roman.woff") format("woff");
   font-weight: 300;
 }
 :root {
@@ -32,7 +32,15 @@ body {
   max-width: 550px;
   padding: 50px 20px;
 }
-
+::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+  background: transparent; /* make scrollbar transparent */
+}
+div::-webkit-scrollbar,
+a::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
 html,
 body,
 .tabulator > * {
