@@ -145,6 +145,38 @@ app.get_static("/grid.css", "public/grid.css", "text/css");
 app.get_static("/vote.css", "public/vote.css", "text/css");
 app.get_static("/create.css", "public/create.css", "text/css");
 
+app.get_static(
+  "/fonts/Compagnon-Bold.woff",
+  "public/fonts/Compagnon-Bold.woff",
+  "font/woff"
+);
+app.get_static(
+  "/fonts/Compagnon-Medium.woff",
+  "public/fonts/Compagnon-Medium.woff",
+  "font/woff"
+);
+app.get_static(
+  "/fonts/Compagnon-Roman.woff",
+  "public/fonts/Compagnon-Roman.woff",
+  "font/woff"
+);
+
+app.get_static(
+  "/fonts/Compagnon-Bold.woff2",
+  "public/fonts/Compagnon-Bold.woff2",
+  "font/woff2"
+);
+app.get_static(
+  "/fonts/Compagnon-Medium.woff2",
+  "public/fonts/Compagnon-Medium.woff2",
+  "font/woff2"
+);
+app.get_static(
+  "/fonts/Compagnon-Roman.woff2",
+  "public/fonts/Compagnon-Roman.woff2",
+  "font/woff2"
+);
+
 app.get_static("/script.js", "public/script.js", "text/javascript");
 app.get_static("/list.js", "public/list.js", "text/javascript");
 app.get_static("/grid.js", "public/grid.js", "text/javascript");
