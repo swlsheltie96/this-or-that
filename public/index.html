@@ -33,7 +33,7 @@
         const response = await fetch("/get-lists"); // Fetch the list of lists
         const data = await response.json();
         const listOfLists = document.getElementById("listOfLists");
-
+        console.log(data);
         // Clear the existing list items
         listOfLists.innerHTML = "";
         // Populate the list of lists

@@ -63,8 +63,11 @@ const listName = searchParams.get("listName");
 document.getElementById("listName").textContent = listName;
 
 getListInfo(listName).then((d) => {
+  console.log(d);
+
   document.getElementById("listDescription").textContent =
     "Description: " + d.description;
+  document.getElementById("listAuthor").textContent = "Author: " + d.author;
 });
 // Create and append cards for each item in the JSON data
 getSortedList(listName).then((data) => {
@@ -75,6 +78,7 @@ getSortedList(listName).then((data) => {
   encodeURIComponent;
   loadViewTypes();
 });
+
 const voteButton = document.getElementById("voteButtonA");
 const editButton = document.getElementById("editButtonA");
 editButton.href = `list.html?listName=${listName}`;

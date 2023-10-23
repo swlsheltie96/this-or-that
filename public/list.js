@@ -169,6 +169,13 @@ window.addEventListener("load", async () => {
     viewButton.href = `grid.html?listName=${listName}`;
     voteButton.href = `vote.html?listName=${listName}`;
 
+    const deleteButton = document.getElementById("deleteButton");
+    deleteButton.addEventListener("click", () => {
+      deleteList(listName).then((d) => {
+        window.location.href = "/";
+      });
+    });
+
     const addItemButton = document.getElementById("addItemButton");
     addItemButton.addEventListener("click", () => {
       table.addRow();

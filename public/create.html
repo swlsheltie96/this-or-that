@@ -37,7 +37,7 @@
           </div>
           <div class="data author">
             <label for="author">Author</label>
-            <input type="text" id="author" name="author" required />
+            <input type="text" id="author" name="author" />
           </div>
           <div class="data password">
             <label for="password">Password</label>
@@ -69,6 +69,8 @@
 
           // Get the values from the form
           const listName = document.getElementById("listName").value;
+          const author = document.getElementById("author").value;
+
           const description = document.getElementById("description").value;
           const vote_prompt = document.getElementById("prompt").value;
           const password = document.getElementById("password").value;
@@ -78,7 +80,7 @@
           // Create a new "thing" object with the form data
           createList(
             listName,
-            { description: description, prompt: vote_prompt },
+            { description: description, prompt: vote_prompt, author: author },
             password
           ).then((resp) => {
             if (resp.error) {
