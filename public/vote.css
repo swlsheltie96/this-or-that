@@ -1,0 +1,55 @@
+.listTop {
+  padding: 10px;
+  position: relative;
+
+  margin-bottom: 10px;
+}
+.form {
+  margin-bottom: 0;
+}
+
+.header {
+  color: black;
+  background-color: unset;
+}
+.instructions {
+  text-align: center;
+  margin-bottom: 10px;
+}
+h1 {
+  text-align: center;
+  border-bottom: unset;
+  /* width: fit-content; */
+  margin-bottom: unset;
+}
+
+h4 {
+  text-align: center;
+  width: 100%;
+}
+.vote-wrapper {
+  padding: 10px;
+}
+.voteElementImage {
+  margin-bottom: 10px;
+}
+.voter {
+  width: 100%;
+  height: 60px;
+}
+#elementVoteContainer {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-gap: 10px;
+  margin-bottom: 10px;
+  border: 2px #fff groove;
+  padding: 10px;
+}
+.voteElement {
+  cursor: pointer;
+}
+.voteElement img {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  object-fit: contain;
+}

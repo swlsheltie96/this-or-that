@@ -7,7 +7,7 @@ function createCard(item, index) {
 
   var nameElement = document.createElement("h4");
   nameElement.textContent = item.name;
-
+  nameElement.classList.add("itemName");
   var eloElement = document.createElement("div");
   var eloElementP = document.createElement("p");
   eloElement.classList.add("eloTag", "largeSquare");
@@ -17,7 +17,7 @@ function createCard(item, index) {
       ? item.data.description
       : ""
     : "";
-  eloElementP.textContent = `${description} (Elo: ${item.elo.toFixed(2)})`;
+  eloElementP.textContent = `${description} ${item.elo.toFixed(2)}`;
   eloElement.appendChild(eloElementP);
   var indexElement = document.createElement("h4");
   indexElement.textContent = `#${index}`;
@@ -53,7 +53,8 @@ const listName = searchParams.get("listName");
 document.getElementById("listName").textContent = listName;
 
 getListInfo(listName).then((d) => {
-  document.getElementById("listDescription").textContent = d.description;
+  document.getElementById("listDescription").textContent =
+    "Description: " + d.description;
 });
 // Create and append cards for each item in the JSON data
 getSortedList(listName).then((data) => {

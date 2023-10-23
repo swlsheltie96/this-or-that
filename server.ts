@@ -142,6 +142,8 @@ app.get_static("/style.css", "public/style.css", "text/css");
 
 app.get_static("/list.css", "public/list.css", "text/css");
 app.get_static("/grid.css", "public/grid.css", "text/css");
+app.get_static("/vote.css", "public/vote.css", "text/css");
+app.get_static("/create.css", "public/create.css", "text/css");
 
 app.get_static("/script.js", "public/script.js", "text/javascript");
 app.get_static("/list.js", "public/list.js", "text/javascript");

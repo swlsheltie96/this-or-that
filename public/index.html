@@ -38,18 +38,17 @@
         listOfLists.innerHTML = "";
         // Populate the list of lists
         data.lists.forEach((list) => {
-          let horizontal_transform = 0; //Math.random() * (10 - -10) + -10;
           const listItem = document.createElement("li");
           listItem.classList.add("listItem", "flex", "justify");
           listItem.classList.add("box");
-          listItem.style.transform =
-            "translate(" + horizontal_transform + "px, 0px)";
+
           const listData = document.createElement("div");
           const listActions = document.createElement("div");
           const listPreview = document.createElement("div");
 
           const listLink = document.createElement("a");
-          const listLinkP = document.createElement("p");
+          const listLinkH4 = document.createElement("h4");
+          listLinkH4.classList.add("itemName");
           const listImg = document.createElement("img");
           listImg.classList.add("inner-box");
           getSortedList(list.name).then((items) => {
@@ -58,8 +57,8 @@
             }
           });
           listLink.href = `grid.html?listName=${list.name}`;
-          listLinkP.textContent = list.name;
-          listLink.appendChild(listLinkP);
+          listLinkH4.textContent = list.name;
+          listLink.appendChild(listLinkH4);
           listData.appendChild(listImg);
           listData.appendChild(listLink);
           listData.appendChild(listPreview);

@@ -18,12 +18,19 @@
     url("fonts/Compagnon-Roman.woff") format("woff");
   font-weight: 300;
 }
-
+:root {
+  --color-blue: #3c52e0;
+  --color-lightgrey: #f4f4f4;
+  --color-grey: #eee;
+  --color-midgrey: #ddd;
+  --color-darkgrey: #ccc;
+  --color-black: #212121;
+}
 body {
   background-color: #eeeeee;
   margin: 0 auto;
-  max-width: 600px;
-  padding: 20px;
+  max-width: 550px;
+  padding: 50px 20px;
 }
 
 html,
@@ -37,7 +44,7 @@ ul {
   margin: 0;
 }
 hr {
-  border-top: solid #ddd 1px;
+  border-top: solid var(--color-midgrey) 1px;
   border-bottom: solid white 1px;
 }
 h1 {
@@ -59,7 +66,12 @@ h4 {
   margin: unset;
   padding-bottom: 0.3em;
   font-family: "Compagnon-Medium";
-  font-weight: 300;
+  font-size: 1em;
+}
+h4.itemName {
+  text-overflow: clip;
+  white-space: nowrap;
+  overflow: scroll;
 }
 h5 {
   margin: unset;
@@ -67,12 +79,11 @@ h5 {
 p {
   margin: unset;
   font-family: "Compagnon-Medium";
-  font-weight: 500;
   font-size: 1em;
   padding-bottom: 0.3em;
 }
 a {
-  color: blue;
+  color: var(--color-blue);
   text-decoration: none;
   cursor: pointer;
   text-align: center;
@@ -80,20 +91,36 @@ a {
 input[type="text"] {
   box-sizing: border-box;
   background-color: white;
-  border-bottom: 1px solid #f4f4f4;
-  border-right: 1px solid #f4f4f4;
+  border-bottom: 1px solid var(--color-lightgrey);
+  border-right: 1px solid var(--color-lightgrey);
   border-left: 1px solid #000;
   border-top: 1px solid #000;
   cursor: text;
+  font-family: "Compagnon-Medium";
 }
 input[type="text"]:focus-visible {
   border-radius: 0;
   outline: none;
 }
+.top {
+  margin-bottom: 10px;
+}
+.wrapper {
+  padding: 10px;
+}
+.form {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  border: 2px #fff groove;
+  margin-bottom: 10px;
+}
 .home-small {
   position: absolute;
   top: 10px;
-  left: 10px;
+  left: 20px;
 }
 .home-small a {
   color: black;
@@ -131,8 +158,8 @@ input[type="text"]:focus-visible {
 .login {
   width: fit-content;
   padding: 20px;
-  background-color: #f2f2f2;
-  border: 1px solid #ccc;
+  background-color: var(--color-lightgrey);
+  border: 1px solid var(--color-darkgrey);
   position: absolute;
   top: 50%;
   left: 50%;
@@ -151,23 +178,36 @@ input[type="text"]:focus-visible {
   float: right;
 }
 
+.actionButtons {
+  width: fit-content;
+  margin-right: 0;
+  margin-left: auto;
+}
 .clickable {
   box-sizing: border-box;
 
-  background-color: #ddd;
-  border-top: 2px solid #f4f4f4;
-  border-left: 2px solid #f4f4f4;
-  border-right: 2px solid #ccc;
-  border-bottom: 2px solid #ccc;
-
+  background-color: var(--color-midgrey);
+  border-top: 2px solid var(--color-lightgrey);
+  border-left: 2px solid var(--color-lightgrey);
+  border-right: 2px solid var(--color-darkgrey);
+  border-bottom: 2px solid var(--color-darkgrey);
   cursor: pointer;
+}
+
+.clickable.huge {
+  /* background-color: var(--color-black); */
+
+  border-top: 5px solid var(--color-lightgrey);
+  border-left: 5px solid var(--color-lightgrey);
+  border-right: 5px solid var(--color-darkgrey);
+  border-bottom: 5px solid var(--color-darkgrey);
 }
 .visualtab {
   box-sizing: border-box;
-  background-color: #ddd;
-  border-top: 2px solid #f4f4f4;
-  border-left: 2px solid #f4f4f4;
-  border-right: 2px solid #ccc;
+  background-color: var(--color-midgrey);
+  border-top: 2px solid var(--color-lightgrey);
+  border-left: 2px solid var(--color-lightgrey);
+  border-right: 2px solid var(--color-darkgrey);
   border-bottom: 0;
   cursor: pointer;
   min-width: 30px;
@@ -177,51 +217,52 @@ input[type="text"]:focus-visible {
 }
 
 .clickable:hover {
-  background-color: #ddd;
-  border-bottom: 2px solid #f4f4f4;
-  border-right: 2px solid #f4f4f4;
-  border-left: 2px solid #ccc;
-  border-top: 2px solid #ccc;
+  background-color: var(--color-midgrey);
+  border-bottom: 2px solid var(--color-lightgrey);
+  border-right: 2px solid var(--color-lightgrey);
+  border-left: 2px solid var(--color-darkgrey);
+  border-top: 2px solid var(--color-darkgrey);
   cursor: pointer;
 }
+
+.clickable.huge:hover {
+  /* background-color: var(--color-black); */
+
+  border-top: 5px solid var(--color-darkgrey);
+  border-left: 5px solid var(--color-darkgrey);
+  border-right: 5px solid var(--color-lightgrey);
+  border-bottom: 5px solid var(--color-lightgrey);
+}
 .clicked {
-  background-color: #ddd;
+  background-color: var(--color-midgrey);
   border-bottom: 0;
-  border-top: 2px solid #f4f4f4;
-  border-left: 2px solid #f4f4f4;
-  border-right: 2px solid #ccc;
+  border-top: 2px solid var(--color-lightgrey);
+  border-left: 2px solid var(--color-lightgrey);
+  border-right: 2px solid var(--color-darkgrey);
   cursor: pointer;
 
   transform: unset;
   height: 24px;
 }
 .inner-box {
-  background-color: #ddd;
-  border-bottom: 2px solid #f4f4f4;
-  border-right: 2px solid #f4f4f4;
-  border-left: 2px solid #ccc;
-  border-top: 2px solid #ccc;
+  background-color: var(--color-midgrey);
+  border-bottom: 2px solid var(--color-lightgrey);
+  border-right: 2px solid var(--color-lightgrey);
+  border-left: 2px solid var(--color-darkgrey);
+  border-top: 2px solid var(--color-darkgrey);
   box-sizing: border-box;
 }
 .box {
   box-sizing: border-box;
-  background-color: #ddd;
-  border-top: 2px solid #f4f4f4;
-  border-left: 2px solid #f4f4f4;
-  border-right: 2px solid #ccc;
-  border-bottom: 2px solid #ccc;
-}
-
-.header {
-  background-color: blue;
-  color: white;
-  padding: 2px 10px;
-  font-size: 1em;
+  background-color: var(--color-midgrey);
+  border-top: 2px solid var(--color-lightgrey);
+  border-left: 2px solid var(--color-lightgrey);
+  border-right: 2px solid var(--color-darkgrey);
+  border-bottom: 2px solid var(--color-darkgrey);
 }
 
 .listItem {
-  padding: 0 2px;
-  margin: 2px 0px;
+  padding: 5px;
   /* height: 80px; */
 }
 
@@ -229,18 +270,23 @@ input[type="text"]:focus-visible {
 .listActions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 5px;
 }
 .listData {
   width: 100%;
+
+  min-width: 0;
+  flex-grow: 2;
 }
 .listData a {
   text-decoration: none;
   color: black;
   text-align: left;
+  min-width: 0;
 }
 .listData img {
   width: 30px;
+  height: 30px;
   aspect-ratio: 1 / 1;
 }
 
@@ -252,11 +298,4 @@ input[type="text"]:focus-visible {
 
 label::after {
   content: ":";
-}
-
-input[type="submit"] {
-  font-family: "VT323";
-  /* grid-column: 1; */
-  font-size: 1em;
-  color: blue;
 }

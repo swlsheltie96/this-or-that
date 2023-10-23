@@ -4,47 +4,59 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" type="text/css" href="style.css" />
+    <link rel="stylesheet" type="text/css" href="grid.css" />
+
+    <link rel="stylesheet" type="text/css" href="vote.css" />
 
     <title>Vote for Item</title>
-    <style>
-      #elementVoteContainer {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        grid-gap: 10px;
-      }
-      .voteElement {
-        padding: 10px;
-        margin: 5px 0;
-        cursor: pointer;
-      }
-      img {
-        aspect-ratio: 1 / 1;
-        width: 100%;
-        object-fit: contain;
-      }
-
-      .iVoted img {
-        box-shadow: unset;
-        width: 300px;
-        mix-blend-mode: multiply;
-      }
-    </style>
   </head>
   <body>
-    <div class="flex justify">
-      <h2>Elo Chamber<span class="elo-logo"></span></h2>
-      <h1 id="listName"></h1>
-    </div>
-    <h1 class="voteTitle" id="listPrompt"></h1>
+    <div class="home-small">
+      <a href="https://elochamber.com/" class="flex align">
+        <img
+          class="elo-logo small"
+          src="https://win98icons.alexmeub.com/icons/png/cardfile-1.png"
+        />
 
-    <div id="elementVoteContainer">
-      <div class="voteElement clickable" id="element1"></div>
-      <div class="voteElement clickable" id="element2"></div>
+        <h5 class="index-title">Elo Chamber</h5>
+      </a>
     </div>
-    <br />
-    <div>
-      <a class="clickable" id="skipButton">skip</a>
-      <a class="clickable" id="resultsButton">results</a>
+    <h1 id="listName" class="index-title"></h1>
+    <h2 class="instructions">Click, tap, or use arrow keys</h2>
+    <div class="listTop wrapper box">
+      <div class="listTop-inner form">
+        <p>Vote!</p>
+        <h2 class="voteTitle" id="listPrompt"></h2>
+      </div>
+    </div>
+    <hr />
+    <div class="vote-wrapper box">
+      <div id="elementVoteContainer">
+        <div class="voteElement" id="element1">
+          <div
+            class="voteElementButton header box flex align voter huge clickable"
+          ></div>
+
+          <!-- <button class=""></button> -->
+        </div>
+        <div class="voteElement" id="element2">
+          <div
+            class="voteElementButton header box flex align voter huge clickable"
+          ></div>
+
+          <!-- <button class="voter huge clickable"></button> -->
+        </div>
+      </div>
+
+      <div class="actionButtons">
+        <button id="skipButton" class="clickable">
+          <a id="skipButtonA"><p>skip</p></a>
+        </button>
+
+        <button id="resultsButton" class="clickable">
+          <a id="resultsButtonA"><p>results</p></a>
+        </button>
+      </div>
     </div>
 
     <script src="api.js"></script>
@@ -55,24 +67,28 @@
         const items = Object.keys(data);
 
         let voteBoxes = document.querySelectorAll(".voteElement");
-
+        let voteBoxes_buttons = document.querySelectorAll(".voteElementButton");
+        // let voteBoxes_images = document.querySelectorAll(".voteElementImage");
         items.forEach((el, i) => {
-          const h2_el = document.createElement("h2");
-          h2_el.textContent = data[el].name;
-          voteBoxes[i].appendChild(h2_el);
+          const el_name = document.createElement("h4");
+          el_name.textContent = data[el].name;
+          voteBoxes_buttons[i].appendChild(el_name);
           if (data[el].data) {
             let parsedData = JSON.parse(data[el].data);
             console.log(parsedData);
             if (parsedData.picture) {
+              const imageDiv = document.createElement("div");
+              imageDiv.classList.add("voteElementImage", "box");
               const image = document.createElement("img");
               image.src = parsedData.picture;
               image.classList.add("inner-box");
-              voteBoxes[i].appendChild(image);
+              imageDiv.appendChild(image);
+              voteBoxes[i].prepend(imageDiv);
             }
             if (parsedData.info) {
-              const info = document.createElement("p");
+              const info = document.createElement("h2");
               info.textContent = parsedData.info;
-              voteBoxes[i].appendChild(info);
+              voteBoxes_headers[i].appendChild(info);
             }
           }
         });
@@ -126,13 +142,14 @@
         document.title = `${listName} 🗳️`;
         document.getElementById("listName").textContent = `${listName}`;
         document.getElementById(
-          "resultsButton"
+          "resultsButtonA"
         ).href = `grid.html?listName=${listName}`;
         document.getElementById(
-          "skipButton"
+          "skipButtonA"
         ).href = `vote.html?listName=${listName}`;
         getListInfo(listName).then((d) => {
-          document.getElementById("listPrompt").textContent = d.prompt;
+          document.getElementById("listPrompt").textContent =
+            "Prompt: " + d.prompt;
         });
 
         const response = await fetch(

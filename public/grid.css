@@ -1,28 +1,19 @@
 .listTop {
-  padding: 15px 10px 10px 10px;
-  position: relative;
-  margin-top: 50px;
   margin-bottom: 10px;
 }
 h1 {
   text-align: center;
-  border-bottom: 2px #fff groove;
-  /* width: fit-content; */
-  margin-bottom: 10px;
-  font-size: 3em;
+
+  /* margin-bottom: 10px; */
 }
-h2 {
-  /* display: inline; */
-}
+
 #listNumber {
-  background-color: #ddd;
+  background-color: var(--color-midgrey);
   padding: 0 3px;
   display: none;
 }
 .listTop-inner {
-  border: 2px #fff groove;
-  padding: 0 10px 10px 10px;
-  margin-bottom: 10px;
+  gap: 0;
 }
 #voteButton,
 #editButton {
@@ -45,23 +36,37 @@ h2 {
   flex-wrap: wrap;
   margin-bottom: 10px;
 }
+.card {
+  min-width: 0;
+}
+.header {
+  background-color: var(--color-blue);
+  color: white;
+  padding: 0 5px;
+  font-size: 1em;
+  min-width: 0;
+}
+
 #card-container.largeSquare {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
 }
+.eloTag.largeSquare {
+  padding: 0 5px;
+}
+
 .header.smallSquare {
   justify-content: flex-start;
-  gap: 10px;
+  gap: 5px;
   flex-grow: 2;
-  max-width: 70%;
   background-color: unset;
   color: black;
 }
-.card {
-  flex: 1 0 20%;
-}
+
 .card.smallSquare {
   display: flex;
+  align-items: center;
+  padding: 5px;
 }
 .card img {
   width: 100%;
@@ -72,19 +77,24 @@ h2 {
 .eloTag.smallSquare {
   display: flex;
   align-items: center;
-  padding: 10px;
+  /* padding: 10px; */
+
+  justify-content: flex-end;
+  /* width: 100%; */
 }
-.eloTag.largeSquare {
-  padding: 2px 10px;
-}
+
 .inner-box.smallSquare {
   width: 30px;
   height: 30px;
-  margin: 5px;
+  /* margin: 5px; */
   order: -1;
 }
 
 @media (min-width: 740px) {
+  #card-container.largeSquare {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
   .header.smallSquare {
     width: 20%;
   }

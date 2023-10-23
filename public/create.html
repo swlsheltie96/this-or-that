@@ -4,56 +4,97 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" type="text/css" href="style.css" />
+    <link rel="stylesheet" type="text/css" href="create.css" />
 
     <title>Elo Chamber</title>
   </head>
 
   <body>
+    <div class="home-small">
+      <a href="https://elochamber.com/" class="flex align">
+        <img
+          class="elo-logo small"
+          src="https://win98icons.alexmeub.com/icons/png/cardfile-1.png"
+        />
 
-    <div class='flex justify'>
-      <h1>Elo Chamber<span class="elo-logo"></span></h1>
-      <a class="clickable" href="/">cancel</a>
+        <h5 class="index-title">Elo Chamber</h5>
+      </a>
     </div>
-    <form id="createListForm" class="box" style="padding:2% 5%;">
-        <label for="listName">Title</label>
-        <input type="text" id="listName" name="listName" required><br><br>
 
-        <label for="password">Password</label>
-        <input type="text" id="password" name="password" required><br><br>
-
-        <label for="description">Description</label>
-        <input type="text" id="description" name="description"></input><br><br>
-
-        <label for="prompt">Vote prompt</label>
-        <input type="text" id="prompt" name="prompt" required><br><br>
-
-        <input type="submit" class="clickable" value="Create List">
-    </form>
+    <div class="flex center top">
+      <h1 class="createTop">Create New List</h1>
+    </div>
+    <button id="cancelButton" class="clickable">
+      <a href="/"><p>Cancel</p></a>
+    </button>
+    <hr />
+    <div class="createForm wrapper box">
+      <form id="createListForm">
+        <div class="createForm-inner form">
+          <div class="data name">
+            <label for="listName">Title</label>
+            <input type="text" id="listName" name="listName" required />
+          </div>
+          <div class="data author">
+            <label for="author">Author</label>
+            <input type="text" id="author" name="author" required />
+          </div>
+          <div class="data password">
+            <label for="password">Password</label>
+            <input type="text" id="password" name="password" required />
+          </div>
+          <div class="data description">
+            <label for="description">Description</label>
+            <input type="text" id="description" name="description" />
+          </div>
+          <div class="data prompt">
+            <label for="prompt">Vote prompt</label>
+            <input type="text" id="prompt" name="prompt" required />
+          </div>
+        </div>
+        <div class="actionButtons">
+          <button id="submitButton" class="clickable">
+            <p>Create List</p>
+          </button>
+        </div>
+      </form>
+    </div>
 
     <script src="api.js"></script>
     <script>
-        document.getElementById("createListForm").addEventListener("submit", function(event) {
-            event.preventDefault();
+      document
+        .getElementById("createListForm")
+        .addEventListener("submit", function (event) {
+          event.preventDefault();
 
-            // Get the values from the form
-            const listName = document.getElementById("listName").value;
-            const description = document.getElementById("description").value;
-            const vote_prompt = document.getElementById("prompt").value;
-            const password = document.getElementById("password").value;
+          // Get the values from the form
+          const listName = document.getElementById("listName").value;
+          const description = document.getElementById("description").value;
+          const vote_prompt = document.getElementById("prompt").value;
+          const password = document.getElementById("password").value;
 
-            // You can perform further validation here if needed
+          // You can perform further validation here if needed
 
-            // Create a new "thing" object with the form data
-            createList(listName, {description: description, prompt: vote_prompt}, password).then((resp) => {
-                if (resp.error) {
-                  alert(resp.error);
-                }
-                cookieManager.setCookie(listName, password, { expires: new Date(Date.now() + 86400 * 1000), path: '/' });
-                window.location.href = `/list.html?listName=${encodeURIComponent(listName)}`
+          // Create a new "thing" object with the form data
+          createList(
+            listName,
+            { description: description, prompt: vote_prompt },
+            password
+          ).then((resp) => {
+            if (resp.error) {
+              alert(resp.error);
+            }
+            cookieManager.setCookie(listName, password, {
+              expires: new Date(Date.now() + 86400 * 1000),
+              path: "/",
             });
+            window.location.href = `/list.html?listName=${encodeURIComponent(
+              listName
+            )}`;
+          });
 
-            // Reset the form
-            document.getElementById("createListForm").reset();
+          // Reset the form
+          document.getElementById("createListForm").reset();
         });
     </script>
   </body>
