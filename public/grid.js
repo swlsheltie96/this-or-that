@@ -64,10 +64,22 @@ document.getElementById("listName").textContent = listName;
 
 getListInfo(listName).then((d) => {
   console.log(d);
-
+  if (d.lastVoteTimestamp && d.lastVoteTimestamp != "") {
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    const date = new Date(d.lastVoteTimestamp);
+    d.lastVoteTimestamp = date.toLocaleDateString("en-US", options);
+    document.getElementById("listTimeLastVoted").textContent =
+      "Last voted: " + d.lastVoteTimestamp;
+  }
+  if (d.author && d.author != "") {
+    document.getElementById("listAuthor").textContent = "Author: " + d.author;
+  }
+  if (d.voteCount && d.voteCount != "") {
+    document.getElementById("listNumVotes").textContent =
+      "Votes: " + d.voteCount;
+  }
   document.getElementById("listDescription").textContent =
     "Description: " + d.description;
-  document.getElementById("listAuthor").textContent = "Author: " + d.author;
 });
 // Create and append cards for each item in the JSON data
 getSortedList(listName).then((data) => {

@@ -283,10 +283,13 @@ async function getListInfo(listName) {
   }
   const data = await response.json();
   if (response.ok) {
-    return data;
+    if (data && data.data) {
+      return data.data; // Return the data object directly
+    } else {
+      console.error("Error:", data.error);
+      return null;
+    }
   }
-  console.error("Error:", data.error);
-  return null;
 }
 
 // Function to test the get-lists endpoint

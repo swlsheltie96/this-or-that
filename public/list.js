@@ -77,6 +77,8 @@ window.addEventListener("load", async () => {
     document.getElementById("listName").value = listName;
     document.getElementById("listDescription").value = d.description;
     document.getElementById("listPrompt").value = d.prompt;
+
+    document.getElementById("listAuthor").value = d.author;
   });
   getSortedList(listName).then((list) => {
     async function save() {

@@ -1,5 +1,6 @@
 import config from "./config.json";
 import { Database } from "bun:sqlite";
+import { vote } from "./tests/api";
 
 const PORT = process.env.PORT || config.port;
 const LRU_SIZE = process.env.LRU_SIZE || config.lru_size;
@@ -588,8 +589,14 @@ app.get("/get-list-info", (req) => {
   }
   const listName = params.get("listName");
 
-  const sqlGetListData = "SELECT data FROM lists WHERE name = ?";
-  const paramsGetListData = [listName];
+  const sqlGetListData = `
+    SELECT lists.data, 
+           (SELECT COUNT(*) FROM list_votes WHERE list_name = ?) AS voteCount,
+           (SELECT MAX(timestamp) FROM list_votes WHERE list_name = ?) AS lastVoteTimestamp
+
+    FROM lists 
+    WHERE name = ?`;
+  const paramsGetListData = [listName, listName, listName];
 
   const queryGetListData = db.query(sqlGetListData);
   const resultGetListData = queryGetListData.get(paramsGetListData);
@@ -597,8 +604,15 @@ app.get("/get-list-info", (req) => {
     return jsonError(`List "${listName}" does not exist.`);
   }
 
-  const listData = resultGetListData.data;
-  return Response.json(JSON.parse(listData));
+  const listData = JSON.parse(resultGetListData.data);
+  const voteCount = resultGetListData.voteCount;
+  const lastVoteTimestamp = resultGetListData.lastVoteTimestamp;
+
+  listData.voteCount = voteCount;
+  listData.lastVoteTimestamp = lastVoteTimestamp;
+
+  console.log(listData);
+  return Response.json({ data: listData });
 });
 
 // Endpoint to get items in a list sorted by Elo rating
@@ -706,9 +720,12 @@ app.post("/vote", 1000, async (req) => {
   const userId = req.headers.has("x-forwarded-for")
     ? req.headers.get("x-forwarded-for")
     : 0;
+
+  const currentTimestamp = new Date().toISOString();
+
   const sqlInsertVote =
-    "INSERT INTO list_votes (list_name, user_id) VALUES (?, ?)";
-  const paramsInsertVote = [listName, userId];
+    "INSERT INTO list_votes (list_name, user_id, timestamp) VALUES (?, ?, ?)";
+  const paramsInsertVote = [listName, userId, currentTimestamp];
 
   return runQueries(
     [sqlUpdateWinnerRating, sqlUpdateLoserRating, sqlInsertVote],

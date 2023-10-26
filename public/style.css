@@ -186,8 +186,7 @@ input[type="text"]:focus-visible {
 .login button {
   float: right;
 }
-
-.actionButtons {
+.actionBar .actionButtons {
   width: fit-content;
   margin-right: 0;
   margin-left: auto;
@@ -297,6 +296,7 @@ input[type="text"]:focus-visible {
   width: 30px;
   height: 30px;
   aspect-ratio: 1 / 1;
+  object-fit: contain;
 }
 
 #addItemButton {
