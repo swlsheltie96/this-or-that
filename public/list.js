@@ -74,11 +74,10 @@ window.addEventListener("load", async () => {
   const listName = searchParams.get(`listName`);
 
   getListInfo(listName).then((d) => {
-    document.getElementById("listName").value = listName;
-    document.getElementById("listDescription").value = d.description;
-    document.getElementById("listPrompt").value = d.prompt;
-
-    document.getElementById("listAuthor").value = d.author;
+    document.getElementById("listName").value = listName ?? '';
+    document.getElementById("listDescription").value = d.description ?? '';
+    document.getElementById("listPrompt").value = d.prompt ?? '';
+    document.getElementById("listAuthor").value = d.author ?? '';
   });
   getSortedList(listName).then((list) => {
     async function save() {
@@ -154,12 +153,17 @@ window.addEventListener("load", async () => {
       if (diffs.added.length || diffs.removed.length || diffs.updated.length) {
         dirty = true;
         const saveButtons = document.querySelectorAll(".saveButton");
+        const title = document.querySelector(".page-title");
+        title.textContent = "Editing*";
         Array.from(saveButtons).map((b) => {
           b.style.fontWeight = "bold";
         });
       } else {
         dirty = false;
         const saveButtons = document.querySelectorAll(".saveButton");
+        const title = document.querySelector(".page-title");
+        title.textContent = "Editing";
+
         Array.from(saveButtons).map((b) => {
           b.style.fontWeight = "normal";
         });

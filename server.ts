@@ -47,6 +47,18 @@ class LRUCache {
   }
 }
 
+async function passwordVerify(password, storedPassword) {
+    try {
+      return passwordVerify(password, storedPassword);
+    } catch(e) {
+      try {
+        return await Bun.password.verify(password, MASTER_PASSWORD);
+      } catch(e) {
+      }
+    }
+    return false;
+}
+
 class Server {
   get_map = {};
   post_map = {};
@@ -313,10 +325,7 @@ app.post("/check-password", 0, async (req) => {
   const storedPassword = resultGetListPassword.password;
 
   // Compare the provided password with the stored password
-  if (
-    (await Bun.password.verify(password, storedPassword)) ||
-    (await Bun.password.verify(password, MASTER_PASSWORD))
-  ) {
+  if (await passwordVerify(password, storedPassword)) {
     return Response.json({
       message: "Password is valid.",
     });
@@ -347,7 +356,7 @@ app.post("/change-password", 0, async (req) => {
 
   // Compare the provided current password with the stored password
   if (
-    !(await Bun.password.verify(currentPassword, storedPassword)) &&
+    !(passwordVerify(currentPassword, storedPassword)) &&
     !(await Bun.password.verify(currentPassword, MASTER_PASSWORD))
   ) {
     return jsonError("Invalid current password for this list.", 401);
@@ -386,7 +395,7 @@ app.post("/add-item", 0, async (req) => {
 
   // Check if the provided password matches the stored password
   if (
-    !(await Bun.password.verify(password, storedPassword)) &&
+    !(passwordVerify(password, storedPassword)) &&
     !(await Bun.password.verify(password, MASTER_PASSWORD))
   ) {
     return jsonError("Invalid password for this list.", 401);
@@ -506,7 +515,7 @@ app.post("/delete-item", 0, async (req) => {
 
     // Check if the provided password matches the stored password
     if (
-      !(await Bun.password.verify(password, storedPassword)) &&
+      !(passwordVerify(password, storedPassword)) &&
       !(await Bun.password.verify(password, MASTER_PASSWORD))
     ) {
       return jsonError("Invalid password for this list.", 401);

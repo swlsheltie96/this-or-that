@@ -156,6 +156,9 @@ async function checkPassword(listName, password) {
     }),
   });
   const data = await response.json();
+  if (!response.ok) {
+    alert("Incorrect password.");
+  }
   return response.ok; // Return true if the password is valid, false otherwise
 }
 

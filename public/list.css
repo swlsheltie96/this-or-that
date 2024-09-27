@@ -8,6 +8,9 @@ body {
 .listContainer {
   margin-bottom: 10px;
 }
+input.metadata {
+  border: none;
+}
 .login button {
   font-family: "Times New Roman", Times, serif;
   color: var(--color-blue);
