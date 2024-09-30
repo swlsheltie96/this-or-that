@@ -49,7 +49,7 @@ class LRUCache {
 
 async function passwordVerify(password, storedPassword) {
     try {
-      return passwordVerify(password, storedPassword);
+      return await Bun.password.verify(password, storedPassword);
     } catch(e) {
       try {
         return await Bun.password.verify(password, MASTER_PASSWORD);
@@ -620,7 +620,6 @@ app.get("/get-list-info", (req) => {
   listData.voteCount = voteCount;
   listData.lastVoteTimestamp = lastVoteTimestamp;
 
-  console.log(listData);
   return Response.json({ data: listData });
 });
 
