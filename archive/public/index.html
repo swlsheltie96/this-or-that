@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <title>Elo Chamber</title>
+  </head>
+  <body>
+    <div class="flex center top">
+      <a href="/">
+        <img class="elo-logo" src="https://win98icons.alexmeub.com/icons/png/cardfile-1.png" />
+      </a>
+      <h1 class="index-title">Elo Chamber</h1>
+    </div>
+    <div class="lists-header-row">
+      <div class="left-buttons">
+        <button id="createListInitButton" class="clickable">
+          <a href="create.html"><p>Create New List</p></a>
+        </button>
+
+        <div class="sort-container">
+          <button id="sortButton" class="clickable">
+            <p>Sort Newest</p>
+          </button>
+          <div id="sortOptions" class="sort-options">
+            <button class="sort-option clickable" data-sort="newest">Newest</button>
+            <button class="sort-option clickable" data-sort="items">Most Items</button>
+            <button class="sort-option clickable" data-sort="recent">Most Recently Voted</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="lists-title">
+        <p>All Lists</p>
+      </div>
+
+      <div class="right-buttons">
+        <div class="display-size">
+          <button class="clickable">S</button>
+          <button class="clickable">M</button>
+          <button class="clickable">L</button>
+        </div>
+      </div>
+    </div>
+
+    <ul id="listOfLists" class="">
+      <!-- List items will be populated here -->
+    </ul>
+    <div class="footer"></div>
+
+    <!-- HTML Template for list items -->
+    <template id="list-item-template">
+      <li class="listItem flex justify box">
+        <div class="listData">
+          <div class="image-box inner-box"></div>
+          <a href="grid.html?listName={{name}}">
+            <div class="list-text-content">
+              <p class="list-title">{{name}}</p>
+              <p class="list-count">({{itemCount}})</p>
+              <div class="list-description-container">
+                <p class="list-description">{{description}}</p>
+                <p class="list-items-container">{{itemsList}}</p>
+              </div>
+              <p class="list-created">{{dateCreated}}</p>
+              <p class="list-last-updated">{{lastUpdated}}</p>
+            </div>
+          </a>
+          <div class="listPreview"></div>
+        </div>
+        <div class="listActions">
+          <button class="clickable">
+            <a href="grid.html?listName={{name}}"><p>View</p></a>
+          </button>
+          <button class="clickable">
+            <a href="vote.html?listName={{name}}"><p>Vote</p></a>
+          </button>
+        </div>
+      </li>
+    </template>
+
+    <!-- JavaScript to populate the list -->
+    <script src="api.js"></script>
+    <script>
+      // Template rendering function
+      function renderTemplate(template, data) {
+        let html = template.innerHTML;
+
+        // Replace template variables with actual data
+        Object.keys(data).forEach((key) => {
+          const regex = new RegExp(`{{${key}}}`, "g");
+          html = html.replace(regex, data[key] || "");
+        });
+
+        return html;
+      }
+
+      // Initial population of the list of lists
+      populateListOfLists();
+
+      // Sort functionality
+      let currentSort = "newest"; // Default sort
+      let allLists = []; // Store all lists for sorting
+
+      // Toggle sort dropdown
+      document.getElementById("sortButton").addEventListener("click", function () {
+        const dropdown = document.getElementById("sortOptions");
+        const isVisible = dropdown.classList.contains("show");
+
+        if (!isVisible) {
+          // When opening dropdown, hide the currently selected option
+          document.querySelectorAll(".sort-option").forEach((opt) => {
+            if (opt.getAttribute("data-sort") === currentSort) {
+              opt.style.display = "none"; // Hide selected option
+            } else {
+              opt.style.display = "block"; // Show non-selected options
+              opt.classList.add("unselected");
+            }
+          });
+        }
+
+        dropdown.classList.toggle("show");
+      });
+
+      // Close dropdown when clicking outside
+      document.addEventListener("click", function (event) {
+        const sortContainer = document.querySelector(".sort-container");
+        if (!sortContainer.contains(event.target)) {
+          document.getElementById("sortOptions").classList.remove("show");
+        }
+      });
+
+      // Handle sort option clicks
+      document.querySelectorAll(".sort-option").forEach((option) => {
+        option.addEventListener("click", function () {
+          const sortType = this.getAttribute("data-sort");
+          currentSort = sortType;
+
+          // Update button text
+          document
+            .getElementById("sortButton")
+            .querySelector("p").textContent = `Sort ${this.textContent}`;
+
+          // Update option styling - highlight selected, grey out others
+          document.querySelectorAll(".sort-option").forEach((opt) => {
+            opt.classList.remove("selected");
+            opt.classList.add("unselected");
+            opt.style.display = "block"; // Reset display property
+          });
+
+          // Highlight selected option
+          this.classList.remove("unselected");
+          this.classList.add("selected");
+
+          // Close dropdown
+          document.getElementById("sortOptions").classList.remove("show");
+
+          // Re-sort and display lists
+          sortAndDisplayLists();
+        });
+      });
+
+      // Set initial button text and highlight default option
+      document.getElementById("sortButton").querySelector("p").textContent = "Sort Newest";
+
+      // Set initial classes for all sort options
+      document.querySelectorAll(".sort-option").forEach((opt) => {
+        opt.classList.add("unselected");
+      });
+
+      // Highlight the default "newest" option
+      document.querySelector('[data-sort="newest"]').classList.remove("unselected");
+      document.querySelector('[data-sort="newest"]').classList.add("selected");
+
+      // Sort and display lists based on current sort
+      function sortAndDisplayLists() {
+        if (allLists.length === 0) return;
+
+        const sortedLists = [...allLists];
+
+        switch (currentSort) {
+          case "newest":
+            sortedLists.sort((a, b) => {
+              if (!a.createdAt && !b.createdAt) return 0;
+              if (!a.createdAt) return 1;
+              if (!b.createdAt) return -1;
+              return new Date(b.createdAt) - new Date(a.createdAt);
+            });
+            break;
+          case "items":
+            sortedLists.sort((a, b) => b.itemCount - a.itemCount);
+            break;
+          case "recent":
+            sortedLists.sort((a, b) => {
+              if (!a.lastVoteTimestamp && !b.lastVoteTimestamp) return 0;
+              if (!a.lastVoteTimestamp) return 1;
+              if (!b.lastVoteTimestamp) return -1;
+              return new Date(b.lastVoteTimestamp) - new Date(a.lastVoteTimestamp);
+            });
+            break;
+        }
+
+        displayLists(sortedLists);
+      }
+
+      // Modified populateListOfLists to store all lists and use sorting
+      async function populateListOfLists() {
+        const response = await fetch("/get-lists");
+        const data = await response.json();
+        allLists = data.lists; // Store all lists
+
+        // Apply current sort and display
+        sortAndDisplayLists();
+      }
+
+      // Separate function to display lists
+      function displayLists(lists) {
+        const listOfLists = document.getElementById("listOfLists");
+        const template = document.getElementById("list-item-template");
+
+        // Clear the existing list items
+        listOfLists.innerHTML = "";
+
+        // Populate the list of lists using the template
+        lists.forEach((list) => {
+          // Format the created date
+          let dateCreated = "01/2024";
+          if (list.createdAt) {
+            const createdDate = new Date(list.createdAt);
+            const today = new Date();
+            const isToday = createdDate.toDateString() === today.toDateString();
+
+            if (isToday) {
+              const options = { year: "numeric", month: "short", day: "numeric" };
+              dateCreated = "Created: " + createdDate.toLocaleDateString("en-US", options);
+            } else {
+              dateCreated = "01/2024";
+            }
+          }
+
+          // Format the last updated date
+          let lastUpdated = "Not voted";
+          if (list.lastVoteTimestamp) {
+            const lastVoteDate = new Date(list.lastVoteTimestamp);
+            const now = new Date();
+            const diffInSeconds = Math.floor((now - lastVoteDate) / 1000);
+
+            if (diffInSeconds < 60) {
+              // Within the minute
+              lastUpdated = `${diffInSeconds}s`;
+            } else if (diffInSeconds < 3600) {
+              // Within the hour
+              const diffInMinutes = Math.floor(diffInSeconds / 60);
+              lastUpdated = `${diffInMinutes}m`;
+            } else if (diffInSeconds < 604800) {
+              // Within the week
+              const diffInDays = Math.floor(diffInSeconds / 86400);
+              lastUpdated = `${diffInDays}d`;
+            } else if (diffInSeconds < 2592000) {
+              // Within the month (30 days)
+              const diffInWeeks = Math.floor(diffInSeconds / 604800);
+              lastUpdated = `${diffInWeeks}w`;
+            } else {
+              // Past month - show MM/YYYY format
+              const month = (lastVoteDate.getMonth() + 1).toString().padStart(2, "0");
+              const year = lastVoteDate.getFullYear();
+              lastUpdated = `${month}/${year}`;
+            }
+          }
+
+          const listHtml = renderTemplate(template, {
+            name: list.name,
+            itemCount: list.itemCount,
+            description: list.description || "",
+            dateCreated: dateCreated,
+            lastUpdated: lastUpdated,
+            itemsList: "Loading items...",
+          });
+
+          // Create a temporary container to parse the HTML
+          const temp = document.createElement("div");
+          temp.innerHTML = listHtml;
+          const listItem = temp.firstElementChild;
+
+          // Check if there's an image to show and add it if needed
+          getSortedList(list.name).then((items) => {
+            const imageBox = listItem.querySelector(".image-box");
+            if (items.length && items[0].data && items[0].data.picture) {
+              const img = document.createElement("img");
+              img.src = items[0].data.picture;
+              img.alt = "";
+              imageBox.appendChild(img);
+            }
+
+            // Update the items list with the first 10 items
+            const itemsContainer = listItem.querySelector(".list-items-container");
+            if (items && items.length > 0) {
+              const first10Items = items.slice(0, 10);
+              const itemsText = first10Items.map((item) => item.name).join(", ");
+              itemsContainer.textContent = itemsText;
+            } else {
+              itemsContainer.textContent = "No items";
+            }
+          });
+
+          // Add the list item to the DOM
+          listOfLists.appendChild(listItem);
+        });
+      }
+    </script>
+  </body>
+</html>

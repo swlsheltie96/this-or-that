@@ -67,6 +67,9 @@ function createButton(existing, buttonTxt_Id, clickHandler) {
 }
 
 let dirty = false;
+let metadataDirty = false;
+let initialMetadata = {};
+
 window.addEventListener("load", async () => {
   const listContainer = document.getElementById("listContainer");
   const queryString = window.location.search;
@@ -74,13 +77,72 @@ window.addEventListener("load", async () => {
   const listName = searchParams.get(`listName`);
 
   getListInfo(listName).then((d) => {
-    document.getElementById("listName").value = listName ?? '';
-    document.getElementById("listDescription").value = d.description ?? '';
-    document.getElementById("listPrompt").value = d.prompt ?? '';
-    document.getElementById("listAuthor").value = d.author ?? '';
+    document.getElementById("listName").value = listName ?? "";
+    document.getElementById("listDescription").value = d.description ?? "";
+    document.getElementById("listPrompt").value = d.prompt ?? "";
+    document.getElementById("listAuthor").value = d.author ?? "";
+
+    // Store initial metadata values
+    initialMetadata = {
+      name: listName ?? "",
+      description: d.description ?? "",
+      prompt: d.prompt ?? "",
+      author: d.author ?? "",
+    };
+
+    // Add event listeners to metadata fields
+    const metadataFields = ["listName", "listDescription", "listPrompt", "listAuthor"];
+    metadataFields.forEach((fieldId) => {
+      const field = document.getElementById(fieldId);
+      field.addEventListener("input", () => {
+        const currentMetadata = {
+          name: document.getElementById("listName").value,
+          description: document.getElementById("listDescription").value,
+          prompt: document.getElementById("listPrompt").value,
+          author: document.getElementById("listAuthor").value,
+        };
+
+        metadataDirty = JSON.stringify(currentMetadata) !== JSON.stringify(initialMetadata);
+        updateSaveButton();
+      });
+    });
   });
   getSortedList(listName).then((list) => {
     async function save() {
+      // Save metadata changes if any
+      if (metadataDirty) {
+        const newListName = document.getElementById("listName").value;
+        const description = document.getElementById("listDescription").value;
+        const prompt = document.getElementById("listPrompt").value;
+        const author = document.getElementById("listAuthor").value;
+
+        try {
+          await updateListMetadata(listName, newListName, description, prompt, author);
+
+          // Update initial metadata and URL if name changed
+          initialMetadata = {
+            name: newListName,
+            description: description,
+            prompt: prompt,
+            author: author,
+          };
+
+          if (newListName !== listName) {
+            // Update URL to reflect new list name
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.set("listName", newListName);
+            window.history.replaceState({}, "", newUrl);
+          }
+
+          metadataDirty = false;
+        } catch (error) {
+          console.error("Failed to save metadata:", error);
+          alert("Failed to save metadata changes. Please try again.");
+          return;
+        }
+      }
+
+      // Save item changes
       const diffs = findObjectDifference(initial_data, table.getData());
       for (let row of diffs.removed) {
         await deleteItem(listName, row.name);
@@ -92,11 +154,34 @@ window.addEventListener("load", async () => {
         await deleteItem(listName, row.name);
         await addItem(listName, rowToItem(row));
       }
+
       const saveButtons = document.querySelectorAll(".saveButton");
+      const title = document.querySelector(".page-title");
+      title.textContent = "Editing";
       Array.from(saveButtons).map((b) => {
         b.style.fontWeight = "normal";
       });
       dirty = false;
+
+      // Show success message
+      alert("Saved successfully!");
+    }
+
+    function updateSaveButton() {
+      const saveButtons = document.querySelectorAll(".saveButton");
+      const title = document.querySelector(".page-title");
+
+      if (dirty || metadataDirty) {
+        title.textContent = "Editing*";
+        Array.from(saveButtons).map((b) => {
+          b.style.fontWeight = "bold";
+        });
+      } else {
+        title.textContent = "Editing";
+        Array.from(saveButtons).map((b) => {
+          b.style.fontWeight = "normal";
+        });
+      }
     }
 
     listContainer.innerHTML = ""; // Clear the existing table
@@ -152,21 +237,10 @@ window.addEventListener("load", async () => {
       const diffs = findObjectDifference(initial_data, table.getData());
       if (diffs.added.length || diffs.removed.length || diffs.updated.length) {
         dirty = true;
-        const saveButtons = document.querySelectorAll(".saveButton");
-        const title = document.querySelector(".page-title");
-        title.textContent = "Editing*";
-        Array.from(saveButtons).map((b) => {
-          b.style.fontWeight = "bold";
-        });
+        updateSaveButton();
       } else {
         dirty = false;
-        const saveButtons = document.querySelectorAll(".saveButton");
-        const title = document.querySelector(".page-title");
-        title.textContent = "Editing";
-
-        Array.from(saveButtons).map((b) => {
-          b.style.fontWeight = "normal";
-        });
+        updateSaveButton();
       }
     });
 
@@ -204,7 +278,7 @@ window.addEventListener("load", async () => {
 });
 
 window.addEventListener("beforeunload", function (e) {
-  if (!dirty) {
+  if (!dirty && !metadataDirty) {
     return undefined;
   }
 

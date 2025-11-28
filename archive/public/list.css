@@ -48,13 +48,13 @@ input.metadata {
   border: none !important;
 }
 .tabulator-row.tabulator-editing {
-  font-family: "Compagnon-Medium";
+  font-family: "Helvetica";
 
   border: 1px dotted black;
 }
 
 .tabulator-row .tabulator-cell.tabulator-editable.tabulator-editing input {
-  font-family: "Compagnon-Medium";
+  font-family: "Helvetica";
   border-right-color: var(--border-color);
   border: none !important;
 }
@@ -93,9 +93,7 @@ input.metadata {
   border-top: 6px solid;
   border-top-color: var(--border-color);
 }
-.tabulator
-  .tabulator-header
-  .tabulator-col.tabulator-sortable.tabulator-col-sorter-element:hover {
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable.tabulator-col-sorter-element:hover {
   background-color: var(--page-color);
   background-color: #eee;
 }

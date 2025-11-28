@@ -1,6 +1,5 @@
 {
   "port": 3000,
-  "lru_size": 1048576,
-  "benchmark": false,
-  "master_password": "$argon2id$v=19$m=65536,t=2,p=1$gnE0lzJxGhGXN54/CIhKdwibFlhzCms52+xZaAE9XIs$jQAWGXNT7F/e0ICz+AsNzrCJzGPovtC33wWKcRnAxBY"
+  "lru_size": 10000,
+  "benchmark": false
 }

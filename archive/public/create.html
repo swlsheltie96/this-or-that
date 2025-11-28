@@ -12,11 +12,6 @@
   <body>
     <div class="home-small">
       <a href="/" class="flex align">
-        <img
-          class="elo-logo small"
-          src="https://win98icons.alexmeub.com/icons/png/cardfile-1.png"
-        />
-
         <h5 class="index-title">Elo Chamber</h5>
       </a>
     </div>
@@ -62,42 +57,38 @@
 
     <script src="api.js"></script>
     <script>
-      document
-        .getElementById("createListForm")
-        .addEventListener("submit", function (event) {
-          event.preventDefault();
+      document.getElementById("createListForm").addEventListener("submit", function (event) {
+        event.preventDefault();
 
-          // Get the values from the form
-          const listName = document.getElementById("listName").value;
-          const author = document.getElementById("author").value;
+        // Get the values from the form
+        const listName = document.getElementById("listName").value;
+        const author = document.getElementById("author").value;
 
-          const description = document.getElementById("description").value;
-          const vote_prompt = document.getElementById("prompt").value;
-          const password = document.getElementById("password").value;
+        const description = document.getElementById("description").value;
+        const vote_prompt = document.getElementById("prompt").value;
+        const password = document.getElementById("password").value;
 
-          // You can perform further validation here if needed
+        // You can perform further validation here if needed
 
-          // Create a new "thing" object with the form data
-          createList(
-            listName,
-            { description: description, prompt: vote_prompt, author: author },
-            password
-          ).then((resp) => {
-            if (resp.error) {
-              alert(resp.error);
-            }
-            cookieManager.setCookie(listName, password, {
-              expires: new Date(Date.now() + 86400 * 1000),
-              path: "/",
-            });
-            window.location.href = `/list.html?listName=${encodeURIComponent(
-              listName
-            )}`;
+        // Create a new "thing" object with the form data
+        createList(
+          listName,
+          { description: description, prompt: vote_prompt, author: author },
+          password
+        ).then((resp) => {
+          if (resp.error) {
+            alert(resp.error);
+          }
+          cookieManager.setCookie(listName, password, {
+            expires: new Date(Date.now() + 86400 * 1000),
+            path: "/",
           });
-
-          // Reset the form
-          document.getElementById("createListForm").reset();
+          window.location.href = `/list.html?listName=${encodeURIComponent(listName)}`;
         });
+
+        // Reset the form
+        document.getElementById("createListForm").reset();
+      });
     </script>
   </body>
 </html>

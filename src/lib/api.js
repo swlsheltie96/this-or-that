@@ -1,4 +1,5 @@
-const server = window.location.origin;
+// Use relative URLs - Vite proxy will handle routing to backend
+const server = "";
 
 class CookieManager {
   constructor() {
@@ -37,9 +38,7 @@ class CookieManager {
   // Set a cookie in the cache and using document.cookie
   setCookie(name, value, options = {}) {
     const { expires, path, domain, secure } = options;
-    let cookieString = `${encodeURIComponent(name)}=${encodeURIComponent(
-      value
-    )}`;
+    let cookieString = `${encodeURIComponent(name)}=${encodeURIComponent(value)}`;
 
     if (expires instanceof Date) {
       cookieString += `; expires=${expires.toUTCString()}`;
@@ -108,13 +107,16 @@ async function login(listName) {
   if (password) {
     return password;
   }
-  const login_prompt = () => {
-    const d = document.createElement("div");
-    return new Promise();
-  };
+  let attempts = 0;
+  const MAX_ATTEMPTS = 3;
   let possible_pw = await createCustomPrompt("Enter password");
   while (possible_pw && !(await checkPassword(listName, possible_pw))) {
-    possible_pw = await createCustomPrompt("Enter password");
+    attempts++;
+    if (attempts >= MAX_ATTEMPTS) {
+      alert("Too many failed attempts. Please try again later.");
+      return "";
+    }
+    possible_pw = await createCustomPrompt("Enter password (attempt " + (attempts + 1) + "/" + MAX_ATTEMPTS + ")");
   }
   if (possible_pw) {
     cookieManager.setCookie(listName, possible_pw, {
@@ -226,9 +228,7 @@ async function deleteItem(listName, itemName) {
 
 // Get a random pair of items for voting
 async function getPairForVoting(listName) {
-  const response = await fetch(
-    `${server}/get-pair?listName=${encodeURIComponent(listName)}`
-  );
+  const response = await fetch(`${server}/get-pair?listName=${encodeURIComponent(listName)}`);
   if (!response.ok) {
     throw new Error(`Failed: ${response.statusText}`);
   }
@@ -237,7 +237,7 @@ async function getPairForVoting(listName) {
 }
 
 // Vote on a pair of items
-async function vote(listName, winner, loser) {
+async function vote(listName, winner, loser, sessionTime = 0) {
   const response = await fetch(`${server}/vote`, {
     method: "POST",
     headers: {
@@ -247,10 +247,13 @@ async function vote(listName, winner, loser) {
       listName: listName,
       winner: winner,
       loser: loser,
+      sessionTime: sessionTime,
     }),
   });
   if (!response.ok) {
-    throw new Error(`Failed: ${response.statusText}`);
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.error || response.statusText;
+    throw new Error(`Failed to vote: ${errorMessage}`);
   }
   const data = await response.json();
   return data;
@@ -278,9 +281,7 @@ async function getSortedList(listName) {
 }
 
 async function getListInfo(listName) {
-  const response = await fetch(
-    `${server}/get-list-info?listName=${encodeURIComponent(listName)}`
-  );
+  const response = await fetch(`${server}/get-list-info?listName=${encodeURIComponent(listName)}`);
   if (!response.ok) {
     throw new Error(`Failed: ${response.statusText}`);
   }
@@ -325,3 +326,44 @@ async function changePassword(listName, currentPassword, newPassword) {
   const data = await response.json();
   return data;
 }
+
+// Update list metadata (description, prompt, author, name)
+async function updateListMetadata(listName, newListName, description, prompt, author) {
+  const password = await login(listName);
+  const response = await fetch(`${server}/update-list-metadata`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      listName: listName,
+      newListName: newListName,
+      description: description,
+      prompt: prompt,
+      author: author,
+      password: password,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed: ${response.statusText}`);
+  }
+  const data = await response.json();
+  return data;
+}
+
+// Export all functions for ES modules
+export {
+  createList,
+  checkPassword,
+  deleteList,
+  addItem,
+  deleteItem,
+  getPairForVoting,
+  vote,
+  getSortedList,
+  getListInfo,
+  getListsWithPopularity,
+  changePassword,
+  updateListMetadata,
+  login,
+};

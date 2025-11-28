@@ -20,11 +20,6 @@
   <body>
     <div class="home-small">
       <a href="/" class="flex align">
-        <img
-          class="elo-logo small"
-          src="https://win98icons.alexmeub.com/icons/png/cardfile-1.png"
-        />
-
         <h5 class="index-title">Elo Chamber</h5>
       </a>
     </div>
@@ -34,12 +29,15 @@
         <h2 id="listDescription"></h2>
         <h2 id="listAuthor"></h2>
         <h2 id="listNumVotes"></h2>
+        <h2 id="listTimeLastVoted"></h2>
       </div>
       <div class="flex justify">
-        <h2 id="listTimeLastVoted"></h2>
-
         <button id="voteButton" class="clickable">
           <a id="voteButtonA"><p>Vote!</p></a>
+        </button>
+
+        <button id="editButton" class="clickable">
+          <a id="editButtonA"><p>(Edit)</p></a>
         </button>
       </div>
     </div>
@@ -47,16 +45,12 @@
     <div class="list-wrapper">
       <div class="gridType flex align">
         <div class="viewSelect flex">
-          <button id="smallSquare" class="visualtab">▪</button>
-          <button id="largeSquare" class="visualtab clicked">⏹</button>
+          <button id="smallSquare" class="visualtab">List</button>
+          <button id="largeSquare" class="visualtab clicked">Grid</button>
         </div>
       </div>
       <div class="card-container-wrapper box">
         <div id="card-container" class="largeSquare"></div>
-
-        <button id="editButton" class="clickable">
-          <a id="editButtonA"><p>(Edit)</p></a>
-        </button>
       </div>
     </div>
 
