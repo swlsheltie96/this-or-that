@@ -1,8 +1,7 @@
 <script>
   import { onMount } from "svelte";
 
-  import List from "./Views/List.svelte";
-  import Grid from "./Views/Grid.svelte";
+  import View from "./Views/View.svelte";
   import Edit from "./Views/Edit.svelte";
   import { getSortedList, getListInfo } from "../lib/api.js";
 
@@ -175,137 +174,29 @@
 </svelte:head>
 
 <div class="list-detail-container">
-  <!-- Header with navigation -->
-  <div class="top-header">
-    <a href="/" class="home-button">Elo Chamber</a>
-  </div>
-
   {#if loading}
     <div class="loading">Loading...</div>
   {:else if error}
     <div class="error">Error: {error}</div>
+  {:else if viewMode === "edit"}
+    <!-- Edit Mode -->
+    <Edit
+      bind:this={editComponent}
+      {items}
+      {listName}
+      bind:listTitle
+      bind:listDescription
+      bind:listPrompt
+      bind:listAuthor
+      bind:dirty
+      bind:metadataDirty
+      bind:tableData
+      on:nameChanged={handleNameChanged}
+      on:saved={handleSaved}
+    />
   {:else}
-    <div class="page-header">
-      <h1 class="page-title">
-        {viewMode === "edit" ? "Editing" : ""}{dirty || metadataDirty ? "*" : ""}
-        {listName}
-      </h1>
-
-      {#if viewMode !== "edit"}
-        <div class="list-meta box">
-          {#if listInfo.author}
-            <p>Author: {listInfo.author}</p>
-          {/if}
-          {#if listInfo.description}
-            <p>Description: {listInfo.description}</p>
-          {/if}
-          {#if listInfo.voteCount}
-            <p>Total votes: {listInfo.voteCount}</p>
-          {/if}
-          {#if listInfo.totalVotingTimeFormatted}
-            <p>Total voting time: {listInfo.totalVotingTimeFormatted}</p>
-          {/if}
-          {#if listInfo.lastVoteTimestamp}
-            <p>Last voted: {listInfo.lastVoteTimestamp}</p>
-          {/if}
-        </div>
-      {/if}
-
-      <div class="settings box">
-        <div class="view-controls">
-          {#if viewMode !== "edit"}
-            <div class="view-type-controls">
-              <button
-                class=" clickable {viewMode === 'list' ? 'clicked' : ''}"
-                on:click={() => switchViewMode("list")}
-              >
-                List
-              </button>
-              <button
-                class=" clickable {viewMode === 'grid' ? 'clicked' : ''}"
-                on:click={() => switchViewMode("grid")}
-              >
-                Grid
-              </button>
-            </div>
-          {/if}
-
-          {#if viewMode !== "edit"}
-            <div class="size-controls">
-              <button
-                class="clickable {viewSize === 'small' ? 'clicked' : ''}"
-                on:click={() => toggleViewSize("small")}
-              >
-                S
-              </button>
-              <button
-                class="clickable {viewSize === 'medium' ? 'clicked' : ''}"
-                on:click={() => toggleViewSize("medium")}
-              >
-                M
-              </button>
-              <button
-                class="clickable {viewSize === 'large' ? 'clicked' : ''}"
-                on:click={() => toggleViewSize("large")}
-              >
-                L
-              </button>
-            </div>
-          {/if}
-        </div>
-
-        <div class="actions {viewMode}">
-          {#if viewMode === "edit"}
-            <div class="negative-actions">
-              <button class="clickable cancel-btn" on:click={handleGoBack}>
-                Back{dirty || metadataDirty ? " (Discard Changes)" : ""}
-              </button>
-              <button class="clickable delete-btn" on:click={handleDelete}> Delete List </button>
-            </div>
-            <div class="positive-actions">
-              <button
-                class="clickable {dirty || metadataDirty ? 'dirty' : ''}"
-                on:click={handleSave}
-              >
-                Save{dirty || metadataDirty ? "*" : ""}
-              </button>
-            </div>
-          {:else}
-            <button class="clickable" on:click={() => switchViewMode("edit")}> Edit </button>
-          {/if}
-          {#if viewMode !== "edit"}
-            <div class="action-buttons">
-              <button class="clickable">
-                <a href="/vote.html?listName={encodeURIComponent(listName)}">Vote</a>
-              </button>
-            </div>
-          {/if}
-        </div>
-      </div>
-    </div>
-
-    {#if viewMode === "edit"}
-      <!-- Edit Mode -->
-      <Edit
-        bind:this={editComponent}
-        {items}
-        {listName}
-        bind:listTitle
-        bind:listDescription
-        bind:listPrompt
-        bind:listAuthor
-        bind:dirty
-        bind:metadataDirty
-        bind:tableData
-        on:nameChanged={handleNameChanged}
-        on:saved={handleSaved}
-      />
-    {:else if viewMode === "list"}
-      <List {items} {viewSize} />
-    {:else}
-      <!-- Grid View Mode -->
-      <Grid {items} {viewSize} />
-    {/if}
+    <!-- List or Grid View Mode -->
+    <View {items} {viewSize} {viewMode} {listName} {listInfo} />
   {/if}
 </div>
 

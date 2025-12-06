@@ -9,9 +9,10 @@
   --color-text-faded: rgba(0, 0, 0, 0.5);
 
   /* Typography */
-  --font-family: 'Helvetica', sans-serif;
+  --font-family: "Helvetica", sans-serif;
   --font-size-header: 10px;
-  --font-size-content: 20px;
+  --font-size-content: 16px;
+  --font-size-content-mobile: 16px;
 
   /* Spacing */
   --spacing-xs: 4px;
@@ -37,4 +38,43 @@
   --color-grey: #eee;
   --color-midgrey: #ddd;
   --color-darkgrey: #ccc;
+}
+
+/* Global Button Styles */
+.action-button {
+  border: var(--border-button);
+  border-radius: var(--border-radius-button);
+  background-color: var(--color-white);
+  font-family: var(--font-family);
+  font-size: var(--font-size-content);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  box-sizing: border-box;
+  text-transform: uppercase;
+  width: 100%;
+  height: var(--button-height);
+}
+
+.action-button:hover:not(:disabled) {
+  opacity: 0.8;
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-button.active {
+  background-color: var(--color-black);
+  color: var(--color-white);
+}
+
+@media (max-width: 740px) {
+  .action-button {
+    font-size: var(--font-size-content-mobile);
+  }
 }

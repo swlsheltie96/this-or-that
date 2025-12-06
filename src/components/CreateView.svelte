@@ -101,8 +101,8 @@
         }
       }
 
-      // Redirect to the new list
-      window.location.href = `/grid.html?listName=${encodeURIComponent(listName)}`;
+      // Redirect to edit mode
+      window.location.href = `/grid.html?listName=${encodeURIComponent(listName)}&mode=edit`;
     } catch (err) {
       error = err.message || "Failed to create list";
       submitting = false;

@@ -1,7 +1,6 @@
 <script>
   import { onMount, onDestroy } from "svelte";
   import { getPairForVoting, vote, getListInfo } from "../lib/api.js";
-  import VoteElement from "./VoteElement.svelte";
 
   export let listName = "";
 
@@ -92,6 +91,10 @@
     loadVotingPair(); // Just load a new pair
   }
 
+  function goToResults() {
+    window.location.href = `/grid.html?listName=${encodeURIComponent(listName)}`;
+  }
+
   // Handle keyboard navigation
   function handleKeydown(event) {
     if (loading || voting || !pairData) return;
@@ -110,16 +113,9 @@
   function formatElapsedTime(startTime, currentTime) {
     const elapsedMs = currentTime - startTime;
     const seconds = Math.floor(elapsedMs / 1000) % 60;
-    const minutes = Math.floor(elapsedMs / (1000 * 60)) % 60;
-    const hours = Math.floor(elapsedMs / (1000 * 60 * 60));
+    const minutes = Math.floor(elapsedMs / (1000 * 60));
 
-    if (hours > 0) {
-      return `${hours}h ${minutes}m ${seconds}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${seconds}s`;
-    } else {
-      return `${seconds}s`;
-    }
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   }
 
   function startSessionTimer() {
@@ -134,13 +130,52 @@
     }
   }
 
+  // Parse item data
+  function parseItemData(item) {
+    if (!item?.data) return null;
+    return typeof item.data === "string" ? JSON.parse(item.data) : item.data;
+  }
+
+  // Sync description heights on desktop
+  let descRow1;
+  let descRow2;
+
+  function syncDescriptionHeights() {
+    if (!descRow1 || !descRow2) return;
+    if (window.innerWidth <= 740) {
+      // Reset heights on mobile
+      descRow1.style.height = 'auto';
+      descRow2.style.height = 'auto';
+      return;
+    }
+
+    // Reset heights first
+    descRow1.style.height = 'auto';
+    descRow2.style.height = 'auto';
+
+    // Get natural heights
+    const height1 = descRow1.offsetHeight;
+    const height2 = descRow2.offsetHeight;
+    const maxHeight = Math.max(height1, height2);
+
+    // Apply max height to both
+    descRow1.style.height = `${maxHeight}px`;
+    descRow2.style.height = `${maxHeight}px`;
+  }
+
+  $: if (pairData && !loading) {
+    setTimeout(syncDescriptionHeights, 0);
+  }
+
   onMount(() => {
     loadVotingPair();
     startSessionTimer();
+    window.addEventListener('resize', syncDescriptionHeights);
   });
 
   onDestroy(() => {
     stopSessionTimer();
+    window.removeEventListener('resize', syncDescriptionHeights);
   });
 </script>
 
@@ -150,150 +185,495 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<div class="vote-view-container">
-  <!-- Header -->
-  <div class="top-header">
-    <a href="/" class="home-button">Elo Chamber</a>
+<div class="vote-container">
+  <!-- Title Row -->
+  <div class="header-cell">
+    <a href="/">ELO CHAMBER</a>
   </div>
 
-  <h1 class="index-title">{listName}</h1>
-  <h2 class="instructions">Click Vote buttons or use arrow keys (1/2)</h2>
-
-  <!-- Session Tracker -->
-
-  {#if listInfo.prompt}
-    <div class="listTop box">
-      <p class="voteTitle">Prompt: {listInfo.prompt}</p>
-    </div>
-  {/if}
-  <div class="actionButtons box">
-    <div class="userSession">
-      <div class="session-stat box">
-        <span class="session-label"
-          >Session time: {formatElapsedTime(sessionStartTime, currentTime)}</span
-        >
-      </div>
-      <div class="session-stat box">
-        <span class="session-label">Votes made: {sessionVoteCount}</span>
-      </div>
+  <!-- Info Rows Wrapper (for mobile scrolling) -->
+  <div class="info-wrapper">
+    <!-- List Info Row -->
+    <div class="list-info-row">
+      <div class="col-title">TITLE</div>
+      <div class="col-prompt">PROMPT</div>
+      <div class="col-time">TIME</div>
+      <div class="col-votes">VOTES</div>
     </div>
 
-    <div class="actionButtons">
-      <button class="clickable" on:click={skipVote} disabled={voting}>
-        <p>skip</p>
-      </button>
-
-      <button class="clickable">
-        <a href="/grid.html?listName={encodeURIComponent(listName)}"><p>results</p></a>
-      </button>
+    <div class="list-info-data">
+      <div class="col-title content-text">{listName}</div>
+      <div class="col-prompt content-text">{listInfo.prompt || ""}</div>
+      <div class="col-time faded">{formatElapsedTime(sessionStartTime, currentTime)}</div>
+      <div class="col-votes faded">{sessionVoteCount}</div>
     </div>
   </div>
+
+  <!-- Controls Row -->
+  <div class="button-row">
+    <div class="button-cell">
+      <button class="action-button" on:click={skipVote} disabled={voting}>SKIP</button>
+    </div>
+    <div class="button-cell">
+      <button class="action-button" on:click={goToResults}>RESULTS</button>
+    </div>
+  </div>
+
+  <!-- Voting Area -->
   {#if loading}
-    <div class="loading">Loading voting pair...</div>
+    <div class="voting-area">
+      <div class="loading-message">Loading voting pair...</div>
+    </div>
   {:else if error}
-    <div class="error">Error: {error}</div>
-    <button class="clickable" on:click={loadVotingPair}>Try Again</button>
+    <div class="voting-area">
+      <div class="error-message">Error: {error}</div>
+    </div>
   {:else if pairData && pairData.item1 && pairData.item2}
-    <div class="vote-wrapper box">
-      <div class="elementVoteContainer">
+    <div class="voting-area">
+      <div class="desktop-layout">
         <!-- Item 1 -->
-        <VoteElement item={pairData.item1} {voting} on:vote={handleVoteForItem1} />
+        <div class="vote-column">
+          <div class="vote-row item-image">
+            {#if parseItemData(pairData.item1)?.picture}
+              <img src={parseItemData(pairData.item1).picture} alt={pairData.item1.name} />
+            {/if}
+          </div>
+          <div class="vote-row item-name">{pairData.item1.name}</div>
+          {#if parseItemData(pairData.item1)?.description}
+            <div class="vote-row item-description" bind:this={descRow1}>{parseItemData(pairData.item1).description}</div>
+          {:else}
+            <div class="vote-row item-description" bind:this={descRow1}></div>
+          {/if}
+          <div class="vote-row button-row-container">
+            <button class="action-button" on:click={handleVoteForItem1} disabled={voting}>
+              VOTE
+            </button>
+          </div>
+        </div>
 
         <!-- Item 2 -->
-        <VoteElement item={pairData.item2} {voting} on:vote={handleVoteForItem2} />
+        <div class="vote-column">
+          <div class="vote-row item-image">
+            {#if parseItemData(pairData.item2)?.picture}
+              <img src={parseItemData(pairData.item2).picture} alt={pairData.item2.name} />
+            {/if}
+          </div>
+          <div class="vote-row item-name">{pairData.item2.name}</div>
+          {#if parseItemData(pairData.item2)?.description}
+            <div class="vote-row item-description" bind:this={descRow2}>{parseItemData(pairData.item2).description}</div>
+          {:else}
+            <div class="vote-row item-description" bind:this={descRow2}></div>
+          {/if}
+          <div class="vote-row button-row-container">
+            <button class="action-button" on:click={handleVoteForItem2} disabled={voting}>
+              VOTE
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile Layout -->
+      <div class="mobile-layout">
+        <!-- Item 1 Name -->
+        <div class="vote-row item-name">{pairData.item1.name}</div>
+        <!-- Item 1 Image -->
+        <div class="vote-row item-image">
+          {#if parseItemData(pairData.item1)?.picture}
+            <img src={parseItemData(pairData.item1).picture} alt={pairData.item1.name} />
+          {/if}
+        </div>
+        <!-- Item 1 Description -->
+        {#if parseItemData(pairData.item1)?.description}
+          <div class="vote-row item-description">{parseItemData(pairData.item1).description}</div>
+        {/if}
+
+        <!-- Item 2 Name -->
+        <div class="vote-row item-name">{pairData.item2.name}</div>
+        <!-- Item 2 Image -->
+        <div class="vote-row item-image">
+          {#if parseItemData(pairData.item2)?.picture}
+            <img src={parseItemData(pairData.item2).picture} alt={pairData.item2.name} />
+          {/if}
+        </div>
+        <!-- Item 2 Description -->
+        {#if parseItemData(pairData.item2)?.description}
+          <div class="vote-row item-description">{parseItemData(pairData.item2).description}</div>
+        {/if}
+
+        <!-- Vote Buttons at Bottom -->
+        <div class="vote-row button-row-container">
+          <button class="action-button" on:click={handleVoteForItem1} disabled={voting}>
+            VOTE
+          </button>
+        </div>
+        <div class="vote-row button-row-container">
+          <button class="action-button" on:click={handleVoteForItem2} disabled={voting}>
+            VOTE
+          </button>
+        </div>
       </div>
     </div>
   {:else}
-    <div class="no-pairs">
-      <p>No pairs available for voting. The list might be empty or have only one item.</p>
-      <button class="clickable">
-        <a href="/grid.html?listName={encodeURIComponent(listName)}">View Results</a>
-      </button>
+    <div class="voting-area">
+      <div class="no-pairs">
+        <p>No pairs available for voting. The list might be empty or have only one item.</p>
+        <button class="action-button" on:click={goToResults}>VIEW RESULTS</button>
+      </div>
     </div>
   {/if}
 </div>
 
 <style>
-  .vote-view-container {
+  .vote-container {
+    background-color: var(--color-white);
+    width: 100%;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
-    margin: auto;
   }
 
-  .top-header {
-    padding: 1rem 0;
+  /* Header */
+  .header-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--cell-height);
+    border-bottom: var(--border);
+    padding: 0 var(--spacing-sm);
+    box-sizing: border-box;
   }
 
-  .home-button {
-    font-size: 1.5rem;
-    font-weight: bold;
+  .header-cell a {
+    font-family: var(--font-family);
+    font-size: var(--font-size-header);
+    color: var(--color-text-primary);
     text-decoration: none;
-    color: inherit;
   }
 
-  .home-button:hover {
+  .header-cell a:hover {
     text-decoration: underline;
   }
 
-  .vote-wrapper {
-    position: relative;
+  /* Info Wrapper */
+  .info-wrapper {
+    width: 100%;
+    overflow-x: visible;
   }
 
-  .index-title {
-    text-align: center;
-  }
-
-  .instructions {
-    text-align: center;
-    color: #666;
-  }
-
-  .userSession {
+  /* List Info Row */
+  .list-info-row,
+  .list-info-data {
     display: flex;
-    justify-content: space-between;
+    width: 100%;
+    height: var(--cell-height);
+    border-bottom: var(--border);
+  }
+
+  .list-info-row > div,
+  .list-info-data > div {
+    display: flex;
     align-items: center;
-    gap: 5p;
+    justify-content: center;
+    height: 100%;
+    border-right: var(--border);
+    padding: var(--spacing-sm);
+    font-family: var(--font-family);
+    box-sizing: border-box;
   }
 
-  .session-stat {
-    text-align: center;
-    margin: 0;
+  .list-info-row > div:last-child,
+  .list-info-data > div:last-child {
+    border-right: none;
   }
 
-  .session-label {
+  .list-info-row > div {
+    font-size: var(--font-size-header);
+    color: var(--color-text-primary);
+  }
+
+  .list-info-data .col-title,
+  .list-info-data .col-prompt {
+    justify-content: center;
+    overflow: hidden;
     white-space: nowrap;
-    opacity: 0.1;
-  }
-  .listTop {
-    position: relative;
   }
 
-  .actionButtons {
-    display: flex;
-    gap: 5px;
-    justify-content: space-between;
+  .col-title {
+    width: 280px;
+    flex-shrink: 0;
   }
-  .elementVoteContainer {
+
+  .col-prompt {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .col-time,
+  .col-votes {
+    width: 74px;
+    flex-shrink: 0;
+  }
+
+  .list-info-data .col-time,
+  .list-info-data .col-votes {
+    font-size: var(--font-size-header);
+  }
+
+  /* Button Row */
+  .button-row {
     display: flex;
-    gap: 5px;
+    width: 100%;
+    height: var(--cell-height);
+    border-bottom: var(--border);
+  }
+
+  .button-cell {
+    display: flex;
     align-items: center;
-    /* margin-bottom: 10px; */
-    justify-content: space-between;
+    justify-content: center;
+    height: 100%;
+    border-right: var(--border);
+    padding: 3px;
+    box-sizing: border-box;
   }
 
-  .actionButtons {
+  .button-cell:last-child {
+    border-right: none;
+  }
+
+  /* Voting Area */
+  .voting-area {
+    flex: 1;
     display: flex;
-    gap: 5px;
-    justify-content: space-between;
+    width: 100%;
+    border-bottom: var(--border);
+    min-height: 0;
+    overflow: hidden;
   }
 
-  .loading,
-  .error,
-  .no-pairs {
+  .desktop-layout {
+    display: flex;
+    width: 100%;
+  }
+
+  .mobile-layout {
+    display: none;
+  }
+
+  .vote-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-right: var(--border);
+    box-sizing: border-box;
+    overflow-y: auto;
+  }
+
+  .vote-column:last-child {
+    border-right: none;
+  }
+
+  /* Mobile Responsive */
+  @media (max-width: 740px) {
+    /* Title row takes full viewport width */
+    .header-cell {
+      width: 100vw;
+    }
+
+    /* Info wrapper allows horizontal scrolling */
+    .info-wrapper {
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .info-wrapper::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Frozen columns on the right */
+    .list-info-row .col-time,
+    .list-info-row .col-votes,
+    .list-info-data .col-time,
+    .list-info-data .col-votes {
+      position: sticky;
+      background-color: var(--color-white);
+      z-index: 1;
+    }
+
+    .list-info-row .col-time,
+    .list-info-data .col-time {
+      right: 74px;
+    }
+
+    .list-info-row .col-votes,
+    .list-info-data .col-votes {
+      right: 0;
+    }
+
+    .desktop-layout {
+      display: none;
+    }
+
+    .mobile-layout {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      min-height: 0;
+    }
+
+    .col-prompt {
+      width: 200px;
+      min-width: 100px;
+      border-right: unset !important;
+    }
+
+    .list-info-row .col-time,
+    .list-info-data .col-time {
+      border-left: var(--border);
+    }
+
+    .list-info-data .col-prompt {
+      justify-content: flex-start;
+    }
+    .list-info-data,
+    .list-info-row {
+      width: fit-content;
+    }
+  }
+
+  .vote-row {
+    width: 100%;
+    border-bottom: var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--spacing-sm);
+    box-sizing: border-box;
+    min-height: var(--cell-height);
+  }
+
+  .vote-row:last-child {
+    border-bottom: none;
+  }
+
+  .vote-row.item-name {
+    height: var(--cell-height);
+    justify-content: center;
+  }
+
+  .vote-row.item-image {
+    min-height: 0;
+    height: auto;
+    /* padding: 0; */
+  }
+
+  .vote-row.item-description {
+    min-height: var(--cell-height);
+    height: auto;
+  }
+
+  .vote-row.button-row-container {
+    height: var(--cell-height);
+    justify-content: center;
+  }
+
+  .item-image {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: var(--spacing-sm);
+  }
+
+  .item-image img {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: contain;
+  }
+
+  .item-name {
+    font-family: var(--font-family);
+    font-size: var(--font-size-content);
+    color: var(--color-text-primary);
     text-align: center;
   }
 
-  .error {
+  .item-description {
+    font-family: var(--font-family);
+    font-size: var(--font-size-content);
+    color: var(--color-text-primary);
+    text-align: left;
+    width: 100%;
+    flex-shrink: 0;
+  }
+
+  .vote-button {
+    border: var(--border-button);
+    border-radius: var(--border-radius-button);
+    background-color: var(--color-white);
+    font-family: var(--font-family);
+    /* font-size: var(--font-size-content); */
+    color: var(--color-text-primary);
+    cursor: pointer;
+    /* text-transform: uppercase; */
+    width: 100%;
+    height: var(--button-height);
+  }
+
+  .vote-button:hover:not(:disabled) {
+    opacity: 0.8;
+  }
+
+  .vote-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .content-text {
+    font-size: var(--font-size-content);
+    color: var(--color-text-primary);
+  }
+
+  .faded {
+    font-size: var(--font-size-content);
+    color: var(--color-text-faded);
+  }
+
+  .loading-message,
+  .error-message,
+  .no-pairs {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-md);
+    width: 100%;
+    padding: var(--spacing-md);
+    text-align: center;
+  }
+
+  .error-message {
     color: red;
+  }
+  @media (max-width: 740px) {
+    .content-text {
+      font-size: var(--font-size-content-mobile);
+    }
+    .item-description {
+      font-size: var(--font-size-content-mobile);
+      align-items: flex-start;
+      min-height: var(--cell-height);
+      height: auto;
+      flex-shrink: 0;
+    }
   }
 </style>

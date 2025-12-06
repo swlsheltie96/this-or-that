@@ -2,6 +2,7 @@
   export let item;
   export let index;
   export let viewSize = "small"; // 'small', 'medium', 'large'
+  export let isFirstRow = false;
 
   // Parse JSON data - handle both string and object cases
   $: parsedData = item.data
@@ -10,50 +11,90 @@
       : item.data
     : null;
   $: description = parsedData?.description || "";
-  $: sizeClass =
-    viewSize === "large" ? "largeSquare" : viewSize === "medium" ? "mediumSquare" : "smallSquare";
 </script>
 
-<div class="card box {sizeClass}">
-  <div class="header {sizeClass}">
-    <h4 class="index">{index}</h4>
-
-    <div class="eloTag {sizeClass}">
-      <p>{item.elo.toFixed(2)}</p>
-    </div>
-  </div>
-
-  <div class="item-picture">
+<div class="card" class:first-row={isFirstRow}>
+  <div class="card-row picture-row">
     {#if parsedData?.picture}
-      <img src={parsedData.picture} alt={item.name} class="inner-box {sizeClass}" />
+      <img src={parsedData.picture} alt={item.name} />
     {/if}
   </div>
 
-  <h4 class="itemName">{item.name}</h4>
+  <div class="card-row rank-row">{index}</div>
+  <div class="card-row score-row">{Math.round(item.elo)}</div>
+
+  <div class="card-row name-row">{item.name}</div>
 
   {#if description}
-    <div class="eloTag description {sizeClass}">
-      <p>{description}</p>
-    </div>
+    <div class="card-row description-row">{description}</div>
   {/if}
 </div>
 
 <style>
   .card {
-    max-width: 100%;
-    width: 100%;
-    min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    border: var(--border);
+    margin-right: -1px;
+    margin-bottom: -1px;
+    box-sizing: border-box;
+    background-color: var(--color-white);
   }
-  .item-picture img {
-    max-width: 100%;
-    width: 100%;
-    min-width: 0;
+
+  /* Remove top border from first row */
+  .card.first-row {
+    border-top: none;
   }
-  .header {
+
+  .card-row {
     display: flex;
-    justify-content: space-between;
+    align-items: center;
+    justify-content: center;
+    border-bottom: var(--border);
+    padding: var(--spacing-sm);
+    box-sizing: border-box;
+    font-family: var(--font-family);
+  }
+
+  .card-row:last-child {
+    border-bottom: none;
+  }
+
+  .rank-row,
+  .score-row {
+    font-size: var(--font-size-header);
+    color: var(--color-text-primary);
+    text-align: center;
+    height: calc(var(--cell-height) / 2);
+  }
+
+  .picture-row {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .picture-row img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .name-row {
+    font-size: var(--font-size-content);
+    color: var(--color-text-primary);
+    text-align: center;
+    width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .description-row {
+    font-size: var(--font-size-header);
+    color: var(--color-text-primary);
+    text-align: left;
+    width: 100%;
+    justify-content: flex-start;
   }
 </style>

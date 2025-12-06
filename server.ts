@@ -579,10 +579,9 @@ app.delete("/delete-list", async (req) => {
   const storedPassword = resultGetListId.password;
 
   // Check if the provided password matches the stored password
-  const isValidPassword = await Bun.password.verify(password, storedPassword);
-  const isMasterPassword = MASTER_PASSWORD && (await Bun.password.verify(password, MASTER_PASSWORD));
+  const isValidPassword = await passwordVerify(password, storedPassword);
 
-  if (!isValidPassword && !isMasterPassword) {
+  if (!isValidPassword) {
     return jsonError("Invalid password for this list.", 401);
   }
 

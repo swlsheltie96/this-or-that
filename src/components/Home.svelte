@@ -129,13 +129,13 @@
 
 <svelte:window on:click={closeSortDropdown} />
 
-<div class="home-container">
-  <!-- Header -->
-  <div class="header-cell">
-    <p>ELO CHAMBER</p>
-  </div>
+<!-- Header -->
+<div class="header-cell">
+  <p>ELO CHAMBER</p>
+</div>
 
-  <!-- Action Buttons Row -->
+<!-- Action Buttons Row -->
+<div class="controls-wrapper">
   <div class="button-row">
     <div class="button-cell">
       <button class="action-button" on:click={() => (window.location.href = "/create.html")}>
@@ -186,9 +186,11 @@
       </button>
     </div>
   </div>
+</div>
 
+<div class="home-container">
   <!-- Table Header Row -->
-  <div class="table-header">
+  <div class="table-header" style="--act-col-width: {actColWidth ? `${actColWidth}px` : '66px'}">
     <div class="col-date header-date">DATE</div>
     <div
       class="col-pic-image header-pic"
@@ -217,7 +219,12 @@
     </div>
   {:else}
     {#each displayedLists as list}
-      <div class="table-row size-{displaySize}">
+      <div
+        class="table-row size-{displaySize}"
+        style="--act-col-width: {actColWidth ? `${actColWidth}px` : '66px'}"
+        on:click={() =>
+          (window.location.href = `/grid.html?listName=${encodeURIComponent(list.name)}`)}
+      >
         <div class="col-date faded">{formatDate(list.createdAt)}</div>
         <div class="col-last-voted faded">{formatLastVoted(list.lastVoteTimestamp)}</div>
         <div class="col-pic-image">
@@ -232,7 +239,7 @@
         <div class="col-look" bind:this={lookColRef}>
           <button
             class="action-button"
-            on:click={() =>
+            on:click|stopPropagation={() =>
               (window.location.href = `/grid.html?listName=${encodeURIComponent(list.name)}`)}
           >
             VIEW
@@ -241,7 +248,7 @@
         <div class="col-act" bind:this={actColRef}>
           <button
             class="action-button"
-            on:click={() =>
+            on:click|stopPropagation={() =>
               (window.location.href = `/vote.html?listName=${encodeURIComponent(list.name)}`)}
           >
             VOTE
@@ -256,7 +263,7 @@
   .home-container {
     background-color: var(--color-white);
     width: 100%;
-    min-height: 100vh;
+    /* min-height: 100vh; */
     margin: 0;
     padding: 0;
   }
@@ -276,6 +283,11 @@
     font-family: var(--font-family);
     font-size: var(--font-size-header);
     color: var(--color-text-primary);
+  }
+
+  /* Controls Wrapper */
+  .controls-wrapper {
+    width: 100%;
   }
 
   /* Button Row */
@@ -426,8 +438,7 @@
   }
 
   .col-descrip {
-    width: 600px;
-    flex-shrink: 0;
+    flex: 1;
   }
 
   .col-preview {
@@ -448,6 +459,16 @@
     display: flex;
     width: 100%;
     border-bottom: var(--border);
+    cursor: pointer;
+  }
+
+  .table-row:hover {
+    background-color: #f5f5f5;
+  }
+
+  .table-row:hover .col-look .action-button {
+    background-color: var(--color-black);
+    color: var(--color-white);
   }
 
   /* Dynamic row heights based on display size */
@@ -496,7 +517,7 @@
   }
 
   .table-row .col-preview {
-    padding: 0 var(--spacing-md);
+    padding: var(--spacing-xs);
     overflow: hidden;
     white-space: nowrap;
     justify-content: flex-start;
@@ -541,5 +562,62 @@
     width: 100%;
     padding: var(--spacing-md);
     justify-content: center;
+  }
+
+  /* Mobile Layout */
+  @media (max-width: 740px) {
+    /* Enable horizontal scrolling independently for controls and table */
+    .controls-wrapper {
+      overflow-x: auto;
+    }
+
+    .home-container {
+      overflow-x: auto;
+    }
+
+    /* Reduce content font size on mobile */
+    .content-text,
+    .faded,
+    .action-button {
+      font-size: var(--font-size-content-mobile);
+    }
+
+    .table-row,
+    .table-header {
+      width: fit-content;
+    }
+
+    .table-row .col-preview,
+    .table-header .col-preview {
+      border-right: none;
+    }
+    /* Freeze VIEW and VOTE columns to the right */
+    .table-header .col-look,
+    .table-header .col-act,
+    .table-row .col-look,
+    .table-row .col-act {
+      position: sticky;
+      background-color: var(--color-white);
+      z-index: 1;
+    }
+
+    .table-header .col-act,
+    .table-row .col-act {
+      right: 0;
+    }
+
+    .table-header .col-look,
+    .table-row .col-look {
+      right: var(--act-col-width, 66px);
+      border-left: var(--border);
+    }
+
+    /* Min-width for scrollable columns */
+    .col-title,
+    .col-descrip,
+    .col-preview {
+      width: 200px;
+      min-width: 100px;
+    }
   }
 </style>

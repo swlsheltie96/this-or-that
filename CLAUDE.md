@@ -68,9 +68,19 @@ Located in `src/`. Uses manual URL-based routing (NOT svelte-spa-router despite 
 **Main views**:
 - `Home.svelte`: List browsing with sorting and preview images
   - Uses flexbox-based table layout (not HTML tables)
-  - **Title row**: "ELO CHAMBER" header
-  - **Controls row**: CREATE LIST, RANDOM, SORT buttons
-  - **Header row**: DATE, PIC, TITLE, LEN, DESCRIP, PREVIEW, LOOK, ACT columns
+  - **Layout structure**:
+    - **Title row**: "ELO CHAMBER" header (outside scrollable containers)
+    - **Controls wrapper**: Contains controls row, scrolls independently on mobile
+    - **Controls row**: CREATE LIST, RANDOM, SORT, S/M/L size buttons
+    - **Home container**: Contains table, scrolls independently on mobile
+    - **Header row**: DATE, PIC, TITLE, LEN, DESCRIP, PREVIEW, LOOK, ACT columns
+  - **Responsive design** (≤740px):
+    - Title row stays at viewport width, no scrolling
+    - Controls and table scroll horizontally independently
+    - VIEW/VOTE columns frozen to right using `position: sticky`
+    - Font size reduced to 16px for content and buttons
+    - Scrollable columns (TITLE, DESCRIP, PREVIEW) have 200px width, 100px min-width
+    - LOOK column has left border to separate from scrolling content
 - `CreateView.svelte`: Create new lists
 - `VoteView.svelte`: Elo voting interface with keyboard shortcuts (Arrow keys, 1/2, Space/Enter)
 - `ListDetailView.svelte`: Container that switches between:
@@ -111,7 +121,7 @@ List metadata also stored as JSON in `data` column:
 
 Centralized design variables in `src/styles/variables.css`:
 - **Colors**: `--color-border: #d9d9d9`, `--color-black`, `--color-white`, `--color-text-faded` (50% opacity)
-- **Typography**: `--font-family: 'Helvetica'`, `--font-size-header: 10px`, `--font-size-content: 20px`
+- **Typography**: `--font-family: 'Helvetica'`, `--font-size-header: 10px`, `--font-size-content: 20px`, `--font-size-content-mobile: 16px`
 - **Spacing**: `--spacing-xs: 4px`, `--spacing-sm: 5px`, `--spacing-md: 10px`
 - **Dimensions**: `--cell-height: 35px`, `--button-height: 26px`
 - **Borders**: `--border: 1px solid #d9d9d9`, `--border-button: 1px solid black`, `--border-radius-button: 2px`
