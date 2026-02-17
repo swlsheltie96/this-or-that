@@ -16,7 +16,7 @@
     display: grid;
     gap: 0;
     width: 100%;
-    grid-template-columns: repeat(var(--columns), 1fr);
+    grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
     box-sizing: border-box;
     background-color: var(--color-white);
   }

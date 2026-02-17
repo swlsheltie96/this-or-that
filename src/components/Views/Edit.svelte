@@ -1,16 +1,23 @@
 <script>
   import { createEventDispatcher, afterUpdate } from "svelte";
-  import { updateListMetadata, deleteList, addItem, deleteItem } from "../../lib/api.js";
+  import { createList, updateListMetadata, deleteList, addItem, deleteItem } from "../../lib/api.js";
 
+  export let isNew = false;
   export let items = [];
   export let listName = "";
   export let listTitle = "";
   export let listDescription = "";
   export let listPrompt = "";
   export let listAuthor = "";
+  export let accentColor = "#ffff00";
   export let dirty = false;
   export let metadataDirty = false;
   export let tableData = [];
+
+  // Create mode state
+  let password = "";
+  let submitting = false;
+  let error = "";
 
   const dispatch = createEventDispatcher();
 
@@ -23,6 +30,7 @@
       description: listDescription,
       prompt: listPrompt,
       author: listAuthor,
+      accentColor: accentColor,
     };
   }
 
@@ -33,6 +41,7 @@
       description: listDescription,
       prompt: listPrompt,
       author: listAuthor,
+      accentColor: accentColor,
     };
     metadataDirty = JSON.stringify(currentMetadata) !== JSON.stringify(initialMetadata);
   }
@@ -79,6 +88,69 @@
   }
 
   async function saveChanges() {
+    if (isNew) {
+      return saveNewList();
+    }
+    return saveExistingList();
+  }
+
+  async function saveNewList() {
+    if (submitting) return;
+    if (!listTitle.trim()) {
+      error = "Title is required";
+      return;
+    }
+    if (!password.trim()) {
+      error = "Password is required";
+      return;
+    }
+
+    try {
+      submitting = true;
+      error = "";
+
+      // Create the list
+      const response = await createList(
+        listTitle,
+        { description: listDescription, prompt: listPrompt, author: listAuthor, accentColor },
+        password
+      );
+
+      if (response.error) {
+        error = response.error;
+        submitting = false;
+        return;
+      }
+
+      // Store password in cookie so addItem calls can authenticate
+      const expires = new Date(Date.now() + 86400 * 1000).toUTCString();
+      document.cookie = `${encodeURIComponent(listTitle)}=${encodeURIComponent(password)}; expires=${expires}; path=/`;
+
+      // Add items
+      const itemsToAdd = tableData.filter(i => i.name && i.name.trim());
+      for (const item of itemsToAdd) {
+        try {
+          await addItem(listTitle, {
+            name: item.name,
+            data: {
+              picture: item.picture || undefined,
+              description: item.description || undefined,
+            },
+          });
+        } catch (err) {
+          console.error(`Failed to add item ${item.name}:`, err);
+        }
+      }
+
+      // Redirect to edit mode
+      window.location.href = `/grid.html?listName=${encodeURIComponent(listTitle)}&mode=edit`;
+    } catch (err) {
+      error = err.message || "Failed to create list";
+      submitting = false;
+    }
+  }
+
+  async function saveExistingList() {
     try {
       // Validate that all items have names
       const itemsWithoutNames = tableData.filter(item => !item.name || !item.name.trim());
@@ -89,7 +161,7 @@
 
       // Save metadata changes if any
       if (metadataDirty) {
-        await updateListMetadata(listName, listTitle, listDescription, listPrompt, listAuthor);
+        await updateListMetadata(listName, listTitle, listDescription, listPrompt, listAuthor, accentColor);
 
         // Update initial metadata and dispatch event if name changed
         initialMetadata = {
@@ -97,6 +169,7 @@
           description: listDescription,
           prompt: listPrompt,
           author: listAuthor,
+          accentColor: accentColor,
         };
 
         if (listTitle !== listName) {
@@ -152,8 +225,8 @@
 
       // Dispatch event to reload data
       dispatch("saved");
-    } catch (error) {
-      console.error("Failed to save:", error);
+    } catch (err) {
+      console.error("Failed to save:", err);
       alert("Failed to save changes. Please try again.");
     }
   }
@@ -262,8 +335,9 @@
 
       // Auto-import after parsing
       if (csvItems.length > 0) {
+        const count = csvItems.length;
         importCSV();
-        alert(`Imported ${csvItems.length} items from CSV`);
+        alert(`Imported ${count} items from CSV`);
       }
     };
     reader.readAsText(file);
@@ -317,7 +391,7 @@
 <div class="edit-container">
   <!-- Title Row -->
   <div class="title-row">
-    <a href="/" class="title-cell">ELO CHAMBER</a>
+    <a href="/" class="title-cell">{isNew ? 'ELO CHAMBER*' : 'ELO CHAMBER'}</a>
   </div>
 
   <!-- Form Fields Row -->
@@ -369,25 +443,46 @@
 
   <!-- Action Buttons Row -->
   <div class="action-buttons-row">
-    <div class="button-cell">
-      <button class="action-button" on:click={() => window.history.back()}> VIEW </button>
+    <div class="button-cell color-picker-cell">
+      <input type="color" bind:value={accentColor} class="color-picker-input" />
+      <button class="color-swatch" style="background-color: {accentColor};" on:click={() => document.querySelector('.color-picker-input').click()}></button>
     </div>
+    {#if !isNew}
+      <div class="button-cell">
+        <button class="action-button" on:click={() => window.history.back()}> VIEW </button>
+      </div>
+      <div class="button-cell">
+        <button class="action-button" on:click={handleDeleteList}> DELETE </button>
+      </div>
+    {/if}
     <div class="button-cell">
-      <button class="action-button" on:click={handleDeleteList}> DELETE </button>
-    </div>
-    <div class="button-cell">
-      <button class="action-button" on:click={saveChanges}> SAVE </button>
+      <button class="action-button" on:click={saveChanges} disabled={isNew && submitting}>
+        {isNew && submitting ? "SAVING..." : "SAVE"}
+      </button>
     </div>
     <div class="button-cell">
       <button class="action-button" on:click={() => document.getElementById("csvFile").click()}>
         IMPORT
       </button>
     </div>
-    <div class="button-cell">
-      <button class="action-button" on:click={toggleSort}>
-        SORT: {sortOrder === "elo" ? "ELO" : "A-Z"}
-      </button>
-    </div>
+    {#if !isNew}
+      <div class="button-cell">
+        <button class="action-button" on:click={toggleSort}>
+          SORT: {sortOrder === "elo" ? "ELO" : "A-Z"}
+        </button>
+      </div>
+    {/if}
+    {#if isNew}
+      <div class="button-cell password-cell">
+        <span class="password-label">PASSWORD</span>
+        <input
+          type="text"
+          class="password-input"
+          bind:value={password}
+          placeholder="INPUT"
+        />
+      </div>
+    {/if}
   </div>
 
   <!-- Hidden CSV file input -->
@@ -406,9 +501,13 @@
     <div class="table-row header-row">
       <div class="table-cell item-cell">Item</div>
       <div class="table-cell url-cell">Picture URL</div>
-      <div class="table-cell preview-cell">Preview</div>
+      {#if !isNew}
+        <div class="table-cell preview-cell">Preview</div>
+      {/if}
       <div class="table-cell description-cell">Description</div>
-      <div class="table-cell elo-cell">Elo</div>
+      {#if !isNew}
+        <div class="table-cell elo-cell">Elo</div>
+      {/if}
       <div class="table-cell actions-cell">Actions</div>
     </div>
 
@@ -431,11 +530,13 @@
             placeholder="Image URL"
           />
         </div>
-        <div class="table-cell preview-cell">
-          {#if item.picture}
-            <img src={item.picture} alt={item.name} class="picture-preview" />
-          {/if}
-        </div>
+        {#if !isNew}
+          <div class="table-cell preview-cell">
+            {#if item.picture}
+              <img src={item.picture} alt={item.name} class="picture-preview" />
+            {/if}
+          </div>
+        {/if}
         <div class="table-cell description-cell">
           <textarea
             bind:value={item.description}
@@ -444,13 +545,12 @@
             placeholder="Description"
           />
         </div>
-        <div class="table-cell elo-cell">{item.elo.toFixed(2)}</div>
+        {#if !isNew}
+          <div class="table-cell elo-cell">{item.elo.toFixed(2)}</div>
+        {/if}
         <div class="table-cell actions-cell">
           <button class="delete-item" on:click={() => removeItem(index)}>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <line x1="1" y1="1" x2="11" y2="11" stroke="black" stroke-width="2" stroke-linecap="round"/>
-              <line x1="11" y1="1" x2="1" y2="11" stroke="black" stroke-width="2" stroke-linecap="round"/>
-            </svg>
+            DEL
           </button>
         </div>
       </div>
@@ -460,9 +560,15 @@
   <!-- Add Item Button Row -->
   <div class="add-item-row">
     <div class="add-button-cell">
-      <button class="add-btn" on:click={addNewItem}>+ ADD ITEM</button>
+      <button class="add-btn" on:click={addNewItem}>ADD ITEM</button>
     </div>
   </div>
+
+  {#if error}
+    <div class="error-row">
+      <span>{error}</span>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -476,6 +582,7 @@
     display: flex;
     height: var(--cell-height);
     border: var(--border);
+    border-top: none;
     border-bottom: none;
   }
 
@@ -517,6 +624,10 @@
     flex-shrink: 0;
   }
 
+  .label-cell:first-child {
+    border-left: none;
+  }
+
   .input-cell {
     display: flex;
     align-items: center;
@@ -555,6 +666,10 @@
     border-left: var(--border);
   }
 
+  .button-cell:first-child {
+    border-left: none;
+  }
+
   .action-button {
     height: var(--button-height);
     border: var(--border-button);
@@ -570,6 +685,28 @@
   .action-button:hover {
     background: var(--color-black);
     color: var(--color-white);
+  }
+
+  /* Color picker */
+  .color-picker-cell {
+    position: relative;
+  }
+
+  .color-picker-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+
+  .color-swatch {
+    width: var(--button-height);
+    height: var(--button-height);
+    border: var(--border-button);
+    border-radius: var(--border-radius-button);
+    cursor: pointer;
+    padding: 0;
   }
 
   /* Items Table */
@@ -593,6 +730,10 @@
     font-family: var(--font-family);
     min-height: var(--cell-height);
     box-sizing: border-box;
+  }
+
+  .table-cell:first-child {
+    border-left: none;
   }
 
   .data-row .description-cell {
@@ -734,5 +875,48 @@
   .add-btn:hover {
     background: var(--color-black);
     color: var(--color-white);
+  }
+
+  /* Password cell */
+  .password-cell {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: 0 var(--spacing-sm);
+  }
+
+  .password-label {
+    font-family: var(--font-family);
+    font-size: var(--font-size-header);
+    white-space: nowrap;
+  }
+
+  .password-input {
+    width: 275px;
+    height: 27px;
+    border: var(--border);
+    border-radius: var(--border-radius-button);
+    padding: 0 var(--spacing-md);
+    font-family: var(--font-family);
+    font-size: var(--font-size-header);
+  }
+
+  .password-input::placeholder {
+    color: var(--color-text-faded);
+  }
+
+  /* Error row */
+  .error-row {
+    display: flex;
+    align-items: center;
+    height: var(--cell-height);
+    border: var(--border);
+    border-top: none;
+    margin-left: -1px;
+    padding: 0 var(--spacing-md);
+    font-family: var(--font-family);
+    font-size: var(--font-size-content);
+    background: #ffe6e6;
+    color: red;
   }
 </style>

@@ -32,7 +32,7 @@
   <!-- Items Data Rows -->
   {#each parsedItems as item}
     <div class="item-row size-{viewSize}">
-      <div class="col-num faded">{item.rank}</div>
+      <div class="col-num faded"><span class="rotated-text">{item.rank}</span></div>
       <div class="col-pic-image">
         {#if item.parsedData?.picture}
           <img src={item.parsedData.picture} alt={item.name} />
@@ -115,7 +115,7 @@
   }
 
   .col-name {
-    width: 172px;
+    width: 25%;
     flex-shrink: 0;
     padding: var(--spacing-xs);
   }

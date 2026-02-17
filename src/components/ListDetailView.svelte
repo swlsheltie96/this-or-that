@@ -33,6 +33,7 @@
   let listDescription = "";
   let listPrompt = "";
   let listAuthor = "";
+  let accentColor = "#ffff00";
 
   // Check URL for view mode
   function getViewModeFromURL() {
@@ -74,6 +75,7 @@
       listDescription = listInfo.description || "";
       listPrompt = listInfo.prompt || "";
       listAuthor = listInfo.author || "";
+      accentColor = listInfo.accentColor || "#ffff00";
 
       // Prepare table data for editing mode
       tableData = items.map((d) => ({
@@ -188,6 +190,7 @@
       bind:listDescription
       bind:listPrompt
       bind:listAuthor
+      bind:accentColor
       bind:dirty
       bind:metadataDirty
       bind:tableData

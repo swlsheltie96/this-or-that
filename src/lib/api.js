@@ -328,7 +328,7 @@ async function changePassword(listName, currentPassword, newPassword) {
 }
 
 // Update list metadata (description, prompt, author, name)
-async function updateListMetadata(listName, newListName, description, prompt, author) {
+async function updateListMetadata(listName, newListName, description, prompt, author, accentColor) {
   const password = await login(listName);
   const response = await fetch(`${server}/update-list-metadata`, {
     method: "POST",
@@ -341,6 +341,7 @@ async function updateListMetadata(listName, newListName, description, prompt, au
       description: description,
       prompt: prompt,
       author: author,
+      accentColor: accentColor,
       password: password,
     }),
   });

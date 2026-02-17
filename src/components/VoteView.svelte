@@ -21,6 +21,26 @@
   let sessionVoteCount = 0;
   let timeInterval;
 
+  // Accent color from list metadata
+  let accentColor = "#ffff00";
+
+  function hexToRgb(hex) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `${r},${g},${b}`;
+  }
+
+  function luminance(hex) {
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    return 0.299 * r + 0.587 * g + 0.114 * b;
+  }
+
+  $: accentRgb = hexToRgb(accentColor);
+  $: labelTextColor = luminance(accentColor) < 0.5 ? '#ffffff' : 'var(--color-text-primary)';
+
   async function loadVotingPair() {
     if (!listName) {
       error = "No list name provided";
@@ -37,6 +57,7 @@
 
       pairData = pair;
       listInfo = info;
+      accentColor = info?.accentColor || "#ffff00";
     } catch (err) {
       console.error("Error loading voting pair:", err);
       error = err.message;
@@ -45,17 +66,96 @@
     }
   }
 
+  // Click animation state
+  let animatingItem = 0; // 0 = none, 1 = item1, 2 = item2
+  let exclamationCount = 0;
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function easeIn(t) {
+    return t * t;
+  }
+
+  async function playVoteAnimation(itemNumber) {
+    animatingItem = itemNumber;
+
+    const duration = 200;
+    const startFill = itemNumber === 1 ? item1Fill : item2Fill;
+    const startTime = performance.now();
+
+    return new Promise(resolve => {
+      let lastExclamation = 0;
+
+      function tick(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(1, elapsed / duration);
+        const eased = easeIn(progress);
+        const fill = startFill + (100 - startFill) * eased;
+
+        if (itemNumber === 1) {
+          item1Fill = fill;
+        } else {
+          item2Fill = fill;
+        }
+
+        // Step exclamation marks at even intervals
+        const exclamationStep = Math.min(5, Math.floor(progress * 5) + 1);
+        if (exclamationStep !== lastExclamation) {
+          exclamationCount = exclamationStep;
+          lastExclamation = exclamationStep;
+        }
+
+        if (progress < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          exclamationCount = 5;
+          resolve();
+        }
+      }
+
+      requestAnimationFrame(tick);
+    });
+  }
+
   async function handleVoteWithAnimation(winner, loser) {
     if (voting) return; // Prevent double voting
 
     try {
       voting = true;
+
+      // Determine which item was voted for
+      const itemNumber = winner === pairData.item1 ? 1 : 2;
+
+      // Play animation and wait for it to finish
+      await playVoteAnimation(itemNumber);
+      await sleep(200);
+
       // Proceed with actual vote and load next pair
       await handleVote(winner, loser);
+
+      // Reset animation state and recalculate fill from cursor position
+      animatingItem = 0;
+      exclamationCount = 0;
+      if (isHoveringVotingArea) {
+        updateFillFromMouseX(lastMouseX);
+      } else {
+        item1Fill = 0;
+        item2Fill = 0;
+      }
     } catch (err) {
       console.error("Error in vote:", err);
       error = "Failed to submit vote. Please try again.";
       voting = false;
+      animatingItem = 0;
+      exclamationCount = 0;
+      if (isHoveringVotingArea) {
+        updateFillFromMouseX(lastMouseX);
+      } else {
+        item1Fill = 0;
+        item2Fill = 0;
+      }
     }
   }
 
@@ -136,46 +236,63 @@
     return typeof item.data === "string" ? JSON.parse(item.data) : item.data;
   }
 
-  // Sync description heights on desktop
-  let descRow1;
-  let descRow2;
+  // Gradient hover effect based on cursor position
+  let item1Fill = 0;
+  let item2Fill = 0;
+  let isHoveringVotingArea = false;
+  let lastMouseX = 0;
 
-  function syncDescriptionHeights() {
-    if (!descRow1 || !descRow2) return;
-    if (window.innerWidth <= 740) {
-      // Reset heights on mobile
-      descRow1.style.height = 'auto';
-      descRow2.style.height = 'auto';
-      return;
+  function updateFillFromMouseX(mouseX) {
+    const vw = window.innerWidth;
+    const midpoint = vw / 2;
+    // Max 10% fill on hover — full fill only on click animation
+    const maxHoverFill = 10;
+
+    if (mouseX <= midpoint) {
+      item1Fill = Math.min(maxHoverFill, Math.max(0, (1 - mouseX / midpoint) * maxHoverFill));
+      item2Fill = 0;
+    } else {
+      item2Fill = Math.min(maxHoverFill, Math.max(0, (1 - (vw - mouseX) / midpoint) * maxHoverFill));
+      item1Fill = 0;
     }
-
-    // Reset heights first
-    descRow1.style.height = 'auto';
-    descRow2.style.height = 'auto';
-
-    // Get natural heights
-    const height1 = descRow1.offsetHeight;
-    const height2 = descRow2.offsetHeight;
-    const maxHeight = Math.max(height1, height2);
-
-    // Apply max height to both
-    descRow1.style.height = `${maxHeight}px`;
-    descRow2.style.height = `${maxHeight}px`;
   }
 
-  $: if (pairData && !loading) {
-    setTimeout(syncDescriptionHeights, 0);
+  function handleVotingAreaMouseMove(event) {
+    if (animatingItem) return; // Don't update during animation
+    lastMouseX = event.clientX;
+    updateFillFromMouseX(lastMouseX);
+    isHoveringVotingArea = true;
   }
+
+  function handleVotingAreaMouseLeave() {
+    item1Fill = 0;
+    item2Fill = 0;
+    isHoveringVotingArea = false;
+  }
+
+  $: item1Gradient = item1Fill > 0
+    ? `linear-gradient(270deg, rgba(${accentRgb},1) ${item1Fill}%, transparent ${item1Fill}%)`
+    : 'none';
+
+  $: item2Gradient = item2Fill > 0
+    ? `linear-gradient(90deg, rgba(${accentRgb},1) ${item2Fill}%, transparent ${item2Fill}%)`
+    : 'none';
+
+  // Animated label text with exclamation marks
+  $: item1LabelText = pairData?.item1
+    ? (animatingItem === 1 ? '!'.repeat(exclamationCount) + pairData.item1.name + '!'.repeat(exclamationCount) : pairData.item1.name)
+    : '';
+  $: item2LabelText = pairData?.item2
+    ? (animatingItem === 2 ? '!'.repeat(exclamationCount) + pairData.item2.name + '!'.repeat(exclamationCount) : pairData.item2.name)
+    : '';
 
   onMount(() => {
     loadVotingPair();
     startSessionTimer();
-    window.addEventListener('resize', syncDescriptionHeights);
   });
 
   onDestroy(() => {
     stopSessionTimer();
-    window.removeEventListener('resize', syncDescriptionHeights);
   });
 </script>
 
@@ -191,31 +308,22 @@
     <a href="/">ELO CHAMBER</a>
   </div>
 
-  <!-- Info Rows Wrapper (for mobile scrolling) -->
+  <!-- Info Rows Wrapper -->
   <div class="info-wrapper">
-    <!-- List Info Row -->
+    <!-- List Info Header Row -->
     <div class="list-info-row">
+      <div class="col-votes">VOTES</div>
       <div class="col-title">TITLE</div>
       <div class="col-prompt">PROMPT</div>
       <div class="col-time">TIME</div>
-      <div class="col-votes">VOTES</div>
     </div>
 
+    <!-- List Info Data Row -->
     <div class="list-info-data">
+      <div class="col-votes faded">{sessionVoteCount}</div>
       <div class="col-title content-text">{listName}</div>
       <div class="col-prompt content-text">{listInfo.prompt || ""}</div>
       <div class="col-time faded">{formatElapsedTime(sessionStartTime, currentTime)}</div>
-      <div class="col-votes faded">{sessionVoteCount}</div>
-    </div>
-  </div>
-
-  <!-- Controls Row -->
-  <div class="button-row">
-    <div class="button-cell">
-      <button class="action-button" on:click={skipVote} disabled={voting}>SKIP</button>
-    </div>
-    <div class="button-cell">
-      <button class="action-button" on:click={goToResults}>RESULTS</button>
     </div>
   </div>
 
@@ -229,87 +337,65 @@
       <div class="error-message">Error: {error}</div>
     </div>
   {:else if pairData && pairData.item1 && pairData.item2}
-    <div class="voting-area">
+    <div class="voting-area" on:mousemove={handleVotingAreaMouseMove} on:mouseleave={handleVotingAreaMouseLeave}>
       <div class="desktop-layout">
         <!-- Item 1 -->
         <div class="vote-column">
-          <div class="vote-row item-image">
-            {#if parseItemData(pairData.item1)?.picture}
-              <img src={parseItemData(pairData.item1).picture} alt={pairData.item1.name} />
+          <div class="vote-row item-image-area" on:click={handleVoteForItem1}>
+            <div class="item-label" style="background: {accentColor}; color: {labelTextColor};">{item1LabelText}</div>
+            <div class="image-button" style="background-image: {item1Gradient};">
+              {#if parseItemData(pairData.item1)?.picture}
+                <img src={parseItemData(pairData.item1).picture} alt={pairData.item1.name} />
+              {/if}
+            </div>
+            {#if parseItemData(pairData.item1)?.description}
+              <div class="item-description-label">{parseItemData(pairData.item1).description}</div>
             {/if}
-          </div>
-          <div class="vote-row item-name">{pairData.item1.name}</div>
-          {#if parseItemData(pairData.item1)?.description}
-            <div class="vote-row item-description" bind:this={descRow1}>{parseItemData(pairData.item1).description}</div>
-          {:else}
-            <div class="vote-row item-description" bind:this={descRow1}></div>
-          {/if}
-          <div class="vote-row button-row-container">
-            <button class="action-button" on:click={handleVoteForItem1} disabled={voting}>
-              VOTE
-            </button>
           </div>
         </div>
 
         <!-- Item 2 -->
         <div class="vote-column">
-          <div class="vote-row item-image">
-            {#if parseItemData(pairData.item2)?.picture}
-              <img src={parseItemData(pairData.item2).picture} alt={pairData.item2.name} />
+          <div class="vote-row item-image-area" on:click={handleVoteForItem2}>
+            <div class="item-label" style="background: {accentColor}; color: {labelTextColor};">{item2LabelText}</div>
+            <div class="image-button" style="background-image: {item2Gradient};">
+              {#if parseItemData(pairData.item2)?.picture}
+                <img src={parseItemData(pairData.item2).picture} alt={pairData.item2.name} />
+              {/if}
+            </div>
+            {#if parseItemData(pairData.item2)?.description}
+              <div class="item-description-label">{parseItemData(pairData.item2).description}</div>
             {/if}
-          </div>
-          <div class="vote-row item-name">{pairData.item2.name}</div>
-          {#if parseItemData(pairData.item2)?.description}
-            <div class="vote-row item-description" bind:this={descRow2}>{parseItemData(pairData.item2).description}</div>
-          {:else}
-            <div class="vote-row item-description" bind:this={descRow2}></div>
-          {/if}
-          <div class="vote-row button-row-container">
-            <button class="action-button" on:click={handleVoteForItem2} disabled={voting}>
-              VOTE
-            </button>
           </div>
         </div>
       </div>
 
       <!-- Mobile Layout -->
       <div class="mobile-layout">
-        <!-- Item 1 Name -->
-        <div class="vote-row item-name">{pairData.item1.name}</div>
-        <!-- Item 1 Image -->
-        <div class="vote-row item-image">
-          {#if parseItemData(pairData.item1)?.picture}
-            <img src={parseItemData(pairData.item1).picture} alt={pairData.item1.name} />
+        <!-- Item 1 -->
+        <div class="vote-row item-image-area" on:click={handleVoteForItem1}>
+          <div class="item-label" style="background: {accentColor}; color: {labelTextColor};">{item1LabelText}</div>
+          <div class="image-button" style="background-image: {item1Gradient};">
+            {#if parseItemData(pairData.item1)?.picture}
+              <img src={parseItemData(pairData.item1).picture} alt={pairData.item1.name} />
+            {/if}
+          </div>
+          {#if parseItemData(pairData.item1)?.description}
+            <div class="item-description-label">{parseItemData(pairData.item1).description}</div>
           {/if}
         </div>
-        <!-- Item 1 Description -->
-        {#if parseItemData(pairData.item1)?.description}
-          <div class="vote-row item-description">{parseItemData(pairData.item1).description}</div>
-        {/if}
 
-        <!-- Item 2 Name -->
-        <div class="vote-row item-name">{pairData.item2.name}</div>
-        <!-- Item 2 Image -->
-        <div class="vote-row item-image">
-          {#if parseItemData(pairData.item2)?.picture}
-            <img src={parseItemData(pairData.item2).picture} alt={pairData.item2.name} />
+        <!-- Item 2 -->
+        <div class="vote-row item-image-area" on:click={handleVoteForItem2}>
+          <div class="item-label" style="background: {accentColor}; color: {labelTextColor};">{item2LabelText}</div>
+          <div class="image-button" style="background-image: {item2Gradient};">
+            {#if parseItemData(pairData.item2)?.picture}
+              <img src={parseItemData(pairData.item2).picture} alt={pairData.item2.name} />
+            {/if}
+          </div>
+          {#if parseItemData(pairData.item2)?.description}
+            <div class="item-description-label">{parseItemData(pairData.item2).description}</div>
           {/if}
-        </div>
-        <!-- Item 2 Description -->
-        {#if parseItemData(pairData.item2)?.description}
-          <div class="vote-row item-description">{parseItemData(pairData.item2).description}</div>
-        {/if}
-
-        <!-- Vote Buttons at Bottom -->
-        <div class="vote-row button-row-container">
-          <button class="action-button" on:click={handleVoteForItem1} disabled={voting}>
-            VOTE
-          </button>
-        </div>
-        <div class="vote-row button-row-container">
-          <button class="action-button" on:click={handleVoteForItem2} disabled={voting}>
-            VOTE
-          </button>
         </div>
       </div>
     </div>
@@ -321,6 +407,21 @@
       </div>
     </div>
   {/if}
+
+  <!-- Instructions Row -->
+  <div class="instructions-row">
+    CLICK OR USE ARROW KEYS TO VOTE. 'S' TO SKIP. 'ENTER' TO VIEW RESULTS.
+  </div>
+
+  <!-- Skip/Results Bar -->
+  <div class="bottom-bar">
+    <div class="bottom-button-cell">
+      <button class="action-button" on:click={skipVote} disabled={voting}>SKIP</button>
+    </div>
+    <div class="bottom-button-cell">
+      <button class="action-button" on:click={goToResults}>RESULTS</button>
+    </div>
+  </div>
 </div>
 
 <style>
@@ -393,54 +494,24 @@
     color: var(--color-text-primary);
   }
 
-  .list-info-data .col-title,
-  .list-info-data .col-prompt {
-    justify-content: center;
-    overflow: hidden;
-    white-space: nowrap;
+  .col-votes,
+  .col-time {
+    width: 74px;
+    flex-shrink: 0;
   }
 
   .col-title {
-    width: 280px;
-    flex-shrink: 0;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
   }
 
   .col-prompt {
     flex: 1;
     min-width: 0;
-  }
-
-  .col-time,
-  .col-votes {
-    width: 74px;
-    flex-shrink: 0;
-  }
-
-  .list-info-data .col-time,
-  .list-info-data .col-votes {
-    font-size: var(--font-size-header);
-  }
-
-  /* Button Row */
-  .button-row {
-    display: flex;
-    width: 100%;
-    height: var(--cell-height);
-    border-bottom: var(--border);
-  }
-
-  .button-cell {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    border-right: var(--border);
-    padding: 3px;
-    box-sizing: border-box;
-  }
-
-  .button-cell:last-child {
-    border-right: none;
+    overflow: hidden;
+    white-space: nowrap;
   }
 
   /* Voting Area */
@@ -448,7 +519,6 @@
     flex: 1;
     display: flex;
     width: 100%;
-    border-bottom: var(--border);
     min-height: 0;
     overflow: hidden;
   }
@@ -476,164 +546,121 @@
     border-right: none;
   }
 
-  /* Mobile Responsive */
-  @media (max-width: 740px) {
-    /* Title row takes full viewport width */
-    .header-cell {
-      width: 100vw;
-    }
-
-    /* Info wrapper allows horizontal scrolling */
-    .info-wrapper {
-      overflow-x: auto;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-    }
-
-    .info-wrapper::-webkit-scrollbar {
-      display: none;
-    }
-
-    /* Frozen columns on the right */
-    .list-info-row .col-time,
-    .list-info-row .col-votes,
-    .list-info-data .col-time,
-    .list-info-data .col-votes {
-      position: sticky;
-      background-color: var(--color-white);
-      z-index: 1;
-    }
-
-    .list-info-row .col-time,
-    .list-info-data .col-time {
-      right: 74px;
-    }
-
-    .list-info-row .col-votes,
-    .list-info-data .col-votes {
-      right: 0;
-    }
-
-    .desktop-layout {
-      display: none;
-    }
-
-    .mobile-layout {
-      display: flex;
-      flex-direction: column;
-      width: 100%;
-      height: 100%;
-      overflow-y: auto;
-      min-height: 0;
-    }
-
-    .col-prompt {
-      width: 200px;
-      min-width: 100px;
-      border-right: unset !important;
-    }
-
-    .list-info-row .col-time,
-    .list-info-data .col-time {
-      border-left: var(--border);
-    }
-
-    .list-info-data .col-prompt {
-      justify-content: flex-start;
-    }
-    .list-info-data,
-    .list-info-row {
-      width: fit-content;
-    }
-  }
-
   .vote-row {
     width: 100%;
-    border-bottom: var(--border);
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: var(--spacing-sm);
     box-sizing: border-box;
-    min-height: var(--cell-height);
   }
 
-  .vote-row:last-child {
-    border-bottom: none;
-  }
-
-  .vote-row.item-name {
-    height: var(--cell-height);
+  /* Image area - takes up remaining space */
+  .vote-row.item-image-area {
+    flex: 1;
     justify-content: center;
-  }
-
-  .vote-row.item-image {
+    align-items: center;
+    gap: 10px;
     min-height: 0;
-    height: auto;
-    /* padding: 0; */
+    overflow: clip;
+    cursor: pointer;
   }
 
-  .vote-row.item-description {
-    min-height: var(--cell-height);
-    height: auto;
-  }
-
-  .vote-row.button-row-container {
-    height: var(--cell-height);
-    justify-content: center;
-  }
-
-  .item-image {
-    width: 100%;
-    height: 100%;
+  /* Image button */
+  .image-button {
+    border: var(--border-button);
+    border-radius: var(--border-radius-button);
+    background: var(--color-white);
+    padding: var(--spacing-sm);
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
-    padding: var(--spacing-sm);
   }
 
-  .item-image img {
-    width: 100%;
-    height: 100%;
-    aspect-ratio: 1 / 1;
+  .item-image-area:hover .image-button:not(:disabled) {
+    /* gradient hover handled dynamically via inline style */
+  }
+
+
+  .image-button img {
+    width: 200px;
+    height: 200px;
     object-fit: contain;
   }
 
-  .item-name {
+  /* Item label with yellow highlight */
+  .item-label {
     font-family: var(--font-family);
     font-size: var(--font-size-content);
     color: var(--color-text-primary);
+    padding: 1px 2px;
     text-align: center;
   }
 
-  .item-description {
+  /* Description label with grey background */
+  .item-description-label {
     font-family: var(--font-family);
-    font-size: var(--font-size-content);
+    font-size: var(--font-size-header);
     color: var(--color-text-primary);
-    text-align: left;
-    width: 100%;
+    background: #f1f1f1;
+    padding: 1px 2px;
+    text-align: justify;
+    max-width: 210px;
+  }
+
+
+
+  /* Instructions Row */
+  .instructions-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--cell-height);
+    border-top: var(--border);
+    border-bottom: var(--border);
+    font-family: var(--font-family);
+    font-size: var(--font-size-header);
+    color: var(--color-text-primary);
     flex-shrink: 0;
   }
 
-  .vote-button {
+  /* Bottom Bar - Skip/Results */
+  .bottom-bar {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    height: var(--cell-height);
+    border-bottom: var(--border);
+    flex-shrink: 0;
+  }
+
+  .bottom-button-cell {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-xs);
+    border: var(--border);
+    box-sizing: border-box;
+  }
+
+  .action-button {
+    height: var(--button-height);
     border: var(--border-button);
     border-radius: var(--border-radius-button);
-    background-color: var(--color-white);
+    background: var(--color-white);
+    padding: 0 var(--spacing-sm);
     font-family: var(--font-family);
-    /* font-size: var(--font-size-content); */
-    color: var(--color-text-primary);
+    font-size: var(--font-size-content);
     cursor: pointer;
-    /* text-transform: uppercase; */
-    width: 100%;
-    height: var(--button-height);
+    white-space: nowrap;
   }
 
-  .vote-button:hover:not(:disabled) {
-    opacity: 0.8;
+  .action-button:hover:not(:disabled) {
+    background: var(--color-black);
+    color: var(--color-white);
   }
 
-  .vote-button:disabled {
+  .action-button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
@@ -644,7 +671,7 @@
   }
 
   .faded {
-    font-size: var(--font-size-content);
+    font-size: var(--font-size-header);
     color: var(--color-text-faded);
   }
 
@@ -664,16 +691,78 @@
   .error-message {
     color: red;
   }
+
+  /* Mobile Responsive */
   @media (max-width: 740px) {
+    .header-cell {
+      width: 100vw;
+    }
+
+    .info-wrapper {
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .info-wrapper::-webkit-scrollbar {
+      display: none;
+    }
+
+    .list-info-row .col-time,
+    .list-info-row .col-votes,
+    .list-info-data .col-time,
+    .list-info-data .col-votes {
+      position: sticky;
+      background-color: var(--color-white);
+      z-index: 1;
+    }
+
+    .list-info-row .col-votes,
+    .list-info-data .col-votes {
+      left: 0;
+    }
+
+    .list-info-row .col-time,
+    .list-info-data .col-time {
+      right: 0;
+    }
+
+    .desktop-layout {
+      display: none;
+    }
+
+    .mobile-layout {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      min-height: 0;
+    }
+
     .content-text {
       font-size: var(--font-size-content-mobile);
     }
-    .item-description {
-      font-size: var(--font-size-content-mobile);
-      align-items: flex-start;
-      min-height: var(--cell-height);
-      height: auto;
-      flex-shrink: 0;
+
+    .col-prompt {
+      width: 200px;
+      min-width: 100px;
+      border-right: unset !important;
+    }
+
+    .list-info-row .col-time,
+    .list-info-data .col-time {
+      border-left: var(--border);
+    }
+
+    .list-info-data .col-prompt,
+    .list-info-data .col-title {
+      justify-content: flex-start;
+    }
+
+    .list-info-data,
+    .list-info-row {
+      width: fit-content;
     }
   }
 </style>

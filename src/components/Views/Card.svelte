@@ -71,14 +71,14 @@
   .picture-row {
     width: 100%;
     aspect-ratio: 1 / 1;
-    padding: 0;
+    padding: var(--spacing-sm);
     overflow: hidden;
   }
 
   .picture-row img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
   }
 
   .name-row {

@@ -457,6 +457,7 @@ app.post("/update-list-metadata", 0, async (req) => {
   const description = body.description;
   const prompt = body.prompt;
   const author = body.author;
+  const accentColor = body.accentColor;
   const password = body.password;
 
   const sqlGetList = "SELECT id, password, data FROM lists WHERE name = ?";
@@ -483,6 +484,7 @@ app.post("/update-list-metadata", 0, async (req) => {
     description: description,
     prompt: prompt,
     author: author,
+    accentColor: accentColor,
   };
 
   // If the list name is being changed, check if the new name already exists

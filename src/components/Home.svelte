@@ -233,7 +233,7 @@
           {/if}
         </div>
         <div class="col-title content-text">{list.name}</div>
-        <div class="col-len content-text">{list.itemCount || 0}</div>
+        <div class="col-len content-text"><span class="rotated-text">{list.itemCount || 0}</span></div>
         <div class="col-descrip faded">{list.description || ""}</div>
         <div class="col-preview faded">{getPreviewItems(list)}</div>
         <div class="col-look" bind:this={lookColRef}>
