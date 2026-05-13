@@ -6,7 +6,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "server": "bun run server.ts"
+    "server": "bun run server.ts",
+    "start": "bun run build && bun run server.ts"
   },
   "devDependencies": {
     "bun-types": "latest",

@@ -116,42 +116,20 @@ class Server {
         const url = new URL(req.url);
         switch (req.method) {
           case "GET":
-            // PRODUCTION ONLY: Handle assets dynamically
-            // Commented out for development - Vite dev server handles these
-            // if (url.pathname.startsWith("/assets/")) {
-            //   const filename = url.pathname.replace("/assets/", "");
-            //   const filePath = `dist/assets/${filename}`;
-
-            //   // Check if file exists
-            //   const file = Bun.file(filePath);
-            //   if (await file.exists()) {
-            //     // Determine content type based on file extension
-            //     let contentType = "application/octet-stream";
-            //     if (filename.endsWith(".js")) {
-            //       contentType = "application/javascript";
-            //     } else if (filename.endsWith(".css")) {
-            //       contentType = "text/css";
-            //     } else if (filename.endsWith(".svg")) {
-            //       contentType = "image/svg+xml";
-            //     } else if (filename.endsWith(".png")) {
-            //       contentType = "image/png";
-            //     } else if (filename.endsWith(".jpg") || filename.endsWith(".jpeg")) {
-            //       contentType = "image/jpeg";
-            //     }
-
-            //     return new Response(file, {
-            //       headers: {
-            //         "Content-Type": contentType,
-            //         "Cache-Control": "public, max-age=31536000", // Cache for 1 year since these are hashed
-            //       },
-            //     });
-            //   }
-            // }
-
             if (url.pathname in self.get_map) {
               return await self.get_map[url.pathname](req);
             }
-            break;
+
+            // Serve static assets from dist/
+            if (url.pathname.startsWith("/assets/") || url.pathname.startsWith("/fonts/") || url.pathname === "/favicon.ico") {
+              const file = Bun.file(`dist${url.pathname}`);
+              if (await file.exists()) return new Response(file);
+            }
+
+            // SPA fallback — serve index.html for all other GET requests
+            return new Response(Bun.file("dist/index.html"), {
+              headers: { "Content-Type": "text/html; charset=utf-8" },
+            });
           case "POST":
             if (url.pathname in self.post_map) {
               const [callback, rate_limit] = self.post_map[url.pathname];
