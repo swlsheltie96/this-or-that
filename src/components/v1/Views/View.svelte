@@ -1,6 +1,8 @@
 <script>
   import List from "./List.svelte";
   import Grid from "./Grid.svelte";
+  import EloChart from "./EloChart.svelte";
+  import { getEloHistory } from "../../../lib/api.js";
 
   export let items = [];
   export let listName = "";
@@ -34,14 +36,34 @@
   function setViewSize(size) {
     viewSize = size;
   }
+
+  // Selected item chart
+  let selectedItem = null;
+  let selectedIndex = null;
+  let eloHistory = [];
+
+  async function handleSelect(event) {
+    const { item, index } = event.detail;
+    // Toggle off if same item clicked again
+    if (selectedItem?.name === item.name) {
+      selectedItem = null;
+      selectedIndex = null;
+      eloHistory = [];
+      return;
+    }
+    selectedItem = item;
+    selectedIndex = index;
+    eloHistory = [];
+    try {
+      const result = await getEloHistory(listName, item.name);
+      eloHistory = result.history || [];
+    } catch (e) {
+      eloHistory = [];
+    }
+  }
 </script>
 
 <div class="view-container">
-  <!-- Title Row -->
-  <div class="header-cell">
-    <a href="/">ELO CHAMBER</a>
-  </div>
-
   <!-- List Info Row -->
   <div class="list-info-row">
     <div class="col-title">TITLE</div>
@@ -64,6 +86,9 @@
       <button class="action-button" on:click={goToVote}>VOTE</button>
     </div>
   </div>
+
+  <!-- Selected Item Chart Row -->
+  <EloChart item={selectedItem} index={selectedIndex} history={eloHistory} />
 
   <!-- Controls Row -->
   <div class="button-row">
@@ -102,7 +127,7 @@
   {#if viewMode === "list"}
     <List {items} {viewSize} />
   {:else}
-    <Grid {items} {viewSize} />
+    <Grid {items} {viewSize} on:select={handleSelect} />
   {/if}
 </div>
 
@@ -112,28 +137,6 @@
     width: 100%;
     margin: 0;
     padding: 0;
-  }
-
-  /* Header - same as Home */
-  .header-cell {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: var(--cell-height);
-    border-bottom: var(--border);
-    padding: 0 var(--spacing-sm);
-    box-sizing: border-box;
-  }
-
-  .header-cell a {
-    font-family: var(--font-family);
-    font-size: var(--font-size-header);
-    color: var(--color-text-primary);
-    text-decoration: none;
-  }
-
-  .header-cell a:hover {
-    text-decoration: underline;
   }
 
   /* List Info Row */

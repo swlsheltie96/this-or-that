@@ -4,77 +4,29 @@
   /* Colors */
   --color-black: #000000;
   --color-white: #ffffff;
-  --color-border: #d9d9d9;
-  --color-text-primary: #000000;
-  --color-text-faded: rgba(0, 0, 0, 0.5);
+  --color-highlight:  lightgoldenrodyellow;
+  --color-grey: lightgrey;
+    --color-green: rgb(32, 165, 32);
+      --color-red: rgb(255, 65, 65);
 
   /* Typography */
   --font-family: "Helvetica", sans-serif;
-  --font-size-header: 10px;
-  --font-size-content: 16px;
-  --font-size-content-mobile: 16px;
+
 
   /* Spacing */
-  --spacing-xs: 4px;
-  --spacing-sm: 5px;
-  --spacing-md: 10px;
+  --spacing-xs: 2px;
+  --spacing-sm: 4px;
+  --spacing-md: 8px;
 
-  /* Cell Dimensions */
-  --cell-height: 35px;
-  --button-height: 26px;
+  --spacing-lg: 16px;
+    --spacing-xlg: 32px;
 
-  /* Borders */
-  --border-width: 1px;
-  --border-style: solid;
-  --border-color: var(--color-border);
-  --border: var(--border-width) var(--border-style) var(--border-color);
-  --border-button: 1px solid var(--color-black);
+--desktop-max-width: 60vw;
 
-  /* Border Radius */
-  --border-radius-button: 2px;
+--header-home-mobile: 40vh;
 
-  /* Legacy color variables (keep for compatibility) */
-  --color-lightgrey: #f4f4f4;
-  --color-grey: #eee;
-  --color-midgrey: #ddd;
-  --color-darkgrey: #ccc;
+
+--guide: solid 1px #ff9a9a51;
 }
 
-/* Global Button Styles */
-.action-button {
-  border: var(--border-button);
-  border-radius: var(--border-radius-button);
-  background-color: var(--color-white);
-  font-family: var(--font-family);
-  font-size: var(--font-size-content);
-  color: var(--color-text-primary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-  box-sizing: border-box;
-  text-transform: uppercase;
-  width: 100%;
-  height: var(--button-height);
-}
 
-.action-button:hover:not(:disabled) {
-  opacity: 0.8;
-}
-
-.action-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.action-button.active {
-  background-color: var(--color-black);
-  color: var(--color-white);
-}
-
-@media (max-width: 740px) {
-  .action-button {
-    font-size: var(--font-size-content-mobile);
-  }
-}

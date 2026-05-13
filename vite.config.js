@@ -8,6 +8,7 @@ export default defineConfig({
   },
   server: {
     port: 3001, // Frontend dev server
+    host: true, // bind to 0.0.0.0 so other devices on the network can connect
     proxy: {
       // Proxy API calls to your backend server
       "/get-lists": "http://localhost:3000",
@@ -16,12 +17,17 @@ export default defineConfig({
       "/create-list": "http://localhost:3000",
       "/check-password": "http://localhost:3000",
       "/add-item": "http://localhost:3000",
+      "/update-item": "http://localhost:3000",
       "/delete-item": "http://localhost:3000",
       "/delete-list": "http://localhost:3000",
       "^/vote$": "http://localhost:3000",
       "/get-pair": "http://localhost:3000",
       "/update-list-metadata": "http://localhost:3000",
       "/change-password": "http://localhost:3000",
+      "/get-elo-history": "http://localhost:3000",
+      "/recent-changes": "http://localhost:3000",
+      "/stats": "http://localhost:3000",
+      "/heartbeat": "http://localhost:3000",
     },
   },
   // Enable SPA routing - serve index.html for all routes

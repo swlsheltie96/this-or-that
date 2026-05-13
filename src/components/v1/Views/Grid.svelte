@@ -7,7 +7,7 @@
 
 <div class="card-container" style="--columns: {columnCount}">
   {#each items as item, index}
-    <Card {item} index={index + 1} {viewSize} isFirstRow={index < columnCount} />
+    <Card {item} index={index + 1} {viewSize} isFirstRow={index < columnCount} on:select />
   {/each}
 </div>
 

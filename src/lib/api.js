@@ -66,38 +66,49 @@ class CookieManager {
 }
 
 function createCustomPrompt(prompt_text) {
-  return new Promise((resolve, reject) => {
-    // Create a form element
-    const form = document.createElement("form");
-    form.classList.add("login");
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "login-overlay";
 
-    // Create a label and input field for the prompt
+    const title = document.createElement("div");
+    title.className = "text-base login-title";
+    title.textContent = prompt_text;
+
+    const form = document.createElement("form");
+    form.className = "login";
+
+    const fieldRow = document.createElement("div");
+    fieldRow.className = "login-field-row";
+
     const label = document.createElement("label");
-    label.textContent = prompt_text;
+    label.className = "text-base";
+    label.textContent = "Password";
+
     const input = document.createElement("input");
-    input.type = "text";
+    input.type = "password";
+    input.className = "text-base";
     input.required = true;
 
-    // Create a submit button
     const submitButton = document.createElement("button");
     submitButton.type = "submit";
+    submitButton.className = "text-base login-submit";
     submitButton.textContent = "Submit";
-    submitButton.classList.add("clickable");
-    // Append elements to the form
-    form.appendChild(label);
-    form.appendChild(input);
-    form.appendChild(submitButton);
 
-    // Handle form submission
+    fieldRow.appendChild(label);
+    fieldRow.appendChild(input);
+    form.appendChild(fieldRow);
+    overlay.appendChild(title);
+    overlay.appendChild(submitButton);
+    overlay.appendChild(form);
+
     form.addEventListener("submit", (event) => {
       event.preventDefault();
-      const userInput = input.value;
-      resolve(userInput); // Resolve the promise with the user input
-      document.body.removeChild(form); // Remove the form from the DOM
+      resolve(input.value);
+      document.body.removeChild(overlay);
     });
 
-    // Append the form to the body
-    document.body.appendChild(form);
+    document.body.appendChild(overlay);
+    input.focus();
   });
 }
 
@@ -327,6 +338,18 @@ async function changePassword(listName, currentPassword, newPassword) {
   return data;
 }
 
+// Update an existing item's data
+async function updateItem(listName, itemName, data) {
+  const password = await login(listName);
+  const response = await fetch(`${server}/update-item`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ listName, itemName, data, password }),
+  });
+  if (!response.ok) throw new Error(`Failed: ${response.statusText}`);
+  return response.json();
+}
+
 // Update list metadata (description, prompt, author, name)
 async function updateListMetadata(listName, newListName, description, prompt, author, accentColor) {
   const password = await login(listName);
@@ -352,8 +375,68 @@ async function updateListMetadata(listName, newListName, description, prompt, au
   return data;
 }
 
+// Get Elo rating history for an item
+async function getEloHistory(listName, itemName) {
+  const response = await fetch(
+    `${server}/get-elo-history?listName=${encodeURIComponent(listName)}&itemName=${encodeURIComponent(itemName)}`
+  );
+  if (!response.ok) {
+    throw new Error(`Failed: ${response.statusText}`);
+  }
+  return await response.json();
+}
+
+// Get recent Elo deltas across all lists (for ticker tape)
+async function getRecentChanges() {
+  const response = await fetch(`${server}/recent-changes`);
+  if (!response.ok) throw new Error(`Failed: ${response.statusText}`);
+  return await response.json();
+}
+
+// Get site-wide stats (online users, votes in last hour)
+async function getStats() {
+  const response = await fetch(`${server}/stats`);
+  if (!response.ok) {
+    throw new Error(`Failed: ${response.statusText}`);
+  }
+  return await response.json();
+}
+
+// Send heartbeat to track online presence
+async function sendHeartbeat() {
+  const response = await fetch(`${server}/heartbeat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed: ${response.statusText}`);
+  }
+  return await response.json();
+}
+
+function navigate(url) {
+  window.history.pushState({}, "", url);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
+function getListPassword(listName) {
+  return cookieManager.getCookie(listName) || "";
+}
+
+function setListPassword(listName, password) {
+  if (!password) return;
+  cookieManager.setCookie(listName, password, {
+    expires: new Date(Date.now() + 86400 * 1000),
+    path: "/",
+  });
+}
+
 // Export all functions for ES modules
 export {
+  getRecentChanges,
   createList,
   checkPassword,
   deleteList,
@@ -365,6 +448,13 @@ export {
   getListInfo,
   getListsWithPopularity,
   changePassword,
+  navigate,
+  updateItem,
   updateListMetadata,
   login,
+  getStats,
+  sendHeartbeat,
+  getEloHistory,
+  getListPassword,
+  setListPassword,
 };

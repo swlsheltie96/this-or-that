@@ -294,6 +294,21 @@ db.query(
 `
 ).run();
 
+// Create a table for storing Elo rating history per item
+db.query(
+  `
+  CREATE TABLE IF NOT EXISTS elo_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    list_name TEXT,
+    item_name TEXT,
+    rating REAL,
+    vote_number INTEGER,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (list_name) REFERENCES lists (name)
+  )
+`
+).run();
+
 // Create a table for storing list votes
 db.query(
   `
@@ -562,6 +577,28 @@ app.post("/add-item", 0, async (req) => {
   );
 });
 
+app.post("/update-item", 0, async (req) => {
+  const body = await req.json();
+  const listName = body.listName;
+  const itemName = body.itemName;
+  const newData = body.data;
+  const password = body.password;
+
+  const sqlGetListId = "SELECT id, password FROM lists WHERE name = ?";
+  const resultGetListId = db.query(sqlGetListId).get([listName]);
+  if (!resultGetListId) return jsonError(`List "${listName}" does not exist.`);
+
+  const listId = resultGetListId.id;
+  const storedPassword = resultGetListId.password;
+
+  const isValidPassword = await passwordVerify(password, storedPassword);
+  const isMasterPassword = MASTER_PASSWORD && (await Bun.password.verify(password, MASTER_PASSWORD));
+  if (!isValidPassword && !isMasterPassword) return jsonError("Invalid password for this list.", 401);
+
+  const sql = "UPDATE items SET data = ? WHERE list_id = ? AND name = ?";
+  return runQuery(sql, [JSON.stringify(newData), listId, itemName], `Item "${itemName}" updated.`, `Failed to update item.`);
+});
+
 // Endpoint to delete a list and its associated items
 app.delete("/delete-list", async (req) => {
   const body = await req.json();
@@ -607,6 +644,13 @@ app.delete("/delete-list", async (req) => {
     queryDeleteEloRatings.run(paramsDeleteEloRatings);
   } catch (error) {
     return jsonError(`Failed to delete Elo ratings for list "${listName}".`);
+  }
+
+  // Delete the Elo history for the list
+  try {
+    db.query("DELETE FROM elo_history WHERE list_name = ?").run([listName]);
+  } catch (error) {
+    return jsonError(`Failed to delete Elo history for list "${listName}".`);
   }
 
   // Delete the list from the 'lists' table
@@ -683,9 +727,13 @@ app.get("/get-pair", (req) => {
 
     const listId = resultGetListId.id;
 
-    // Fetch items associated with the list from the 'items' table
-    const sqlGetItems = "SELECT * FROM items WHERE list_id = ?";
-    const paramsGetItems = [listId];
+    // Fetch items with their current Elo ratings
+    const sqlGetItems = `
+      SELECT items.*, COALESCE(elo_ratings.rating, 1000) as elo
+      FROM items
+      LEFT JOIN elo_ratings ON items.name = elo_ratings.item_name AND elo_ratings.list_name = ?
+      WHERE items.list_id = ?`;
+    const paramsGetItems = [listName, listId];
 
     try {
       const queryGetItems = db.query(sqlGetItems);
@@ -726,11 +774,11 @@ app.get("/get-list-info", (req) => {
   const listName = params.get("listName");
 
   const sqlGetListData = `
-    SELECT lists.data, 
+    SELECT lists.data,
            (SELECT COUNT(*) FROM list_votes WHERE list_name = ?) AS voteCount,
-           (SELECT MAX(timestamp) FROM list_votes WHERE list_name = ?) AS lastVoteTimestamp
-
-    FROM lists 
+           (SELECT MAX(timestamp) FROM list_votes WHERE list_name = ?) AS lastVoteTimestamp,
+           (SELECT COUNT(*) FROM items WHERE list_id = lists.id) AS itemCount
+    FROM lists
     WHERE name = ?`;
   const paramsGetListData = [listName, listName, listName];
 
@@ -746,6 +794,7 @@ app.get("/get-list-info", (req) => {
 
   listData.voteCount = voteCount;
   listData.lastVoteTimestamp = lastVoteTimestamp;
+  listData.itemCount = resultGetListData.itemCount;
 
   // Add formatted total voting time
   if (listData.totalVotingTimeSeconds) {
@@ -856,6 +905,15 @@ app.post("/vote", 100, async (req) => {
     "INSERT OR REPLACE INTO elo_ratings (list_name, item_name, rating) VALUES (?, ?, ?)";
   const paramsUpdateLoserRating = [listName, loser, loserNewRating];
 
+  // Record history for winner and loser
+  const sqlGetWinnerVoteCount = "SELECT COUNT(*) as count FROM elo_history WHERE list_name = ? AND item_name = ?";
+  const winnerVoteCount = (db.query(sqlGetWinnerVoteCount).get([listName, winner]) as any)?.count ?? 0;
+  const loserVoteCount = (db.query(sqlGetWinnerVoteCount).get([listName, loser]) as any)?.count ?? 0;
+
+  const sqlInsertHistory = "INSERT INTO elo_history (list_name, item_name, rating, vote_number) VALUES (?, ?, ?, ?)";
+  const paramsWinnerHistory = [listName, winner, winnerNewRating, winnerVoteCount + 1];
+  const paramsLoserHistory = [listName, loser, loserNewRating, loserVoteCount + 1];
+
   const userId = req.headers.has("x-forwarded-for") ? req.headers.get("x-forwarded-for") : 0;
 
   const currentTimestamp = new Date().toISOString();
@@ -881,19 +939,53 @@ app.post("/vote", 100, async (req) => {
     const paramsUpdateListData = [JSON.stringify(listData), listName];
 
     return runQueries(
-      [sqlUpdateWinnerRating, sqlUpdateLoserRating, sqlInsertVote, sqlUpdateListData],
-      [paramsUpdateWinnerRating, paramsUpdateLoserRating, paramsInsertVote, paramsUpdateListData],
+      [sqlUpdateWinnerRating, sqlUpdateLoserRating, sqlInsertVote, sqlUpdateListData, sqlInsertHistory, sqlInsertHistory],
+      [paramsUpdateWinnerRating, paramsUpdateLoserRating, paramsInsertVote, paramsUpdateListData, paramsWinnerHistory, paramsLoserHistory],
       `Elo for "${winner}" and "${loser}" updated successfully.`,
       `Failed to update Elo for "${winner}" and "${loser}".`
     );
   } else {
     return runQueries(
-      [sqlUpdateWinnerRating, sqlUpdateLoserRating, sqlInsertVote],
-      [paramsUpdateWinnerRating, paramsUpdateLoserRating, paramsInsertVote],
+      [sqlUpdateWinnerRating, sqlUpdateLoserRating, sqlInsertVote, sqlInsertHistory, sqlInsertHistory],
+      [paramsUpdateWinnerRating, paramsUpdateLoserRating, paramsInsertVote, paramsWinnerHistory, paramsLoserHistory],
       `Elo for "${winner}" and "${loser}" updated successfully.`,
       `Failed to update Elo for "${winner}" and "${loser}".`
     );
   }
+});
+
+// Endpoint to get Elo rating history for an item
+app.get("/get-elo-history", (req) => {
+  const url = new URL(req.url);
+  const listName = url.searchParams.get("listName");
+  const itemName = url.searchParams.get("itemName");
+
+  if (!listName || !itemName) {
+    return jsonError("listName and itemName are required.");
+  }
+
+  const rows = db.query(
+    "SELECT vote_number, rating, timestamp FROM elo_history WHERE list_name = ? AND item_name = ? ORDER BY vote_number ASC"
+  ).all([listName, itemName]);
+
+  return Response.json({ history: rows });
+});
+
+// Recent Elo deltas across all lists — used by the ticker tape
+app.get("/recent-changes", (req) => {
+  const rows = db.query(`
+    SELECT h1.list_name, h1.item_name,
+           ROUND(h1.rating - h2.rating) AS delta,
+           h1.timestamp
+    FROM elo_history h1
+    JOIN elo_history h2
+      ON h1.list_name = h2.list_name
+     AND h1.item_name = h2.item_name
+     AND h1.vote_number = h2.vote_number + 1
+    ORDER BY h1.timestamp DESC
+    LIMIT 40
+  `).all([]);
+  return Response.json({ changes: rows || [] });
 });
 
 // Endpoint to get the names of all available lists
@@ -931,12 +1023,18 @@ app.get("/get-lists", (req) => {
     const topItems = queryGetTopItem.all([row.name, row.name]);
 
     let previewImage = null;
+    let previewImages = [];
     let itemsList = "No items";
 
     if (topItems && topItems.length > 0) {
-      // Get preview image from top item
-      const topItemData = topItems[0].data ? JSON.parse(topItems[0].data) : {};
-      previewImage = topItemData.picture || null;
+      // Get preview images from top items
+      for (const item of topItems) {
+        const itemData = item.data ? JSON.parse(item.data) : {};
+        if (itemData.picture) {
+          previewImages.push(itemData.picture);
+        }
+      }
+      previewImage = previewImages.length > 0 ? previewImages[0] : null;
 
       // Get first 10 item names for preview
       itemsList = topItems.map(item => item.name).join(", ");
@@ -954,13 +1052,44 @@ app.get("/get-lists", (req) => {
         ? formatTotalTime(listData.totalVotingTimeSeconds)
         : "0s",
       previewImage: previewImage,
+      previewImages: previewImages,
       itemsList: itemsList,
+      accentColor: listData.accentColor || null,
     };
   });
 
   return Response.json({
     lists: sortedLists,
   });
+});
+
+// In-memory heartbeat tracking: IP -> last seen timestamp
+const heartbeatMap = new Map<string, number>();
+
+app.post("/heartbeat", 5000, async (req) => {
+  const userId = req.headers.has("x-forwarded-for") ? req.headers.get("x-forwarded-for") : "0";
+  heartbeatMap.set(userId, Date.now());
+  return Response.json({ message: "ok" });
+});
+
+app.get("/stats", (req) => {
+  // Prune stale entries and count online users (active in last 5 minutes)
+  const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+  let onlineUsers = 0;
+  for (const [ip, timestamp] of heartbeatMap) {
+    if (timestamp < fiveMinutesAgo) {
+      heartbeatMap.delete(ip);
+    } else {
+      onlineUsers++;
+    }
+  }
+
+  // Count votes in the last hour
+  const sqlVotesLastHour = "SELECT COUNT(*) as count FROM list_votes WHERE timestamp > datetime('now', '-1 hour')";
+  const result = db.query(sqlVotesLastHour).get();
+  const votesLastHour = result ? result.count : 0;
+
+  return Response.json({ onlineUsers, votesLastHour });
 });
 
 app.get_static("/", "public/index.html", "text/html; charset=utf-8");

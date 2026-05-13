@@ -1,6 +1,6 @@
 <script>
-  import { createEventDispatcher, afterUpdate } from "svelte";
-  import { createList, updateListMetadata, deleteList, addItem, deleteItem } from "../../lib/api.js";
+  import { createEventDispatcher, afterUpdate, onMount } from "svelte";
+  import { createList, updateListMetadata, deleteList, addItem, deleteItem } from "../../../lib/api.js";
 
   export let isNew = false;
   export let items = [];
@@ -262,13 +262,8 @@
     return handleDeleteList();
   }
 
-  function handleInputChange(event) {
+  function handleInputChange() {
     dirty = true;
-    // Auto-resize textarea on input
-    if (event.target.tagName === "TEXTAREA") {
-      event.target.style.height = "auto";
-      event.target.style.height = event.target.scrollHeight + "px";
-    }
   }
 
   function handlePaste(event, index, field) {
@@ -298,6 +293,12 @@
       dirty = true;
     }
   }
+
+  onMount(() => {
+    if (isNew && tableData.length === 0) {
+      tableData = Array.from({ length: 5 }, () => ({ name: "", picture: "", description: "", elo: 1000 }));
+    }
+  });
 
   let csvFile = null;
   let csvItems = [];
@@ -389,11 +390,6 @@
 </script>
 
 <div class="edit-container">
-  <!-- Title Row -->
-  <div class="title-row">
-    <a href="/" class="title-cell">{isNew ? 'ELO CHAMBER*' : 'ELO CHAMBER'}</a>
-  </div>
-
   <!-- Form Fields Row -->
   <div class="form-fields-row">
     <div class="label-cell">TITLE:</div>
@@ -462,7 +458,7 @@
     </div>
     <div class="button-cell">
       <button class="action-button" on:click={() => document.getElementById("csvFile").click()}>
-        IMPORT
+        IMPORT CSV
       </button>
     </div>
     {#if !isNew}
@@ -501,9 +497,7 @@
     <div class="table-row header-row">
       <div class="table-cell item-cell">Item</div>
       <div class="table-cell url-cell">Picture URL</div>
-      {#if !isNew}
-        <div class="table-cell preview-cell">Preview</div>
-      {/if}
+      <div class="table-cell preview-cell">Preview</div>
       <div class="table-cell description-cell">Description</div>
       {#if !isNew}
         <div class="table-cell elo-cell">Elo</div>
@@ -515,46 +509,49 @@
     {#each tableData as item, index}
       <div class="table-row data-row">
         <div class="table-cell item-cell">
-          <textarea
+          <input
+            type="text"
             bind:value={item.name}
             on:input={handleInputChange}
             on:paste={(e) => handlePaste(e, index, 'name')}
-            placeholder="Item name"
           />
         </div>
         <div class="table-cell url-cell">
-          <textarea
+          <input
+            type="text"
             bind:value={item.picture}
             on:input={handleInputChange}
             on:paste={(e) => handlePaste(e, index, 'picture')}
-            placeholder="Image URL"
           />
         </div>
-        {#if !isNew}
-          <div class="table-cell preview-cell">
-            {#if item.picture}
-              <img src={item.picture} alt={item.name} class="picture-preview" />
-            {/if}
-          </div>
-        {/if}
+        <div class="table-cell preview-cell">
+          {#if item.picture}
+            <img src={item.picture} alt={item.name} class="picture-preview" />
+          {/if}
+        </div>
         <div class="table-cell description-cell">
-          <textarea
+          <input
+            type="text"
             bind:value={item.description}
             on:input={handleInputChange}
             on:paste={(e) => handlePaste(e, index, 'description')}
-            placeholder="Description"
           />
         </div>
         {#if !isNew}
           <div class="table-cell elo-cell">{item.elo.toFixed(2)}</div>
         {/if}
         <div class="table-cell actions-cell">
-          <button class="delete-item" on:click={() => removeItem(index)}>
+          <button class="action-button" on:click={() => removeItem(index)}>
             DEL
           </button>
         </div>
       </div>
     {/each}
+  </div>
+
+  <!-- Instructions Row -->
+  <div class="instructions-row">
+    PASTE A MULTI-LINE LIST INTO ANY COLUMN TO FILL MULTIPLE ROWS AT ONCE.
   </div>
 
   <!-- Add Item Button Row -->
@@ -577,37 +574,13 @@
     flex-direction: column;
   }
 
-  /* Title Row */
-  .title-row {
-    display: flex;
-    height: var(--cell-height);
-    border: var(--border);
-    border-top: none;
-    border-bottom: none;
-  }
-
-  .title-cell {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    font-family: var(--font-family);
-    font-size: var(--font-size-header);
-    padding: 0 var(--spacing-sm);
-    text-decoration: none;
-    color: inherit;
-  }
-
-  .title-cell:hover {
-    text-decoration: underline;
-  }
-
   /* Form Fields Row */
   .form-fields-row {
     display: flex;
     align-items: stretch;
     height: var(--cell-height);
     border: var(--border);
+    border-top: none;
     border-bottom: none;
     margin-left: -1px;
   }
@@ -717,6 +690,7 @@
   .table-row {
     display: flex;
     align-items: stretch;
+    height: var(--cell-height);
     border: var(--border);
     border-top: none;
     margin-left: -1px;
@@ -728,23 +702,15 @@
     padding: var(--spacing-sm);
     border-left: var(--border);
     font-family: var(--font-family);
-    min-height: var(--cell-height);
     box-sizing: border-box;
+    overflow: hidden;
   }
 
   .table-cell:first-child {
     border-left: none;
   }
 
-  .data-row .description-cell {
-    align-items: stretch;
-  }
-
-  .header-row .description-cell {
-    align-items: center;
-  }
-
-  /* Header Row */
+/* Header Row */
   .header-row .table-cell {
     font-size: var(--font-size-header);
     text-transform: uppercase;
@@ -825,26 +791,7 @@
     display: block;
   }
 
-  .delete-item {
-    background: var(--color-white);
-    border: var(--border-button);
-    border-radius: var(--border-radius-button);
-    padding: 10px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .delete-item:hover {
-    background: var(--color-black);
-  }
-
-  .delete-item:hover svg line {
-    stroke: var(--color-white);
-  }
-
-  /* Add Item Row */
+/* Add Item Row */
   .add-item-row {
     display: flex;
     align-items: stretch;
@@ -875,6 +822,20 @@
   .add-btn:hover {
     background: var(--color-black);
     color: var(--color-white);
+  }
+
+  /* Instructions Row */
+  .instructions-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--cell-height);
+    border: var(--border);
+    border-top: none;
+    margin-left: -1px;
+    font-family: var(--font-family);
+    font-size: var(--font-size-header);
+    color: var(--color-text-primary);
   }
 
   /* Password cell */

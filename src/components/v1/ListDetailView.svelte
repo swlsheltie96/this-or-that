@@ -3,7 +3,7 @@
 
   import View from "./Views/View.svelte";
   import Edit from "./Views/Edit.svelte";
-  import { getSortedList, getListInfo } from "../lib/api.js";
+  import { getSortedList, getListInfo } from "../../lib/api.js";
 
   export let listName = "";
 

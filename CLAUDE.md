@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Elo Chamber is an Elo-based ranking application where users can create lists, add items, and vote on pairs to generate rankings. Built with Bun (backend), SQLite (database), and Svelte (frontend).
+This or That is an Elo-based ranking application where users can create lists, add items, and vote on pairs to generate rankings. Built with Bun (backend), SQLite (database), and Svelte (frontend).
 
 ## Development Setup
 
@@ -69,7 +69,7 @@ Located in `src/`. Uses manual URL-based routing (NOT svelte-spa-router despite 
 - `Home.svelte`: List browsing with sorting and preview images
   - Uses flexbox-based table layout (not HTML tables)
   - **Layout structure**:
-    - **Title row**: "ELO CHAMBER" header (outside scrollable containers)
+    - **Title row**: "This or That" header (outside scrollable containers)
     - **Controls wrapper**: Contains controls row, scrolls independently on mobile
     - **Controls row**: CREATE LIST, RANDOM, SORT, S/M/L size buttons
     - **Home container**: Contains table, scrolls independently on mobile
