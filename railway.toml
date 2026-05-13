@@ -1,2 +1,2 @@
 [deploy]
-startCommand = "bun install && bun run build && bun run server.ts"
+startCommand = "bun run server.ts"
