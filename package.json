@@ -20,6 +20,7 @@
     "typescript": "^5.6.2"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.3",
     "svelte-spa-router": "^4.0.1"
   }
 }
