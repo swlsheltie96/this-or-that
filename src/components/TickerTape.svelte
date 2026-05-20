@@ -1,6 +1,7 @@
 <script>
   import { onMount, onDestroy } from "svelte";
   import { getRecentChanges } from "../lib/api.js";
+  import { onTick } from "../lib/sharedTick.js";
 
   export let isMobile = false;
 
@@ -8,7 +9,7 @@
   let trackEl;
   let paused = false;
   let position = 0;
-  let interval;
+  let unsubTick;
   let tickerHeight = 0;
 
   $: document.documentElement.style.setProperty(
@@ -24,16 +25,16 @@
       console.error(e);
     }
 
-    interval = setInterval(() => {
+    unsubTick = onTick(() => {
       if (paused || !trackEl) return;
       position -= 5;
       const halfWidth = trackEl.scrollWidth / 2;
       if (Math.abs(position) >= halfWidth) position = 0;
       trackEl.style.transform = `translateX(${position}px)`;
-    }, 300);
+    });
   });
 
-  onDestroy(() => clearInterval(interval));
+  onDestroy(() => unsubTick?.());
 </script>
 
 {#if items.length > 0}
@@ -71,10 +72,11 @@
 
 <style>
   .ticker-wrap {
-    width: 100%;
+    width: calc(100% + 2 * var(--spacing-margin));
     overflow: hidden;
     border-bottom: 1px solid var(--color-grey);
     border-top: 1px solid var(--color-grey);
+    margin-left: calc(-1 * var(--spacing-margin));
     display: flex;
     align-items: center;
     padding: var(--spacing-md) 0;

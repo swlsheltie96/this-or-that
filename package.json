@@ -10,6 +10,7 @@
     "start": "bun run build && bun run server.ts"
   },
   "devDependencies": {
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "bun-types": "latest"
   },
   "peerDependencies": {

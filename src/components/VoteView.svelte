@@ -1,6 +1,12 @@
 <script>
   import { onMount, onDestroy } from "svelte";
-  import { getPairForVoting, vote, getListInfo, navigate } from "../lib/api.js";
+  import {
+    getPairForVoting,
+    vote,
+    getListInfo,
+    getListsWithPopularity,
+    navigate,
+  } from "../lib/api.js";
 
   export let listName = "";
   export let isMobile = false;
@@ -8,6 +14,10 @@
   let pairData = null;
   let listInfo = {};
   let loading = true;
+  let allLists = [];
+  let showDropdown = false;
+  let dropdownTop = 0;
+  let mobileHeaderEl;
   let voting = false;
   let error = null;
   let selectedItem = 0;
@@ -16,12 +26,23 @@
   let mouseX = 0;
   let imagesRowEl;
   let voteItem1El;
+  let voteItem2El;
   let namesRowEl;
   let eloPopup = null; // { item: 1|2, delta: number }
   let winnerCountElo = null;
   let eloAnimTimer = null;
+  let arrowCurrentPx = null;
+  let gyroSetup = false;
+  let betaAngle = null;
+  let rafId = null;
+  let mobileHoveredItem = 0;
+  let voteItemSize = null;
+  let hoverProgress = 0;
+  let hoverStartTime = null;
   const SVG_W = 140;
-  const SVG_H = Math.round((SVG_W * 349) / 479);
+  const SVG_H = Math.round((SVG_W * 350) / 400);
+  let mobileSvgH = 60;
+  $: mobileSvgW = Math.round((mobileSvgH * 400) / 350);
 
   function handleMouseMove(e) {
     if (!imagesRowEl) return;
@@ -43,6 +64,8 @@
       mouseY = Math.max(SVG_W / 2, Math.min(raw, rect.height - SVG_W / 2));
     }
   }
+
+  $: mobileArrowStyle = `position: fixed; bottom: 20px; left: ${arrowCurrentPx ?? (window.innerWidth / 2)}px; transform: translateX(-50%); pointer-events: none; z-index: 10;`;
 
   $: arrowStyle = (() => {
     if (!hoveredItem || selectedItem !== 0) return "display: none";
@@ -161,22 +184,159 @@
     }
   }
 
+  function handleOrientation(e) {
+    betaAngle = Math.round(e.gamma ?? 0);
+  }
+
+  function smoothTick() {
+    const img1 = voteItem1El?.querySelector("img, .img-empty");
+    const img2 = voteItem2El?.querySelector("img, .img-empty");
+    if (img1 && img2) {
+      if (voteItemSize === null) {
+        const c = voteItem1El.getBoundingClientRect();
+        if (c.width > 0 && c.height > 0)
+          voteItemSize = Math.min(c.width, c.height);
+      }
+      const r1 = img1.getBoundingClientRect();
+      const r2 = img2.getBoundingClientRect();
+      const leftSnap = r1.left + r1.width / 2;
+      const rightSnap = r2.left + r2.width / 2;
+      const midSnap = (leftSnap + rightSnap) / 2;
+
+      const target =
+        betaAngle !== null && betaAngle < -30
+          ? leftSnap
+          : betaAngle !== null && betaAngle > 30
+            ? rightSnap
+            : midSnap;
+
+      if (arrowCurrentPx === null) arrowCurrentPx = target;
+      arrowCurrentPx += (target - arrowCurrentPx) * 0.12;
+
+      if (arrowCurrentPx >= r1.left && arrowCurrentPx <= r1.right) {
+        mobileHoveredItem = 1;
+      } else if (arrowCurrentPx >= r2.left && arrowCurrentPx <= r2.right) {
+        mobileHoveredItem = 2;
+      } else {
+        mobileHoveredItem = 0;
+      }
+
+      if (mobileHoveredItem !== 0 && !voting && pairData) {
+        if (hoverStartTime === null) hoverStartTime = performance.now();
+        hoverProgress = Math.min(
+          1,
+          (performance.now() - hoverStartTime) / 3000,
+        );
+        if (hoverProgress >= 1) {
+          hoverProgress = 0;
+          hoverStartTime = null;
+          if (mobileHoveredItem === 1)
+            castVote(pairData.item1.name, pairData.item2.name, 1);
+          else castVote(pairData.item2.name, pairData.item1.name, 2);
+        }
+      } else {
+        hoverStartTime = null;
+        hoverProgress = 0;
+      }
+    }
+    rafId = requestAnimationFrame(smoothTick);
+  }
+
+  function setupGyro() {
+    if (gyroSetup) return;
+    gyroSetup = true;
+    if (
+      typeof DeviceOrientationEvent !== "undefined" &&
+      typeof DeviceOrientationEvent.requestPermission === "function"
+    ) {
+      DeviceOrientationEvent.requestPermission()
+        .then((state) => {
+          if (state === "granted")
+            window.addEventListener("deviceorientation", handleOrientation);
+        })
+        .catch(() => {});
+    } else {
+      window.addEventListener("deviceorientation", handleOrientation);
+    }
+  }
+
   function navigateToList() {
     navigate(`/?view=listview&listName=${encodeURIComponent(listName)}`);
   }
 
-  onMount(() => {
+  onMount(async () => {
     loadPair();
+    try {
+      const response = await getListsWithPopularity();
+      allLists = response.lists || [];
+    } catch (e) {}
     window.addEventListener("keydown", handleKeydown);
     window.addEventListener("mousemove", handleMouseMove);
+    if (isMobile) smoothTick();
+    if (isMobile) {
+      if (
+        typeof DeviceOrientationEvent === "undefined" ||
+        typeof DeviceOrientationEvent.requestPermission !== "function"
+      ) {
+        setupGyro();
+      }
+    }
   });
 
   onDestroy(() => {
     window.removeEventListener("keydown", handleKeydown);
     window.removeEventListener("mousemove", handleMouseMove);
+    window.removeEventListener("deviceorientation", handleOrientation);
     if (eloAnimTimer) clearInterval(eloAnimTimer);
+    if (rafId) cancelAnimationFrame(rafId);
   });
 </script>
+
+{#if isMobile}
+  <div class="mobile-header" bind:this={mobileHeaderEl}>
+    <button class="text-small" on:click={() => navigate("/")}>Main</button>
+    <div
+      class="mobile-header-title text-small"
+      on:click={() => {
+        dropdownTop = mobileHeaderEl.getBoundingClientRect().bottom;
+        showDropdown = !showDropdown;
+      }}
+    >
+      {listName} ▾
+    </div>
+    <button
+      class="text-small"
+      on:click={() =>
+        navigate(`/?view=listview&listName=${encodeURIComponent(listName)}`)}
+      >View</button
+    >
+  </div>
+  {#if showDropdown}
+    <div class="list-dropdown" style="top: {dropdownTop}px">
+      <div
+        class="dropdown-item dropdown-home text-small"
+        on:click={() => {
+          showDropdown = false;
+          navigate("/");
+        }}
+      >
+        <span>This</span><span>or</span><span>That</span>
+      </div>
+      {#each allLists as list}
+        <div
+          class="dropdown-item text-base"
+          class:active={list.name === listName}
+          on:click={() => {
+            showDropdown = false;
+            navigate(`/?view=vote&listName=${encodeURIComponent(list.name)}`);
+          }}
+        >
+          {list.name}
+        </div>
+      {/each}
+    </div>
+  {/if}
+{/if}
 
 {#if loading}
   <!-- <p class="text-base">Loading...</p> -->
@@ -185,78 +345,116 @@
 {:else if pairData}
   <div class="vote-container" class:mobile={isMobile}>
     <div class="images-row" bind:this={imagesRowEl}>
-      <div
-        class="vote-item vote-item-1"
-        class:disabled={voting}
-        class:selected={selectedItem === 1}
-        class:loser={selectedItem === 2}
-        bind:this={voteItem1El}
-        role="button"
-        tabindex="0"
-        on:click={() => castVote(pairData.item1.name, pairData.item2.name, 1)}
-        on:keydown={(e) =>
-          e.key === "Enter" &&
-          castVote(pairData.item1.name, pairData.item2.name, 1)}
-      >
-        {#if pairData.item1.data?.picture}
-          <img src={pairData.item1.data.picture} alt={pairData.item1.name} />
-        {:else}
-          <div class="img-empty"></div>
-        {/if}
-      </div>
-      <div class="mobile-names-row">
-        <div class="name text-base">
-          {selectedItem !== 0
-            ? selectedItem === 1
-              ? (winnerCountElo ?? Math.round(pairData.item1.elo))
-              : Math.round(pairData.item1.elo)
-            : pairData.item1.name}
-          {#if eloPopup?.item === 1}
-            <span class="elo-popup text-base">+{eloPopup.delta}</span>
-          {/if}
+      <div class="vote-side">
+        <div
+          class="text-base mobile-name mobile-name-1"
+          class:hovered={mobileHoveredItem === 1}
+        >
+          <span
+            class="name-inner"
+            style={isMobile && mobileHoveredItem === 1
+              ? `background-size:${hoverProgress * 100}% 100%`
+              : ""}
+          >
+            {selectedItem !== 0
+              ? selectedItem === 1
+                ? (winnerCountElo ?? Math.round(pairData.item1.elo))
+                : Math.round(pairData.item1.elo)
+              : pairData.item1.name}
+            {#if eloPopup?.item === 1}
+              <span class="elo-popup text-base">+{eloPopup.delta}</span>
+            {/if}
+          </span>
         </div>
-        <div class="or text-base">or</div>
-        <div class="name text-base">
-          {selectedItem !== 0
-            ? selectedItem === 2
-              ? (winnerCountElo ?? Math.round(pairData.item2.elo))
-              : Math.round(pairData.item2.elo)
-            : pairData.item2.name}
-          {#if eloPopup?.item === 2}
-            <span class="elo-popup text-base">+{eloPopup.delta}</span>
+
+        <div
+          class="vote-item vote-item-1"
+          class:disabled={voting}
+          class:selected={selectedItem === 1}
+          class:loser={selectedItem === 2}
+          bind:this={voteItem1El}
+          style={isMobile && voteItemSize
+            ? `width:${voteItemSize}px;height:${voteItemSize}px;flex:none`
+            : undefined}
+          role="button"
+          tabindex="0"
+          on:click={() => {
+            setupGyro();
+            castVote(pairData.item1.name, pairData.item2.name, 1);
+          }}
+          on:keydown={(e) =>
+            e.key === "Enter" &&
+            castVote(pairData.item1.name, pairData.item2.name, 1)}
+        >
+          {#if pairData.item1.data?.picture}
+            <img src={pairData.item1.data.picture} alt={pairData.item1.name} />
+          {:else}
+            <div class="img-empty"></div>
           {/if}
         </div>
       </div>
 
-      <div
-        class="vote-item vote-item-2"
-        class:disabled={voting}
-        class:selected={selectedItem === 2}
-        class:loser={selectedItem === 1}
-        role="button"
-        tabindex="0"
-        on:click={() => castVote(pairData.item2.name, pairData.item1.name, 2)}
-        on:keydown={(e) =>
-          e.key === "Enter" &&
-          castVote(pairData.item2.name, pairData.item1.name, 2)}
-      >
-        {#if pairData.item2.data?.picture}
-          <img src={pairData.item2.data.picture} alt={pairData.item2.name} />
-        {:else}
-          <div class="img-empty"></div>
-        {/if}
+      <div class="mobile-or text-base">or</div>
+
+      <div class="vote-side">
+        <div
+          class="text-base mobile-name mobile-name-2"
+          class:hovered={mobileHoveredItem === 2}
+        >
+          <span
+            class="name-inner"
+            style={isMobile && mobileHoveredItem === 2
+              ? `background-size:${hoverProgress * 100}% 100%`
+              : ""}
+          >
+            {selectedItem !== 0
+              ? selectedItem === 2
+                ? (winnerCountElo ?? Math.round(pairData.item2.elo))
+                : Math.round(pairData.item2.elo)
+              : pairData.item2.name}
+            {#if eloPopup?.item === 2}
+              <span class="elo-popup text-base">+{eloPopup.delta}</span>
+            {/if}
+          </span>
+        </div>
+
+        <div
+          class="vote-item vote-item-2"
+          class:disabled={voting}
+          class:selected={selectedItem === 2}
+          class:loser={selectedItem === 1}
+          bind:this={voteItem2El}
+          style={isMobile && voteItemSize
+            ? `width:${voteItemSize}px;height:${voteItemSize}px;flex:none`
+            : undefined}
+          role="button"
+          tabindex="0"
+          on:click={() => {
+            setupGyro();
+            castVote(pairData.item2.name, pairData.item1.name, 2);
+          }}
+          on:keydown={(e) =>
+            e.key === "Enter" &&
+            castVote(pairData.item2.name, pairData.item1.name, 2)}
+        >
+          {#if pairData.item2.data?.picture}
+            <img src={pairData.item2.data.picture} alt={pairData.item2.name} />
+          {:else}
+            <div class="img-empty"></div>
+          {/if}
+        </div>
       </div>
 
-      <div class="arrow" style={arrowStyle}>
+      <div class="arrow" style={isMobile ? mobileArrowStyle : arrowStyle}>
         <svg
-          width={SVG_W}
-          height={SVG_H}
-          viewBox="0 0 479 349"
+          width={isMobile ? mobileSvgW : SVG_W}
+          height={isMobile ? mobileSvgH : SVG_H}
+          viewBox="0 0 400 350"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path d="M239.5 0L446.913 172.5H32.0869L239.5 0Z" fill="black" />
-          <rect x="122" y="171" width="234" height="178" fill="black" />
+          <path d="M200 0L400 172.994H0L200 0Z" fill="black" />
+          <path d="M86.6995 171.49H312.336V350H86.6995V171.49Z" fill="black" />
         </svg>
       </div>
     </div>
@@ -292,9 +490,10 @@
     </div>
   </div>
   <button
-    class="view-list text-base"
+    class="view-list {isMobile ? 'text-small' : 'text-base'}"
     class:mobile={isMobile}
-    on:click={navigateToList}>Results</button
+    on:click={navigateToList}
+    >{listName} Rankings{betaAngle !== null ? ` ${betaAngle}` : ""}</button
   >
 {/if}
 
@@ -307,18 +506,82 @@
     cursor: pointer;
     box-sizing: border-box;
     text-transform: uppercase;
-    padding: 8px 8px 6px 8px;
-    margin: -10px;
+    /* padding: 8px 8px 6px 8px; */
+    /* margin: -10px; */
     line-height: 1;
-    margin-right: 20px;
+    /* margin-right: 20px; */
     z-index: 2;
   }
   .mobile.view-list {
+    display: none;
+  }
+
+  .mobile-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--color-white);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-md) 0;
+    border-bottom: var(--border);
+  }
+
+  .mobile-header-title {
+    text-transform: uppercase;
+    cursor: pointer;
+    flex: 1;
+    text-align: center;
+  }
+
+  .list-dropdown {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--color-white);
+    z-index: 100;
+    overflow-y: auto;
+    animation: slideDown 0.2s ease;
+  }
+
+  @keyframes slideDown {
+    from {
+      transform: translateY(-8px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .dropdown-item {
+    padding: var(--spacing-md) var(--spacing-margin);
+    cursor: pointer;
+    text-transform: uppercase;
     position: relative;
-    top: unset;
-    right: unset;
-    margin: unset;
-    margin-bottom: 20px;
+  }
+
+  .dropdown-item::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: var(--spacing-margin);
+    right: var(--spacing-margin);
+    border-bottom: var(--border);
+  }
+
+  .dropdown-item.active {
+    text-decoration: underline;
+  }
+
+  .dropdown-home {
+    padding-bottom: var(--spacing-xlg);
+    padding-top: var(--spacing-xlg);
+    display: flex;
+    justify-content: space-between;
   }
   .vote-container {
     display: flex;
@@ -326,6 +589,9 @@
     width: 100%;
     flex: 1;
     min-height: 0;
+  }
+  .mobile.vote-container {
+    padding-bottom: var(--spacing-lg);
   }
 
   .images-row {
@@ -363,6 +629,9 @@
     animation: floatUp 1s ease-out forwards;
     white-space: nowrap;
   }
+  /* .elo-popup-test {
+    animation: unset;
+  } */
 
   @keyframes floatUp {
     0% {
@@ -409,12 +678,12 @@
 
   .vote-item.selected img,
   .vote-item.selected .img-empty {
-    transform: scale(4);
+    transform: scale(2);
   }
 
   .vote-item.loser img,
   .vote-item.loser .img-empty {
-    transform: scale(0.9);
+    /* transform: scale(0.5); */
     filter: grayscale(1);
   }
 
@@ -431,25 +700,112 @@
   .arrow svg {
     display: block;
   }
+  .mobile .arrow svg {
+    transform: none;
+  }
+  .mobile-or {
+    display: none;
+  }
 
-  .mobile-names-row {
+  .mobile .mobile-or {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    text-transform: uppercase;
+    padding: 0 var(--spacing-sm);
+    flex-shrink: 0;
+  }
+
+  .mobile-name {
     display: none;
   }
 
   .mobile .images-row {
-    flex-direction: column;
+    flex-direction: row;
+    align-items: stretch;
   }
-  .mobile .mobile-names-row {
+
+  .vote-side {
+    display: none;
+  }
+
+  .mobile .vote-side {
     display: flex;
     flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    justify-content: center;
     align-items: center;
     gap: var(--spacing-sm);
-    /* margin: 20px 0; */
+  }
+
+  .mobile .mobile-or + .vote-side {
+    flex-direction: column-reverse;
+  }
+
+  .mobile .mobile-name {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--spacing-sm) 0;
+  }
+
+  .mobile .mobile-name.hovered {
+    text-decoration: underline;
   }
   .mobile .names-row {
     display: none;
   }
-  .mobile .arrow {
-    display: none;
+
+  .mobile .name-inner {
+    position: relative;
+    display: inline-block;
+    background: linear-gradient(rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.12))
+      no-repeat left center;
+    background-size: 0% 100%;
+  }
+
+  .mobile .elo-popup {
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    bottom: auto;
+    margin-left: 0.3em;
+    transform: translateY(-50%);
+    animation: slideRight 1s ease-out forwards;
+  }
+  .mobile .vote-item {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    max-width: 50vw;
+    max-height: 50vw;
+  }
+
+  .mobile .vote-item {
+    border: 1px solid var(--color-grey);
+    border-radius: 4px;
+    padding: var(--spacing-lg);
+  }
+
+  .mobile .vote-item img,
+  .mobile .vote-item .img-empty {
+    width: 100%;
+    height: 100%;
+    max-width: unset;
+    aspect-ratio: unset;
+    object-fit: contain;
+  }
+
+  @keyframes slideRight {
+    0% {
+      opacity: 1;
+      transform: translateX(0) translateY(-50%);
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(2em) translateY(-50%);
+    }
   }
 </style>

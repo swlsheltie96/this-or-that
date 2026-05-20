@@ -1,6 +1,11 @@
 <script>
-  import { onMount, onDestroy } from "svelte";
-  import { getSortedList, getListInfo, navigate } from "../lib/api.js";
+  import { onMount } from "svelte";
+  import {
+    getSortedList,
+    getListInfo,
+    getListsWithPopularity,
+    navigate,
+  } from "../lib/api.js";
 
   export let listName = "";
   export let isMobile = false;
@@ -12,13 +17,10 @@
   let view = "grid";
   let columns = isMobile ? 2 : 4;
   let listViewEl;
-  let voteBarHeight = 0;
-
-  function updateVoteBar() {
-    if (!listViewEl) return;
-    const bottom = listViewEl.getBoundingClientRect().bottom;
-    voteBarHeight = Math.max(0, window.innerHeight - Math.max(0, bottom));
-  }
+  let allLists = [];
+  let showDropdown = false;
+  let dropdownTop = 0;
+  let mobileHeaderEl;
   const MIN_COLUMNS = 2;
   const MAX_COLUMNS = 8;
 
@@ -54,20 +56,17 @@
     });
   }
 
-  onDestroy(() => {
-    window.removeEventListener("scroll", updateVoteBar);
-  });
-
   onMount(async () => {
     watchDPR();
-    window.addEventListener("scroll", updateVoteBar, { passive: true });
     try {
-      const [sorted, info] = await Promise.all([
+      const [sorted, info, lists] = await Promise.all([
         getSortedList(listName),
         getListInfo(listName),
+        getListsWithPopularity(),
       ]);
       items = sorted || [];
       listInfo = info || {};
+      allLists = lists?.lists || [];
     } catch (e) {
       console.error(e);
     } finally {
@@ -79,10 +78,62 @@
 {#if loading}
   <!-- <p class="text-base">Loading...</p> -->
 {:else}
+  {#if isMobile}
+    <div class="mobile-header" bind:this={mobileHeaderEl}>
+      <button
+        class="text-small"
+        on:click={() =>
+          navigate(`/?view=edit&listName=${encodeURIComponent(listName)}`)}
+        >Edit</button
+      >
+      <div
+        class="mobile-header-title text-small"
+        on:click={() => {
+          dropdownTop = mobileHeaderEl.getBoundingClientRect().bottom;
+          showDropdown = !showDropdown;
+        }}
+      >
+        {listName} ▾
+      </div>
+      <button
+        class="text-small"
+        on:click={() =>
+          navigate(`/?view=vote&listName=${encodeURIComponent(listName)}`)}
+        >Vote</button
+      >
+    </div>
+    {#if showDropdown}
+      <div class="list-dropdown" style="top: {dropdownTop}px">
+        <div
+          class="dropdown-item dropdown-home text-small"
+          on:click={() => {
+            showDropdown = false;
+            navigate("/");
+          }}
+        >
+          <span>This</span><span>or</span><span>That</span>
+        </div>
+        {#each allLists as list}
+          <div
+            class="dropdown-item text-base"
+            class:active={list.name === listName}
+            on:click={() => {
+              showDropdown = false;
+              navigate(
+                `/?view=listview&listName=${encodeURIComponent(list.name)}`,
+              );
+            }}
+          >
+            {list.name}
+          </div>
+        {/each}
+      </div>
+    {/if}
+  {/if}
+
   <div class="list-header" class:mobile={isMobile}>
     <div class="list-header-data">
-      <div class="list-title text-base">{listName}</div>
-      <div class="list-data text-base">
+      <div class="list-data text-small">
         By {listInfo.author}<br />
         {listInfo.itemCount} items<br />
         {listInfo.voteCount} votes<br />
@@ -131,6 +182,9 @@
           <div class="item-data-wrapper">
             <div class="item-data rank text-base">{i + 1}</div>
             <div class="item-data name text-base">{item.name}</div>
+            <div class="item-data elo-mobile text-base"
+              >{Math.round(item.elo)}</div
+            >
           </div>
 
           <div class="item-data img">
@@ -160,15 +214,16 @@
     >Edit</button
   >
 
-  <div class="vote-spacer"></div>
-  <div class="vote-bar" style="height: {voteBarHeight}px">
-    <button
-      class="text-base"
-      on:click={() =>
-        navigate(`/?view=vote&listName=${encodeURIComponent(listName)}`)}
-      >Vote</button
-    >
-  </div>
+  {#if !isMobile}
+    <div class="vote-bar">
+      <button
+        class="text-small vote-btn"
+        on:click={() =>
+          navigate(`/?view=vote&listName=${encodeURIComponent(listName)}`)}
+        >Vote</button
+      >
+    </div>
+  {/if}
 {/if}
 
 <style>
@@ -210,34 +265,86 @@
     width: 100%;
   }
 
-  .vote-spacer {
-    height: 100vh;
-  }
-
   .vote-bar {
     position: fixed;
-    bottom: 0;
-    left: 0;
+    top: 20px;
     right: 0;
     display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    pointer-events: none;
+    gap: var(--spacing-md);
+    z-index: 2;
+  }
+  .mobile ~ .vote-bar,
+  .mobile-header ~ * .vote-bar {
+    display: none;
   }
 
-  .vote-bar button {
-    width: var(--desktop-max-width);
-    margin: auto;
-    cursor: pointer;
+  .mobile-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
     background: var(--color-white);
-    pointer-events: auto;
-    height: 100%;
-    min-height: fit-content;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-md) 0;
+    border-bottom: var(--border);
   }
 
-  .vote-bar button:hover {
-    background: var(--color-black);
-    color: var(--color-white);
+  .mobile-header-title {
+    text-transform: uppercase;
+    cursor: pointer;
+    flex: 1;
+    text-align: center;
+  }
+
+  .list-dropdown {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--color-white);
+    z-index: 100;
+    overflow-y: auto;
+    animation: slideDown 0.2s ease;
+  }
+
+  @keyframes slideDown {
+    from {
+      transform: translateY(-8px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .dropdown-item {
+    padding: var(--spacing-md) var(--spacing-margin);
+    cursor: pointer;
+    text-transform: uppercase;
+    position: relative;
+  }
+
+  .dropdown-item::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: var(--spacing-margin);
+    right: var(--spacing-margin);
+    border-bottom: var(--border);
+  }
+
+  .dropdown-item.active {
+    text-decoration: underline;
+  }
+
+  .dropdown-home {
+    /* color: var(--color-text-faded); */
+    padding-bottom: var(--spacing-xlg);
+    padding-top: var(--spacing-xlg);
+    display: flex;
+    justify-content: space-between;
   }
 
   .page-container {
@@ -268,9 +375,6 @@
   }
   .mobile.edit-btn {
     display: none;
-  }
-  .mobile.mobile-edit-btn {
-    display: block;
   }
   .list-view {
     width: var(--desktop-max-width);
@@ -303,13 +407,15 @@
   .view-list .item-list {
     display: flex;
     align-items: center;
-    height: 15rem;
     gap: var(--spacing-md);
   }
   .view-list .item-data-wrapper {
     gap: var(--spacing-md);
   }
-  .view-list .item-list .item-data-wrapper,
+  .view-list .item-list .item-data-wrapper {
+    flex: 1;
+    min-width: 0;
+  }
   .view-list .item-list .elo {
     flex: 1;
   }
@@ -318,20 +424,45 @@
     text-align: right;
   }
   .view-list .img {
-    height: 100%;
+    width: 25vw;
+    height: 25vw;
+    flex-shrink: 0;
   }
 
   .view-list .img img,
-  .view-list .img-empty {
-    height: 100%;
-    aspect-ratio: 1/1;
-  }
-
-  .view-list .img img {
+  .view-list .img .img-empty {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    aspect-ratio: 1/1;
+    aspect-ratio: unset;
+  }
+
+  .page-container.mobile .view-list .img {
+    order: 1;
+  }
+  .page-container.mobile .view-list .item-data-wrapper {
+    order: 2;
+  }
+  .page-container.mobile .view-list .elo {
+    order: 3;
+  }
+
+  .elo-mobile {
+    display: none;
+  }
+  .page-container.mobile .elo-mobile {
+    display: block;
+    flex: 3;
+    text-align: right;
+  }
+  .page-container.mobile .view-list .item-list .rank {
+    flex: 1;
+  }
+  .page-container.mobile .view-list .item-list .name {
+    flex: 6;
+  }
+  .page-container.mobile .view-list .item-list .elo {
+    display: none;
   }
 
   .view-list .item-grid {

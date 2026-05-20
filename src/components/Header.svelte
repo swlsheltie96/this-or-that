@@ -5,11 +5,25 @@
   export let fullWidth = false;
   export let isMobile = false;
   export let isHome = false;
+
+  let mobileInfoHeight = 0;
+
+  $: document.documentElement.style.setProperty(
+    "--header-top-offset",
+    `calc(var(--ticker-height) + ${mobileInfoHeight}px)`,
+  );
 </script>
 
 <!--
   <span class="header-stat">{onlineUsers} online</span>
   <span class="header-stat">{votesLastHour} votes/hr</span> -->
+
+{#if isHome && isMobile}
+  <div class="mobile-info text-small" bind:clientHeight={mobileInfoHeight}>
+    A pairwise ranking tool powered by the Elo algorithm. Your ranking problems
+    solved.
+  </div>
+{/if}
 
 <a href="/">
   <div
@@ -17,6 +31,9 @@
     class:compact
     class:mobile={isMobile}
     class:home={isHome}
+    style={isMobile && isHome
+      ? `top: calc(var(--ticker-height) + ${mobileInfoHeight}px)`
+      : undefined}
   >
     <div
       class="header"
@@ -24,9 +41,18 @@
       class:full-width={fullWidth}
       class:home={isHome}
     >
-      <div id="header-this" class="text-base">This</div>
-      <div id="header-or" class="text-base">or</div>
-      <div id="header-that" class="text-base">That</div>
+      <div
+        id="header-this"
+        class={isMobile && !isHome ? "text-small" : "text-base"}>This</div
+      >
+      <div
+        id="header-or"
+        class={isMobile && !isHome ? "text-small" : "text-base"}>or</div
+      >
+      <div
+        id="header-that"
+        class={isMobile && !isHome ? "text-small" : "text-base"}>That</div
+      >
     </div>
   </div>
 </a>
@@ -46,7 +72,8 @@
 
   .mobile:not(.home) {
     top: 0;
-    height: unset;
+    height: var(--ticker-height, 40px);
+    border-bottom: 1px solid var(--color-grey);
   }
 
   /* Compact pages don't need the spacer — header floats in the corner */
@@ -70,7 +97,7 @@
     text-transform: uppercase;
     gap: 0.25em;
     justify-content: center;
-    padding: 20px 0;
+    padding: var(--spacing-lg) 0;
     z-index: 2;
     transition:
       transform 0.5s ease,
@@ -84,6 +111,9 @@
     height: 100%;
     align-items: center;
     position: relative;
+
+    padding-top: 0;
+    /* margin-top: 20px; */
   }
 
   .header.compact {
@@ -137,5 +167,15 @@
   .mobile .header.compact #header-or,
   .mobile .header.compact #header-that {
     display: none;
+  }
+
+  .mobile-info {
+    position: sticky;
+    top: var(--ticker-height);
+    z-index: 3;
+    text-transform: uppercase;
+    text-align: center;
+    padding: calc(2 * var(--spacing-xlg)) var(--spacing-margin)
+      var(--spacing-xlg);
   }
 </style>

@@ -98,14 +98,16 @@
     {#if currentView === "home" && isMobile}
       <TickerTape {isMobile} />
     {/if}
-    <Header
-      {onlineUsers}
-      {votesLastHour}
-      {isMobile}
-      isHome={currentView === "home"}
-      compact={currentView !== "home" && currentView !== "vote"}
-      fullWidth={currentView === "vote"}
-    />
+    {#if !(isMobile && (currentView === "listview" || currentView === "vote"))}
+      <Header
+        {onlineUsers}
+        {votesLastHour}
+        {isMobile}
+        isHome={currentView === "home"}
+        compact={currentView !== "home" && currentView !== "vote" && currentView !== "listview"}
+        fullWidth={currentView === "vote" || currentView === "listview"}
+      />
+    {/if}
 
     {#if currentView === "home"}
       <Home {isMobile} />

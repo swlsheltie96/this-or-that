@@ -2,6 +2,7 @@
   import { onMount, onDestroy, tick } from "svelte";
   import { getListsWithPopularity, navigate } from "../lib/api.js";
   import TickerTape from "./TickerTape.svelte";
+  import { onTick } from "../lib/sharedTick.js";
 
   export let isMobile = false;
 
@@ -19,7 +20,15 @@
   let highlightedIndex = 0;
   let listItemEls = [];
   let listsEl;
+  let spacerEl;
   let hasScrolled = false;
+  let overlayContentHeight = 0;
+
+  $: if (isMobile && overlayContentHeight)
+    document.documentElement.style.setProperty(
+      "--header-home-mobile",
+      `calc(${overlayContentHeight}px + 1.25rem + var(--spacing-md) + var(--spacing-xlg))`,
+    );
 
   const sortOptions = [
     { key: "title", label: "Title" },
@@ -59,11 +68,12 @@
     if (!listsEl || !isMobile) return;
     hasScrolled = listsEl.scrollTop > 0;
     const containerTop = listsEl.getBoundingClientRect().top;
+    const targetY = containerTop + (spacerEl?.offsetHeight ?? 0);
     let closestIdx = 0;
     let closestDist = Infinity;
     listItemEls.forEach((el, i) => {
       if (!el) return;
-      const dist = Math.abs(el.getBoundingClientRect().top - containerTop);
+      const dist = Math.abs(el.getBoundingClientRect().top - targetY);
       if (dist < closestDist) {
         closestDist = dist;
         closestIdx = i;
@@ -72,7 +82,45 @@
     highlightedIndex = closestIdx;
   }
 
+  let snapping = false;
+  let wheelAccum = 0;
+  let wheelResetTimer;
+  const WHEEL_THRESHOLD = 2;
+
+  function snapBy(direction) {
+    if (!listsEl || snapping) return;
+    snapping = true;
+    const itemHeight =
+      listItemEls.find((el) => el)?.offsetHeight ??
+      spacerEl?.offsetHeight ??
+      50;
+    listsEl.scrollBy({ top: direction * itemHeight, behavior: "smooth" });
+    setTimeout(() => {
+      snapping = false;
+    }, 100);
+  }
+
+  function handleWheel(e) {
+    if (!listsEl) return;
+    e.preventDefault();
+    if (snapping) return;
+    wheelAccum += e.deltaY;
+    clearTimeout(wheelResetTimer);
+    wheelResetTimer = setTimeout(() => {
+      wheelAccum = 0;
+    }, 200);
+    if (Math.abs(wheelAccum) < WHEEL_THRESHOLD) return;
+    const direction = Math.sign(wheelAccum);
+    wheelAccum = 0;
+    snapBy(direction);
+  }
+
+
   onMount(async () => {
+    if (isMobile) {
+      document.body.style.overflow = "hidden";
+      window.addEventListener("wheel", handleWheel, { passive: false });
+    }
     try {
       const response = await getListsWithPopularity();
       lists = response.lists || [];
@@ -89,10 +137,62 @@
     }
   });
 
-  onDestroy(() => clearInterval(cycleTimer));
+  function marquee(node, text) {
+    let raf;
+    let unsubScroll;
+    let position = 0;
+
+    function startScroll() {
+      unsubScroll?.();
+      position = 0;
+      unsubScroll = onTick(() => {
+        position -= 5;
+        const halfWidth = node.scrollWidth / 2;
+        if (Math.abs(position) >= halfWidth) position = 0;
+        node.style.transform = `translateX(${position}px)`;
+      });
+    }
+
+    function apply(t) {
+      cancelAnimationFrame(raf);
+      unsubScroll?.();
+      node.style.transform = "";
+      node.textContent = t || "";
+      if (!t) return;
+      raf = requestAnimationFrame(() => {
+        const parent = node.parentElement;
+        if (parent && node.offsetWidth > parent.clientWidth) {
+          node.textContent = t + "     " + t;
+          parent.style.textAlign = "left";
+          startScroll();
+        } else if (parent) {
+          parent.style.textAlign = "center";
+        }
+      });
+    }
+
+    apply(text);
+    return {
+      update: apply,
+      destroy() {
+        cancelAnimationFrame(raf);
+        unsubScroll?.();
+      },
+    };
+  }
+
+  onDestroy(() => {
+    clearInterval(cycleTimer);
+    if (isMobile) {
+      document.body.style.overflow = "";
+      window.removeEventListener("wheel", handleWheel);
+    }
+  });
 
   $: displayList = isMobile
-    ? (hasScrolled ? (sortedLists[highlightedIndex] ?? null) : (lists[randomIdx] ?? null))
+    ? hasScrolled
+      ? (sortedLists[highlightedIndex] ?? null)
+      : (lists[randomIdx] ?? null)
     : (hoveredList ?? lists[randomIdx] ?? null);
   $: overlay_img_1 = (displayList?.previewImages || [])[0] || null;
   $: overlay_img_2 = (displayList?.previewImages || [])[1] || null;
@@ -106,23 +206,15 @@
   {#if !isMobile}<TickerTape {isMobile} />{/if}
   {#if isMobile}
     <div class="mobile-controls">
-      <button
-        class="mobile-info-btn text-base"
-        class:active={showInfo}
-        on:click={() => (showInfo = !showInfo)}>Info</button
-      >
-      <button
-        class="sort-btn text-base"
-        on:click={() => (showSortMenu = !showSortMenu)}
-      >
+      <button class="sort-btn" on:click={() => (showSortMenu = !showSortMenu)}>
         Sort: {sortOptions.find((o) => o.key === sortBy)?.label}
       </button>
+      <button on:click={() => navigate("/?view=edit")}>Create a List</button>
     </div>
     {#if showSortMenu}
       <div class="sort-menu">
         {#each sortOptions as opt}
           <button
-            class="text-base"
             class:active={sortBy === opt.key}
             on:click={() => {
               sortBy = opt.key;
@@ -133,17 +225,13 @@
       </div>
     {/if}
   {:else}
-    <button
-      class="sort-btn text-base"
-      on:click={() => (showSortMenu = !showSortMenu)}
-    >
+    <button class="sort-btn" on:click={() => (showSortMenu = !showSortMenu)}>
       Sort: {sortOptions.find((o) => o.key === sortBy)?.label}
     </button>
     {#if showSortMenu}
       <div class="sort-menu">
         {#each sortOptions as opt}
           <button
-            class="text-base"
             class:active={sortBy === opt.key}
             on:click={() => {
               sortBy = opt.key;
@@ -154,11 +242,11 @@
       </div>
     {/if}
   {/if}
-  <button class="create-btn text-base" on:click={() => navigate("/?view=edit")}
+  <button class="create-btn" on:click={() => navigate("/?view=edit")}
     >Create a List</button
   >
   <button
-    class="info-btn text-base"
+    class="info-btn"
     class:active={showInfo}
     on:click={() => (showInfo = !showInfo)}>Info</button
   >
@@ -175,8 +263,13 @@
     </div>
   {/if}
 
-  <div class="preview-overlay" class:mobile={isMobile}>
-    <div class="overlay-content">
+  <div
+    class="preview-overlay"
+    class:mobile={isMobile}
+    on:click={() => isMobile && displayList && navigate(`/?view=vote&listName=${encodeURIComponent(displayList.name)}`)}
+    style={isMobile && displayList ? 'cursor: pointer;' : undefined}
+  >
+    <div class="overlay-content" bind:clientHeight={overlayContentHeight}>
       <div class="overlay-item">
         <div class="img-placeholder" bind:clientHeight={imgPlaceholderHeight}>
           {#if overlay_img_1}<img
@@ -184,11 +277,8 @@
               alt={overlay_item_1}
             />{/if}
         </div>
-        <div
-          class="text-base overlay-name"
-          style={isMobile
-            ? `top: calc(${imgPlaceholderHeight}px + var(--spacing-md))`
-            : ""}>{overlay_item_1}</div
+        <div class="text-base overlay-name"
+          ><span class="marquee-inner" use:marquee={overlay_item_1}></span></div
         >
       </div>
       <div class="text-base or">or</div>
@@ -199,11 +289,8 @@
               alt={overlay_item_2}
             />{/if}
         </div>
-        <div
-          class="text-base overlay-name"
-          style={isMobile
-            ? `top: calc(${imgPlaceholderHeight}px + var(--spacing-md))`
-            : ""}>{overlay_item_2}</div
+        <div class="text-base overlay-name"
+          ><span class="marquee-inner" use:marquee={overlay_item_2}></span></div
         >
       </div>
     </div>
@@ -215,12 +302,14 @@
     bind:this={listsEl}
     on:scroll={updateHighlight}
   >
+    {#if isMobile}<div class="list-spacer" bind:this={spacerEl}></div>{/if}
     {#each sortedLists as list, i}
       {@const item_1 = (list.itemsList || "").split(", ")[0]}
       {@const item_2 = (list.itemsList || "").split(", ")[1]}
       <div
         class="list"
-        class:highlighted={isMobile && i === highlightedIndex}
+        class:prev-item={isMobile && hasScrolled && i < highlightedIndex}
+        class:faded={isMobile && hasScrolled && i > highlightedIndex}
         bind:this={listItemEls[i]}
         on:click={() =>
           navigate(`/?view=vote&listName=${encodeURIComponent(list.name)}`)}
@@ -246,12 +335,6 @@
         </div>
       </div>
     {/each}
-    {#if isMobile}
-      <button
-        class="mobile-create-btn text-base"
-        on:click={() => navigate("/?view=edit")}>Create a List</button
-      >
-    {/if}
   </div>
 {/if}
 
@@ -273,7 +356,7 @@
     left: 10px;
     z-index: 3;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: flex-start;
     gap: var(--spacing-md);
   }
@@ -374,11 +457,26 @@
   .lists.mobile .list {
     display: flex;
   }
-  .lists.mobile .list-col.recency { order: 1; flex: 0.5; text-align: left; }
-  .lists.mobile .list-col.title   { order: 2; flex: 3; text-align: center; }
-  .lists.mobile .list-col.title p { text-align: center; }
-  .lists.mobile .list-col.length  { order: 3; flex: 0.5; }
-  .lists.mobile .list-col.preview { display: none; }
+  .lists.mobile .list-col.recency {
+    order: 1;
+    flex: 0.5;
+    text-align: left;
+  }
+  .lists.mobile .list-col.title {
+    order: 2;
+    flex: 3;
+    text-align: center;
+  }
+  .lists.mobile .list-col.title p {
+    text-align: center;
+  }
+  .lists.mobile .list-col.length {
+    order: 3;
+    flex: 0.5;
+  }
+  .lists.mobile .list-col.preview {
+    display: none;
+  }
   .preview-vote {
     color: var(--color-grey);
     display: flex;
@@ -389,10 +487,19 @@
     text-transform: uppercase;
   }
   .list:hover {
-    background-color: var(--color-highlight);
+    background-color: transparent;
   }
-  .list.highlighted {
-    /* background-color: var(--color-highlight); */
+
+  .list {
+    transition: opacity 0.25s ease;
+  }
+
+  .list.prev-item {
+    opacity: 0;
+  }
+
+  .list.faded {
+    opacity: 0.5;
   }
   .preview {
     width: var(--desktop-max-width);
@@ -426,7 +533,8 @@
 
   .mobile.preview-overlay {
     height: var(--header-home-mobile);
-    top: var(--ticker-height);
+    top: var(--header-top-offset, var(--ticker-height));
+    pointer-events: auto;
   }
 
   .overlay-content {
@@ -437,6 +545,7 @@
   }
   .mobile .overlay-content {
     width: 100%;
+    box-sizing: border-box;
     padding: 20px;
     align-items: flex-start;
   }
@@ -471,19 +580,33 @@
     aspect-ratio: 1 / 1;
   }
   .overlay-name {
-    text-align: center;
+    text-align: left;
     margin-top: var(--spacing-md);
+    overflow: hidden;
+    white-space: nowrap;
+    width: 100%;
   }
   .mobile .overlay-name {
-    position: absolute;
-    width: 100%;
+    position: relative;
     max-width: 20rem;
   }
 
+  .marquee-inner {
+    display: inline-block;
+  }
+
   .lists.mobile {
-    height: 50vh;
+    height: calc(
+      100dvh - var(--header-top-offset, var(--ticker-height)) -
+        var(--header-home-mobile)
+    );
     overflow-y: scroll;
     scroll-snap-type: y mandatory;
+    scrollbar-width: none;
+  }
+
+  .lists.mobile::-webkit-scrollbar {
+    display: none;
   }
   .lists.mobile::after {
     content: "";
@@ -494,11 +617,20 @@
     scroll-snap-align: start;
   }
 
+  .list-spacer {
+    scroll-snap-align: start;
+    height: var(--cell-height);
+    flex-shrink: 0;
+  }
 
   .mobile-controls {
     display: flex;
     justify-content: space-between;
-    margin-bottom: var(--spacing-md);
+    position: fixed;
+    bottom: var(--spacing-lg);
+    left: var(--spacing-margin);
+    right: var(--spacing-margin);
+    z-index: 3;
   }
 
   .mobile-controls button {
