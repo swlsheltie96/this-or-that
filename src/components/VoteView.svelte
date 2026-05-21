@@ -65,7 +65,7 @@
     }
   }
 
-  $: mobileArrowStyle = `position: fixed; bottom: 20px; left: ${arrowCurrentPx ?? (window.innerWidth / 2)}px; transform: translateX(-50%); pointer-events: none; z-index: 10;`;
+  $: mobileArrowStyle = `position: fixed; bottom: 20px; left: ${arrowCurrentPx ?? window.innerWidth / 2}px; transform: translateX(-50%); pointer-events: none; z-index: 10;`;
 
   $: arrowStyle = (() => {
     if (!hoveredItem || selectedItem !== 0) return "display: none";
@@ -373,9 +373,6 @@
           class:selected={selectedItem === 1}
           class:loser={selectedItem === 2}
           bind:this={voteItem1El}
-          style={isMobile && voteItemSize
-            ? `width:${voteItemSize}px;height:${voteItemSize}px;flex:none`
-            : undefined}
           role="button"
           tabindex="0"
           on:click={() => {
@@ -731,17 +728,14 @@
 
   .mobile .vote-side {
     display: flex;
-    flex-direction: column;
+    flex-direction: column-reverse;
     flex: 1;
     min-width: 0;
     min-height: 0;
+    overflow: hidden;
     justify-content: center;
     align-items: center;
     gap: var(--spacing-sm);
-  }
-
-  .mobile .mobile-or + .vote-side {
-    flex-direction: column-reverse;
   }
 
   .mobile .mobile-name {
@@ -778,9 +772,9 @@
   .mobile .vote-item {
     flex: 1;
     width: 100%;
+    box-sizing: border-box;
     min-height: 0;
-    max-width: 50vw;
-    max-height: 50vw;
+    max-width: 100%;
   }
 
   .mobile .vote-item {
