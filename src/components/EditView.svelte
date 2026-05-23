@@ -120,9 +120,7 @@
             data: { picture: row.url },
           });
         }
-        navigate(
-          `/?view=vote&listName=${encodeURIComponent(title.trim())}`,
-        );
+        navigate(`/?view=vote&listName=${encodeURIComponent(title.trim())}`);
       } else {
         setListPassword(listName, password);
         await updateListMetadata(
@@ -146,9 +144,7 @@
             await addItem(title.trim(), { name, data });
           }
         }
-        navigate(
-          `/?view=vote&listName=${encodeURIComponent(title.trim())}`,
-        );
+        navigate(`/?view=vote&listName=${encodeURIComponent(title.trim())}`);
       }
     } catch (e) {
       error = e.message;
@@ -176,7 +172,10 @@
     <Header />
     <div class="list-name-bar no-border">
       <button class="text-small" disabled>Vote</button>
-      <div class="list-name-center text-small" on:click={() => (showDropdown = false)}>
+      <div
+        class="list-name-center text-small"
+        on:click={() => (showDropdown = false)}
+      >
         <span>{listName}</span>
         <span class="chevron open">▾</span>
       </div>
@@ -189,7 +188,10 @@
   {#if !isNew}
     <div class="list-name-bar">
       <button class="text-small" disabled>Vote</button>
-      <div class="list-name-center text-small" on:click={() => (showDropdown = true)}>
+      <div
+        class="list-name-center text-small"
+        on:click={() => (showDropdown = true)}
+      >
         <span>{listName}</span>
         <span class="chevron">▾</span>
       </div>
@@ -237,18 +239,20 @@
     <div class="items-table">
       <div class="table-header">
         <span class="col-name text-small">Name</span>
+        <div class="col-thumb"></div>
         <span class="col-url text-small">URL</span>
+        <div class="del-spacer"></div>
       </div>
       {#each rows as row, i}
         <div class="table-row">
           <input class="col-name text-small" bind:value={row.name} />
-          {#if row.url}
-            <div class="col-thumb">
-              <img src={row.url} alt="" />
-            </div>
-          {/if}
+          <div class="col-thumb">
+            {#if row.url}<img src={row.url} alt="" />{/if}
+          </div>
           <input class="col-url text-small" bind:value={row.url} />
-          <button class="del-btn text-small" on:click={() => removeRow(i)}>×</button>
+          <button class="del-btn text-small" on:click={() => removeRow(i)}
+            >×</button
+          >
         </div>
       {/each}
       <div class="add-row">
@@ -262,7 +266,7 @@
   </div>
 
   <button class="edit-fab text-small active" on:click={save} disabled={saving}>
-    {isNew ? (saving ? "Creating" : "Create") : (saving ? "Saving" : "Editing")}
+    {isNew ? (saving ? "Creating" : "Create") : saving ? "Saving" : "Editing"}
   </button>
 {/if}
 
@@ -313,6 +317,12 @@
 
   .chevron {
     flex-shrink: 0;
+    transition: transform 0.2s ease;
+    transform: rotate(180deg);
+  }
+
+  .chevron.open {
+    transform: rotate(0deg);
   }
 
   button:disabled {
@@ -339,7 +349,9 @@
     align-items: center;
     gap: var(--spacing-md);
     padding: var(--spacing-margin);
+    padding-bottom: var(--spacing-md);
     border-bottom: var(--border);
+    /* min-height: calc(25px + var(--spacing-md)); */
   }
 
   .field-row label {
@@ -368,8 +380,15 @@
   }
 
   @keyframes fadeHighlight {
-    0%, 66% { background-color: red; color: white; }
-    100% { background-color: transparent; color: inherit; }
+    0%,
+    66% {
+      background-color: red;
+      color: white;
+    }
+    100% {
+      background-color: transparent;
+      color: inherit;
+    }
   }
 
   /* items table */
@@ -387,6 +406,13 @@
     border-bottom: var(--border);
     color: var(--color-text-faded);
     text-transform: uppercase;
+  }
+
+  @media (min-width: 740px) {
+    .table-header {
+      align-items: center;
+      padding-left: 2px;
+    }
   }
 
   .table-row {
@@ -439,6 +465,11 @@
     background: var(--color-grey);
   }
 
+  .del-spacer {
+    flex-shrink: 0;
+    width: 20px;
+  }
+
   .del-btn {
     flex-shrink: 0;
     background: none;
@@ -472,5 +503,4 @@
   .edit-fab:disabled {
     opacity: 0.7;
   }
-
 </style>

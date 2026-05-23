@@ -28,6 +28,7 @@
 
   $: topItemName = rankedItems[topItemIndex]?.name ?? "";
   let hoveredItemName = "";
+  $: gridHeaderName = isMobile ? topItemName : (hoveredItemName || rankedItems[0]?.name || "");
 
   function handleGridScroll() {
     if (!gridScrollEl || rankedItems.length === 0) return;
@@ -58,6 +59,7 @@
       topItemIndex = 0;
       const res = await getSortedList(listName);
       rankedItems = (res || []).map((item, i) => ({ ...item, rank: i + 1 }));
+      if (!isMobile) hoveredItemName = rankedItems[0]?.name ?? "";
     } catch (e) {}
   }
 
@@ -286,7 +288,7 @@
   {#if viewMode !== "vote"}
     <div class="mobile-grid-container">
       <div class="grid-header">
-        <span class="text-small">{isMobile ? topItemName : hoveredItemName}</span>
+        <span class="text-small">{gridHeaderName}</span>
         {#if listInfo?.data?.description}
           <span class="text-small grid-description"
             >{listInfo.data.description}</span
@@ -303,7 +305,6 @@
             {#each rankedItems as item, i}
               <div bind:this={itemEls[i]}
                 on:mouseenter={() => { if (!isMobile) hoveredItemName = item.name; }}
-                on:mouseleave={() => { if (!isMobile) hoveredItemName = ""; }}
               >
                 <GridItem
                   rank={item.rank}
@@ -319,7 +320,6 @@
             {#each rankedItems as item, i}
               <div bind:this={itemEls[i]}
                 on:mouseenter={() => { if (!isMobile) hoveredItemName = item.name; }}
-                on:mouseleave={() => { if (!isMobile) hoveredItemName = ""; }}
               >
                 <ListViewItem
                   rank={item.rank}
@@ -516,10 +516,11 @@
   .chevron {
     flex-shrink: 0;
     transition: transform 0.2s ease;
+    transform: rotate(180deg);
   }
 
   .chevron.open {
-    transform: rotate(180deg);
+    transform: rotate(0deg);
   }
 
   button.active {
