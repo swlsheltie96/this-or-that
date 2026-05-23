@@ -181,7 +181,7 @@
       </div>
       <button class="text-small" disabled>List</button>
     </div>
-    <HomeDropdown isMobile={true} />
+    <HomeDropdown {isMobile} />
   </div>
 {:else}
   {#if isMobile}<Header />{/if}

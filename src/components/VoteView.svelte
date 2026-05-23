@@ -5,6 +5,7 @@
     vote,
     getListInfo,
     getSortedList,
+    getEloHistory,
     navigate,
   } from "../lib/api.js";
   import Header from "./Header.svelte";
@@ -28,7 +29,70 @@
 
   $: topItemName = rankedItems[topItemIndex]?.name ?? "";
   let hoveredItemName = "";
-  $: gridHeaderName = isMobile ? topItemName : (hoveredItemName || rankedItems[0]?.name || "");
+  $: gridHeaderName = isMobile
+    ? topItemName
+    : hoveredItemName || rankedItems[0]?.name || "";
+
+  let historyCache = new Map();
+  let itemHistory = [];
+  let gridHeaderHeight = 0;
+
+  $: recentDelta =
+    itemHistory.length >= 2
+      ? Math.round(
+          itemHistory[itemHistory.length - 1].rating -
+            itemHistory[itemHistory.length - 2].rating,
+        )
+      : null;
+
+  $: sparkPoints = (() => {
+    if (itemHistory.length < 2) return "";
+    const W = 120;
+    const H = (gridHeaderHeight - 6) || 18;
+    const ratings = itemHistory.map((h) => h.rating);
+    const min = Math.min(...ratings);
+    const max = Math.max(...ratings);
+    const range = max - min || 1;
+    return ratings
+      .map((r, i) => {
+        const x = (i / (ratings.length - 1)) * W;
+        const y = H - ((r - min) / range) * H;
+        return `${x},${y}`;
+      })
+      .join(" ");
+  })();
+
+  async function loadItemHistory(name) {
+    if (!name) {
+      itemHistory = [];
+      return;
+    }
+    if (historyCache.has(name)) {
+      itemHistory = historyCache.get(name);
+      return;
+    }
+    try {
+      const res = await getEloHistory(listName, name);
+      const h = res.history || [];
+      historyCache.set(name, h);
+      itemHistory = h;
+    } catch (e) {
+      itemHistory = [];
+    }
+  }
+
+  $: loadItemHistory(gridHeaderName);
+
+  function timeAgo(ts) {
+    if (!ts) return "—";
+    const d = new Date(ts.includes("T") ? ts : ts.replace(" ", "T") + "Z");
+    if (isNaN(d.getTime())) return "—";
+    const mins = Math.floor((Date.now() - d.getTime()) / 60000);
+    if (mins < 60) return `${mins}m`;
+    if (mins < 1440) return `${Math.floor(mins / 60)}h`;
+    if (mins < 10080) return `${Math.floor(mins / 1440)}d`;
+    return `${Math.floor(mins / 10080)}w`;
+  }
 
   function handleGridScroll() {
     if (!gridScrollEl || rankedItems.length === 0) return;
@@ -39,6 +103,10 @@
         (scrollTop / scrollable) * (rankedItems.length - 1),
       );
     } else {
+      if (scrollTop + clientHeight >= scrollHeight - 5) {
+        topItemIndex = rankedItems.length - 1;
+        return;
+      }
       const containerTop = gridScrollEl.getBoundingClientRect().top;
       let closestIdx = 0;
       let closestDist = Infinity;
@@ -81,6 +149,8 @@
   $: if (listName !== prevListName) {
     prevListName = listName;
     showDropdown = false;
+    historyCache = new Map();
+    itemHistory = [];
     loadPair();
     if (viewMode !== "vote") loadRankings();
   }
@@ -255,7 +325,7 @@
         }}>{viewButtonLabel}</button
       >
     </div>
-    <HomeDropdown isMobile={true} />
+    <HomeDropdown {isMobile} />
   </div>
 {:else}
   {#if isMobile}<Header />{/if}
@@ -287,12 +357,68 @@
 {:else if pairData}
   {#if viewMode !== "vote"}
     <div class="mobile-grid-container">
+      <div class="grid-data">
+        {#if listInfo?.author}<span
+            class:text-base={!isMobile}
+            class:text-small={isMobile}>By {listInfo.author}</span
+          >{/if}
+        <span
+          class:text-base={!isMobile}
+          class:text-small={isMobile}
+          class="grid-data-right"
+          bind:clientHeight={gridHeaderHeight}
+        >
+          <span class="grid-data-chip text-small">Votes</span>
+          {listInfo?.voteCount ?? 0}
+          <span class="grid-data-chip text-small">Last Voted</span>{timeAgo(
+            listInfo?.lastVoteTimestamp,
+          )}
+          <span class="grid-data-chip text-small">Length</span
+          >{listInfo?.itemCount ?? rankedItems.length}
+        </span>
+      </div>
       <div class="grid-header">
-        <span class="text-small">{gridHeaderName}</span>
-        {#if listInfo?.data?.description}
-          <span class="text-small grid-description"
-            >{listInfo.data.description}</span
-          >
+        <span class:text-base={!isMobile} class:text-small={isMobile}
+          >{gridHeaderName}</span
+        >
+        {#if itemHistory.length > 0}
+          <div class="grid-header-stats">
+            <span class="grid-data-chip text-small">Votes</span>
+            <span
+              class:text-base={!isMobile}
+              class:text-small={isMobile}
+              class="item-votes">{itemHistory.length}</span
+            >
+            {#if recentDelta !== null}
+              <span class="grid-data-chip text-small">Recent Change</span>
+              <span
+                class:text-base={!isMobile}
+                class:text-small={isMobile}
+                class="recent-delta"
+                class:positive={recentDelta > 0}
+                class:negative={recentDelta < 0}
+                >{recentDelta > 0 ? "+" : ""}{recentDelta}</span
+              >
+            {/if}
+            {#if sparkPoints}
+              <span class="grid-data-chip text-small">History</span>
+              <svg
+                class="sparkline"
+                width="120"
+                height={gridHeaderHeight - 6}
+                viewBox="0 0 120 {gridHeaderHeight - 6}"
+              >
+                <polyline
+                  points={sparkPoints}
+                  fill="none"
+                  stroke="var(--color-grey)"
+                  stroke-width="1"
+                  stroke-linejoin="round"
+                  stroke-linecap="round"
+                />
+              </svg>
+            {/if}
+          </div>
         {/if}
       </div>
       <div
@@ -303,8 +429,11 @@
         {#if viewMode === "grid"}
           <div class="grid-items">
             {#each rankedItems as item, i}
-              <div bind:this={itemEls[i]}
-                on:mouseenter={() => { if (!isMobile) hoveredItemName = item.name; }}
+              <div
+                bind:this={itemEls[i]}
+                on:mouseenter={() => {
+                  if (!isMobile) hoveredItemName = item.name;
+                }}
               >
                 <GridItem
                   rank={item.rank}
@@ -318,8 +447,11 @@
         {:else}
           <div class="list-items">
             {#each rankedItems as item, i}
-              <div bind:this={itemEls[i]}
-                on:mouseenter={() => { if (!isMobile) hoveredItemName = item.name; }}
+              <div
+                bind:this={itemEls[i]}
+                on:mouseenter={() => {
+                  if (!isMobile) hoveredItemName = item.name;
+                }}
               >
                 <ListViewItem
                   rank={item.rank}
@@ -771,6 +903,35 @@
     min-height: 0;
   }
 
+  .grid-data {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-margin);
+    border-bottom: var(--border);
+    gap: var(--spacing-md);
+    text-transform: uppercase;
+    color: var(--color-text-faded);
+  }
+
+  .grid-data-right {
+    display: flex;
+    /* align-items: center; */
+    gap: var(--spacing-md);
+    flex-shrink: 0;
+  }
+
+  .grid-data-chip {
+    background-color: var(--color-grey);
+    color: var(--color-white);
+    padding: 0 var(--spacing-sm);
+    padding-top: 1px;
+    display: flex;
+
+    justify-content: center;
+    align-items: center;
+  }
+
   .grid-header {
     display: flex;
     justify-content: space-between;
@@ -781,12 +942,50 @@
     text-transform: uppercase;
   }
 
-  .grid-description {
-    text-align: right;
-    flex: 1;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+  @media (max-width: 740px) {
+    .grid-data,
+    .grid-header {
+      overflow-x: auto;
+      scrollbar-width: none;
+      white-space: nowrap;
+      flex-wrap: nowrap;
+    }
+
+    .grid-data::-webkit-scrollbar,
+    .grid-header::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  .grid-header-stats {
+    display: flex;
+    /* align-items: s; */
+    gap: var(--spacing-md);
+    flex-shrink: 0;
+  }
+
+  .item-votes {
+    color: var(--color-text-faded);
+  }
+
+  .recent-delta {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .recent-delta.positive {
+    color: var(--color-green);
+  }
+
+  .recent-delta.negative {
+    color: var(--color-red);
+  }
+
+  .sparkline {
+    display: block;
+    overflow: visible;
+    border: var(--border);
+    padding: 3px 0;
+    border-radius: 2px;
   }
 
   .grid-scroll {
