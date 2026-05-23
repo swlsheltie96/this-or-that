@@ -54,8 +54,7 @@
           <span class="list-name text-small"
             >{item.list_name.toUpperCase()}</span
           >
-          <span class="item-name text-base">{item.item_name.toUpperCase()}</span
-          >
+          <span class="item-name text-base">{item.item_name}</span>
           <span
             class="ticker-stat text-base"
             class:positive={item.delta >= 0}
@@ -72,22 +71,12 @@
 
 <style>
   .ticker-wrap {
-    width: calc(100% + 2 * var(--spacing-margin));
-    overflow: hidden;
-    border-bottom: 1px solid var(--color-grey);
-    border-top: 1px solid var(--color-grey);
-    margin-left: calc(-1 * var(--spacing-margin));
+    border-bottom: var(--border);
     display: flex;
     align-items: center;
-    padding: var(--spacing-md) 0;
-    margin-bottom: var(--spacing-md);
-  }
-  .ticker-wrap.mobile {
-    border-top: none;
-    margin-bottom: 0;
-
-    position: sticky;
-    top: 0;
+    padding: var(--spacing-margin) 0;
+    width: 100vw;
+    overflow: hidden;
   }
 
   .ticker-track {
@@ -112,6 +101,11 @@
     align-items: center;
     background-color: var(--color-grey);
     padding: 0 var(--spacing-sm);
+  }
+  @media (min-width: 740px) {
+    .list-name {
+      padding-top: 2px;
+    }
   }
 
   .item-name {

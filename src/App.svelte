@@ -1,54 +1,27 @@
 <script>
-  import { onMount, onDestroy } from "svelte";
+  import { onMount } from "svelte";
   import Home from "./components/Home.svelte";
-  import HomeV1 from "./components/v1/Home.svelte";
-  import Header from "./components/Header.svelte";
-  import ListView from "./components/ListView.svelte";
-  import ListDetailView from "./components/v1/ListDetailView.svelte";
   import VoteView from "./components/VoteView.svelte";
   import EditView from "./components/EditView.svelte";
   import TickerTape from "./components/TickerTape.svelte";
-  import { getStats, sendHeartbeat } from "./lib/api.js";
-
+  import Header from "./components/Header.svelte";
+  import VotePreview from "./components/VotePreview.svelte";
+  import HomeDropdown from "./components/HomeDropdown.svelte";
   let currentView = "home";
   let listName = "";
+  let activeListName = "";
 
   let windowWidth = window.innerWidth;
   $: isMobile = windowWidth <= 740;
-
-  let onlineUsers = 0;
-  let votesLastHour = 0;
-  let statsInterval;
-
-  async function fetchStats() {
-    try {
-      const stats = await getStats();
-      onlineUsers = stats.onlineUsers;
-      votesLastHour = stats.votesLastHour;
-    } catch (e) {}
-  }
-
-  async function heartbeat() {
-    try {
-      await sendHeartbeat();
-    } catch (e) {}
-  }
 
   function getViewFromURL() {
     const urlParams = new URLSearchParams(window.location.search);
     const path = window.location.pathname;
 
     if (
-      path.includes("grid.html") ||
-      path.includes("list.html") ||
-      (urlParams.has("view") &&
-        (urlParams.get("view") === "grid" || urlParams.get("view") === "list"))
-    ) {
-      listName = urlParams.get("listName") || "";
-      return "listdetail";
-    } else if (
       path.includes("vote.html") ||
-      (urlParams.has("view") && urlParams.get("view") === "vote")
+      (urlParams.has("view") && urlParams.get("view") === "vote") ||
+      (urlParams.has("view") && (urlParams.get("view") === "listview" || urlParams.get("view") === "grid" || urlParams.get("view") === "list"))
     ) {
       listName = urlParams.get("listName") || "";
       return "vote";
@@ -60,11 +33,6 @@
       (urlParams.has("view") && urlParams.get("view") === "create")
     ) {
       return "create";
-    } else if (urlParams.has("view") && urlParams.get("view") === "listview") {
-      listName = urlParams.get("listName") || "";
-      return "listview";
-    } else if (path.startsWith("/v1")) {
-      return "home_v1";
     }
     return "home";
   }
@@ -75,17 +43,7 @@
 
   onMount(() => {
     window.addEventListener("popstate", updateView);
-    fetchStats();
-    heartbeat();
-    statsInterval = setInterval(() => {
-      fetchStats();
-      heartbeat();
-    }, 30000);
     return () => window.removeEventListener("popstate", updateView);
-  });
-
-  onDestroy(() => {
-    if (statsInterval) clearInterval(statsInterval);
   });
 
   currentView = getViewFromURL();
@@ -94,29 +52,32 @@
 <svelte:window bind:innerWidth={windowWidth} />
 
 <main>
-  <div class="app-container" class:vote-layout={currentView === "vote"}>
+  <div
+    class="app-container"
+    class:vote-layout={currentView === "vote"}
+    class:mobile-home={currentView === "home" && isMobile}
+    class:desktop-home={currentView === "home" && !isMobile}
+    class:mobile-edit={(currentView === "edit" || currentView === "create") && isMobile}
+  >
     {#if currentView === "home" && isMobile}
+      <Header />
       <TickerTape {isMobile} />
-    {/if}
-    {#if !(isMobile && (currentView === "listview" || currentView === "vote"))}
-      <Header
-        {onlineUsers}
-        {votesLastHour}
-        {isMobile}
-        isHome={currentView === "home"}
-        compact={currentView !== "home" && currentView !== "vote" && currentView !== "listview"}
-        fullWidth={currentView === "vote" || currentView === "listview"}
+      <div class="mobile-info text-small">
+        A pairwise ranking tool powered by the Elo algorithm. Your ranking
+        problems solved.
+      </div>
+      <VotePreview listName={activeListName} />
+      <HomeDropdown
+        isMobile={true}
+        on:activeList={(e) => (activeListName = e.detail.listName)}
       />
+    {/if}
+    {#if !isMobile}
+      <Header />
     {/if}
 
     {#if currentView === "home"}
       <Home {isMobile} />
-    {:else if currentView === "listview"}
-      <ListView {listName} {isMobile} />
-    {:else if currentView === "home_v1"}
-      <HomeV1 />
-    {:else if currentView === "listdetail"}
-      <ListDetailView {listName} />
     {:else if currentView === "vote"}
       <VoteView {listName} {isMobile} />
     {:else if currentView === "edit"}
@@ -137,11 +98,31 @@
   .app-container {
     display: flex;
     flex-direction: column;
-    /* flex: 1; */
-    min-height: 0;
-    margin: 0 20px;
+  }
+
+  .mobile-info {
+    padding: var(--spacing-margin);
+    text-align: center;
+    text-transform: uppercase;
   }
   .app-container.vote-layout {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .app-container.mobile-home {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .app-container.mobile-edit {
+    height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app-container.desktop-home {
     height: 100dvh;
     overflow: hidden;
   }

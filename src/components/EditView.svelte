@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import {
     createList,
     updateListMetadata,
@@ -13,9 +13,11 @@
     setListPassword,
     navigate,
   } from "../lib/api.js";
+  import Header from "./Header.svelte";
+  import HomeDropdown from "./HomeDropdown.svelte";
 
   export let listName = "";
-  export let isMobile = false;
+  export let isMobile = false; // used only to conditionally show Header
 
   const isNew = !listName;
 
@@ -31,6 +33,9 @@
   let loading = !isNew;
   let saving = false;
   let error = "";
+  let passwordHighlight = false;
+  let passwordInputEl;
+  let showDropdown = false;
 
   onMount(async () => {
     if (isNew) return;
@@ -90,6 +95,14 @@
 
   async function save() {
     if (saving) return;
+    if (!isNew && !password) {
+      passwordHighlight = false;
+      await tick();
+      passwordHighlight = true;
+      passwordInputEl?.focus();
+      setTimeout(() => (passwordHighlight = false), 1500);
+      return;
+    }
     saving = true;
     error = "";
     try {
@@ -108,7 +121,7 @@
           });
         }
         navigate(
-          `/?view=listview&listName=${encodeURIComponent(title.trim())}`,
+          `/?view=vote&listName=${encodeURIComponent(title.trim())}`,
         );
       } else {
         setListPassword(listName, password);
@@ -134,7 +147,7 @@
           }
         }
         navigate(
-          `/?view=listview&listName=${encodeURIComponent(title.trim())}`,
+          `/?view=vote&listName=${encodeURIComponent(title.trim())}`,
         );
       }
     } catch (e) {
@@ -157,263 +170,307 @@
 </script>
 
 {#if loading}
-  <!-- <p class="text-base">Loading...</p> -->
-{:else}
-  <div class="page-title text-base" class:mobile={isMobile}>{isNew ? "Creating..." : "Editing..."}</div>
-  <div class="edit-container" class:mobile={isMobile}>
-    <div class="actions">
-      <input
-        bind:this={fileInput}
-        type="file"
-        accept=".csv,.txt"
-        on:change={handleImport}
-        style="display:none"
-      />
-      {#if !isNew}
-        <button
-          class="text-base"
-          on:click={() =>
-            navigate(
-              `/?view=listview&listName=${encodeURIComponent(listName)}`,
-            )}>Back</button
-        >
-      {/if}
-      <button class="text-base" on:click={() => fileInput.click()}
-        >Import</button
-      >
-      <button class="text-base" on:click={save} disabled={saving}>
-        {saving ? "Saving..." : "Save"}
-      </button>
-      {#if !isNew}
-        <button class="text-base delete" on:click={handleDelete}>Delete</button>
-      {/if}
+  <!-- loading -->
+{:else if !isNew && showDropdown}
+  <div class="dropdown-overlay">
+    <Header />
+    <div class="list-name-bar no-border">
+      <button class="text-small" disabled>Vote</button>
+      <div class="list-name-center text-small" on:click={() => (showDropdown = false)}>
+        <span>{listName}</span>
+        <span class="chevron open">▾</span>
+      </div>
+      <button class="text-small" disabled>List</button>
     </div>
+    <HomeDropdown isMobile={true} />
+  </div>
+{:else}
+  {#if isMobile}<Header />{/if}
+  {#if !isNew}
+    <div class="list-name-bar">
+      <button class="text-small" disabled>Vote</button>
+      <div class="list-name-center text-small" on:click={() => (showDropdown = true)}>
+        <span>{listName}</span>
+        <span class="chevron">▾</span>
+      </div>
+      <button class="text-small" disabled>List</button>
+    </div>
+  {/if}
+
+  <div class="scroll-area">
+    <input
+      bind:this={fileInput}
+      type="file"
+      accept=".csv,.txt"
+      on:change={handleImport}
+      style="display:none"
+    />
 
     <div class="meta">
       <div class="field-row">
-        <label class="text-base">Title</label>
-        <input class="text-base" bind:value={title} placeholder="List name" />
+        <label class="text-small">Title</label>
+        <input class="text-small" bind:value={title} placeholder="List name" />
       </div>
       <div class="field-row">
-        <label class="text-base">Description</label>
-        <input class="text-base" bind:value={description} placeholder="" />
-      </div>
-      <!-- <div class="field-row">
-        <label class="text-base">Prompt</label>
-        <input class="text-base" bind:value={prompt} placeholder="" />
-      </div> -->
-      <div class="field-row">
-        <label class="text-base">Author</label>
-        <input class="text-base" bind:value={author} placeholder="" />
+        <label class="text-small">Description</label>
+        <input class="text-small" bind:value={description} />
       </div>
       <div class="field-row">
-        <label class="text-base">Password</label>
+        <label class="text-small">Author</label>
+        <input class="text-small" bind:value={author} />
+      </div>
+      <div
+        class="field-row field-row-black"
+        class:highlight={passwordHighlight}
+      >
+        <label class="text-small">Password</label>
         <input
-          class="text-base"
+          class="text-small"
           type="password"
           bind:value={password}
-          placeholder=""
+          bind:this={passwordInputEl}
+          on:input={() => (passwordHighlight = false)}
         />
       </div>
     </div>
 
     <div class="items-table">
       <div class="table-header">
-        <div class="col name text-small">NAME</div>
-        <div class="col url text-small">URL</div>
-        <div class="col del"></div>
+        <span class="col-name text-small">Name</span>
+        <span class="col-url text-small">URL</span>
       </div>
-      <div class="items-body">
-        {#each rows as row, i}
-          <div class="table-row">
-            <div class="col name">
-              <input class="text-base" bind:value={row.name} />
+      {#each rows as row, i}
+        <div class="table-row">
+          <input class="col-name text-small" bind:value={row.name} />
+          {#if row.url}
+            <div class="col-thumb">
+              <img src={row.url} alt="" />
             </div>
-            <div class="col url">
-              <input class="text-base" bind:value={row.url} />
-            </div>
-            <div class="col del">
-              <button class="text-small" on:click={() => removeRow(i)}>×</button
-              >
-            </div>
-          </div>
-        {/each}
-      </div>
-      <div class="table-row add-row">
-        <button class="text-base" on:click={addRow}>add row</button>
+          {/if}
+          <input class="col-url text-small" bind:value={row.url} />
+          <button class="del-btn text-small" on:click={() => removeRow(i)}>×</button>
+        </div>
+      {/each}
+      <div class="add-row">
+        <button class="text-small" on:click={addRow}>+ Add</button>
       </div>
     </div>
 
     {#if error}
-      <p class="error text-base">{error}</p>
+      <p class="error text-small">{error}</p>
     {/if}
-
-    <div class="pitch-section">
-      <div class="pitch-label text-base">Don't feel like creating a list?</div>
-      <div class="meta">
-        <div class="field-row">
-          <label class="text-base">List idea</label>
-          <input class="text-base" placeholder="" />
-        </div>
-        <div class="field-row">
-          <label class="text-base">Why</label>
-          <input class="text-base" placeholder="" />
-        </div>
-        <div class="field-row">
-          <label class="text-base">Your name</label>
-          <input class="text-base" placeholder="" />
-        </div>
-      </div>
-      <button class="text-base pitch-submit">Submit</button>
-    </div>
   </div>
+
+  <button class="edit-fab text-small active" on:click={save} disabled={saving}>
+    {isNew ? (saving ? "Creating" : "Create") : (saving ? "Saving" : "Editing")}
+  </button>
 {/if}
 
 <style>
-  .edit-container {
-    width: var(--desktop-max-width);
-    margin: auto;
+  /* ── Mobile layout ────────────────────────────────── */
+
+  .dropdown-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--color-white);
+    z-index: 50;
     display: flex;
     flex-direction: column;
-    margin-top: var(--spacing-md);
-  }
-  .edit-container.mobile {
-    width: 100%;
   }
 
-  .page-title {
+  .list-name-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-margin);
+    border-bottom: var(--border);
+    gap: var(--spacing-md);
+  }
+
+  .list-name-bar.no-border {
+    border-bottom: none;
+  }
+
+  .list-name-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--spacing-md);
+    cursor: pointer;
     text-transform: uppercase;
-    z-index: 3;
-    position: sticky;
-    top: 20px;
-    margin-left: calc((100vw - var(--desktop-max-width)) / 2 - 20px);
-    margin-bottom: var(--spacing-xlg);
-  }
-  .page-title.mobile {
-    margin-left: 0;
+    min-width: 0;
   }
 
+  .list-name-center span:first-child {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .chevron {
+    flex-shrink: 0;
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .scroll-area {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-bottom: 60px;
+  }
+
+  /* meta rows */
   .meta {
     display: flex;
     flex-direction: column;
     text-transform: uppercase;
-    /* margin: var(--spacing-lg) 0; */
-    margin-bottom: var(--spacing-xlg);
   }
 
   .field-row {
     display: flex;
     align-items: center;
-    height: var(--cell-height);
+    gap: var(--spacing-md);
+    padding: var(--spacing-margin);
     border-bottom: var(--border);
   }
 
-  label {
-    width: 200px;
+  .field-row label {
     flex-shrink: 0;
-    color: var(--color-text-faded);
+    width: fit-content;
   }
 
-  .field-row input,
-  .table-row input {
+  .field-row input {
     flex: 1;
     border: none;
     outline: none;
-    padding: 0;
     background: transparent;
-    width: 100%;
+    text-align: right;
+    text-transform: uppercase;
+    min-width: 0;
   }
 
+  .field-row-black {
+    border-bottom: 1px solid var(--color-black);
+  }
+
+  .field-row.highlight label {
+    background-color: red;
+    color: white;
+    animation: fadeHighlight 1500ms ease forwards;
+  }
+
+  @keyframes fadeHighlight {
+    0%, 66% { background-color: red; color: white; }
+    100% { background-color: transparent; color: inherit; }
+  }
+
+  /* items table */
   .items-table {
     display: flex;
     flex-direction: column;
-  }
-
-  .table-header,
-  .table-row {
-    display: flex;
-    align-items: center;
-    height: var(--cell-height);
-    border-bottom: var(--border);
-  }
-
-  .items-body .table-row:last-child {
-    border-bottom: none;
+    padding: var(--spacing-margin);
+    gap: var(--spacing-md);
   }
 
   .table-header {
+    display: flex;
+    gap: var(--spacing-md);
+    padding-bottom: var(--spacing-md);
+    border-bottom: var(--border);
     color: var(--color-text-faded);
+    text-transform: uppercase;
   }
 
-  .col.name {
+  .table-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding-bottom: var(--spacing-md);
+    border-bottom: var(--border);
+    min-height: calc(25px + var(--spacing-md));
+  }
+
+  .col-name {
     flex: 1;
+    min-width: 0;
   }
 
-  .col.url {
-    flex: 2;
+  .col-url {
+    flex: 1.5;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .col.del {
-    width: 30px;
+  .table-row .col-name,
+  .table-row .col-url {
+    border: none;
+    outline: none;
+    background: transparent;
+    text-transform: uppercase;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .col-thumb {
+    width: 25px;
+    height: 25px;
     flex-shrink: 0;
-    text-align: center;
+    overflow: hidden;
   }
 
-  .col.del button {
+  .col-thumb img,
+  .thumb-empty {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .thumb-empty {
+    background: var(--color-grey);
+  }
+
+  .del-btn {
+    flex-shrink: 0;
     background: none;
     border: none;
     cursor: pointer;
-    /* padding: 0; */
-  }
-
-  .col.del button:hover {
-    color: black;
+    padding: 0;
+    width: 20px;
+    text-align: center;
   }
 
   .add-row {
-    border-bottom: none;
-    padding: var(--spacing-md) 0;
-    margin-bottom: var(--spacing-xlg);
-    /* justify-content: flex-end; */
-  }
-
-  .add-row button {
-    /* background: none;/ */
-    /* border: none; */
-    cursor: pointer;
-  }
-
-  .pitch-section {
-    margin-top: var(--spacing-xlg);
-  }
-
-  .pitch-label {
-    color: var(--color-text-faded);
-    text-transform: uppercase;
-    margin-bottom: var(--spacing-md);
-  }
-
-  .pitch-submit {
-    margin: 0;
-    margin-top: var(--spacing-md);
-  }
-
-  .actions {
-    position: fixed;
-    top: 12px;
-    right: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: var(--spacing-md);
-    z-index: 3;
-  }
-
-  .actions button {
-    margin: 0;
+    padding-top: var(--spacing-md);
   }
 
   .error {
+    padding: var(--spacing-margin);
     color: red;
   }
+
+  .edit-fab {
+    position: fixed;
+    bottom: var(--spacing-margin);
+    right: var(--spacing-margin);
+    z-index: 10;
+    cursor: pointer;
+    color: var(--color-white);
+    background-color: var(--color-black);
+    border-color: var(--color-black);
+  }
+
+  .edit-fab:disabled {
+    opacity: 0.7;
+  }
+
 </style>
