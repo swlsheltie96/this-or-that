@@ -359,6 +359,35 @@ function requireAdmin(req: Request): Response | null {
 
 // ── OG image generation ────────────────────────────────────────────────────
 
+let ogFontPath: string | null | undefined = undefined; // undefined = not yet resolved
+
+async function getOgFontPath(): Promise<string | null> {
+  if (ogFontPath !== undefined) return ogFontPath;
+  const systemPaths = [
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+    "/usr/share/fonts/opentype/noto/NotoSans-Regular.ttf",
+  ];
+  for (const p of systemPaths) {
+    if (await Bun.file(p).exists()) { ogFontPath = p; return p; }
+  }
+  try {
+    const res = await fetch("https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Me5WZLCzYlKw.ttf", {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (res.ok) {
+      const buf = await res.arrayBuffer();
+      const tmp = `/tmp/og-font.ttf`;
+      await Bun.write(tmp, buf);
+      ogFontPath = tmp;
+      return tmp;
+    }
+  } catch {}
+  ogFontPath = null;
+  return null;
+}
+
 async function fetchAsBase64(url: string): Promise<string | null> {
   try {
     const ctrl = new AbortController();
@@ -395,12 +424,18 @@ async function generateOGImage(listName: string, item1: any, item2: any): Promis
   ${img1El}${img2El}
   <line x1="${cx}" y1="${IMG_TOP}" x2="${cx}" y2="${IMG_TOP + IMG_H}" stroke="#d9d9d9" stroke-width="1"/>
   <rect x="${cx - 28}" y="${ory - 20}" width="56" height="28" fill="#ffffff"/>
-  <text x="${cx}" y="${ory}" text-anchor="middle" font-size="16" font-family="Helvetica,Arial,sans-serif" fill="#999999" letter-spacing="3">OR</text>
-  <text x="${PAD + IMG_W / 2}" y="${IMG_TOP + IMG_H + 46}" text-anchor="middle" font-size="22" font-family="Helvetica,Arial,sans-serif" fill="#000000">${n1}</text>
-  <text x="${rx + IMG_W / 2}" y="${IMG_TOP + IMG_H + 46}" text-anchor="middle" font-size="22" font-family="Helvetica,Arial,sans-serif" fill="#000000">${n2}</text>
-  <text x="${cx}" y="${H - 18}" text-anchor="middle" font-size="15" font-family="Helvetica,Arial,sans-serif" fill="#cccccc" letter-spacing="3">${escapeHtml(listName.slice(0, 50).toUpperCase())}</text>
+  <text x="${cx}" y="${ory}" text-anchor="middle" font-size="16" font-family="Roboto,sans-serif" fill="#999999" letter-spacing="3">OR</text>
+  <text x="${PAD + IMG_W / 2}" y="${IMG_TOP + IMG_H + 46}" text-anchor="middle" font-size="22" font-family="Roboto,sans-serif" fill="#000000">${n1}</text>
+  <text x="${rx + IMG_W / 2}" y="${IMG_TOP + IMG_H + 46}" text-anchor="middle" font-size="22" font-family="Roboto,sans-serif" fill="#000000">${n2}</text>
+  <text x="${cx}" y="${H - 18}" text-anchor="middle" font-size="15" font-family="Roboto,sans-serif" fill="#cccccc" letter-spacing="3">${escapeHtml(listName.slice(0, 50).toUpperCase())}</text>
 </svg>`;
-  const resvg = new Resvg(svg, { fitTo: { mode: "width" as const, value: W }, font: { loadSystemFonts: true } });
+  const fontPath = await getOgFontPath();
+  const resvg = new Resvg(svg, {
+    fitTo: { mode: "width" as const, value: W },
+    font: fontPath
+      ? { loadSystemFonts: false, fontFiles: [fontPath], sansSerifFamily: "Roboto" }
+      : { loadSystemFonts: true },
+  });
   return Buffer.from(resvg.render().asPng());
 }
 
