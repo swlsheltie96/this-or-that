@@ -34,8 +34,50 @@
   let saving = false;
   let error = "";
   let passwordHighlight = false;
+  let titleHighlight = false;
   let passwordInputEl;
   let showDropdown = false;
+
+  async function flashHighlight(setter, inputEl = null) {
+    setter(false);
+    await tick();
+    setter(true);
+    inputEl?.focus();
+    setTimeout(() => setter(false), 1500);
+  }
+
+  let createSuccess = false;
+  let saveSuccess = false;
+  let deleteInProgress = false;
+  let confirmDelete = false;
+  let isSuggestion = false;
+  let suggEmail = "";
+  let suggSubmitted = false;
+
+  async function submitSuggestion() {
+    if (!title.trim()) {
+      flashHighlight((v) => (titleHighlight = v));
+      return;
+    }
+    try {
+      await fetch("/suggest-list", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim(),
+          author: author.trim(),
+          email: suggEmail.trim(),
+        }),
+      });
+    } catch (e) {}
+    title = "";
+    description = "";
+    author = "";
+    suggEmail = "";
+    suggSubmitted = true;
+    setTimeout(() => (suggSubmitted = false), 3000);
+  }
 
   onMount(async () => {
     if (isNew) return;
@@ -95,12 +137,12 @@
 
   async function save() {
     if (saving) return;
+    if (!title.trim()) {
+      flashHighlight((v) => (titleHighlight = v));
+      return;
+    }
     if (!isNew && !password) {
-      passwordHighlight = false;
-      await tick();
-      passwordHighlight = true;
-      passwordInputEl?.focus();
-      setTimeout(() => (passwordHighlight = false), 1500);
+      flashHighlight((v) => (passwordHighlight = v), passwordInputEl);
       return;
     }
     saving = true;
@@ -120,6 +162,8 @@
             data: { picture: row.url },
           });
         }
+        createSuccess = true;
+        await new Promise((r) => setTimeout(r, 2000));
         navigate(`/?view=vote&listName=${encodeURIComponent(title.trim())}`);
       } else {
         setListPassword(listName, password);
@@ -144,6 +188,8 @@
             await addItem(title.trim(), { name, data });
           }
         }
+        saveSuccess = true;
+        await new Promise((r) => setTimeout(r, 2000));
         navigate(`/?view=vote&listName=${encodeURIComponent(title.trim())}`);
       }
     } catch (e) {
@@ -154,16 +200,36 @@
   }
 
   async function handleDelete() {
-    if (!confirm(`Delete "${listName}"?`)) return;
+    if (!password.trim()) {
+      flashHighlight((v) => (passwordHighlight = v), passwordInputEl);
+      return;
+    }
+    if (!confirmDelete) {
+      confirmDelete = true;
+      return;
+    }
+    deleteInProgress = true;
+    confirmDelete = false;
     try {
       setListPassword(listName, password);
       await deleteList(listName);
+      await new Promise((r) => setTimeout(r, 2000));
       navigate("/");
     } catch (e) {
+      deleteInProgress = false;
       error = e.message;
     }
   }
+
+  // // debug: D = toggle success, X = toggle delete, S = toggle saveSuccess
+  // function handleKeydown(e) {
+  //   if (e.key === "d" || e.key === "D") createSuccess = !createSuccess;
+  //   if (e.key === "x" || e.key === "X") deleteInProgress = !deleteInProgress;
+  //   if (e.key === "s" || e.key === "S") saveSuccess = !saveSuccess;
+  // }
 </script>
+
+<!-- <svelte:window on:keydown={handleKeydown} /> -->
 
 {#if loading}
   <!-- loading -->
@@ -208,8 +274,33 @@
       style="display:none"
     />
 
+    <div
+      class="field-row instruction-row"
+      class:success={createSuccess || saveSuccess}
+      class:deleting={deleteInProgress}
+      style="padding-left: var(--spacing-margin); padding-right: var(--spacing-margin);"
+    >
+      <span class="text-small"
+        class:success-text={createSuccess || saveSuccess}
+        class:delete-text={deleteInProgress}
+        style={createSuccess || saveSuccess || deleteInProgress ? "" : "color: var(--color-grey)"}
+      >
+        {#if createSuccess}
+          list created successfully!!! :)))))
+        {:else if saveSuccess}
+          success. closing...
+        {:else if deleteInProgress}
+          Deleting... Good bye.
+        {:else if isNew}
+          Name your list, add some items, and start ranking.
+        {:else}
+          Edit your list, add or remove items.
+        {/if}
+      </span>
+    </div>
+
     <div class="meta">
-      <div class="field-row">
+      <div class="field-row" class:highlight={titleHighlight}>
         <label class="text-small">Title</label>
         <input class="text-small" bind:value={title} placeholder="List name" />
       </div>
@@ -221,43 +312,78 @@
         <label class="text-small">Author</label>
         <input class="text-small" bind:value={author} />
       </div>
-      <div
-        class="field-row field-row-black"
-        class:highlight={passwordHighlight}
-      >
-        <label class="text-small">Password</label>
-        <input
-          class="text-small"
-          type="password"
-          bind:value={password}
-          bind:this={passwordInputEl}
-          on:input={() => (passwordHighlight = false)}
-        />
-      </div>
+      {#if isSuggestion}
+        <div class="field-row field-row-black">
+          <label class="text-small">Email</label>
+          <input class="text-small" type="email" bind:value={suggEmail} />
+        </div>
+      {/if}
+      {#if !isSuggestion}
+        <div
+          class="field-row field-row-black"
+          class:highlight={passwordHighlight}
+        >
+          <label class="text-small">Password</label>
+          <input
+            class="text-small"
+            type="password"
+            bind:value={password}
+            bind:this={passwordInputEl}
+            on:input={() => (passwordHighlight = false)}
+          />
+        </div>
+      {/if}
     </div>
 
-    <div class="items-table">
-      <div class="table-header">
-        <span class="col-name text-small">Name</span>
-        <div class="col-thumb"></div>
-        <span class="col-url text-small">URL</span>
-        <div class="del-spacer"></div>
-      </div>
-      {#each rows as row, i}
-        <div class="table-row">
-          <input class="col-name text-small" bind:value={row.name} />
-          <div class="col-thumb">
-            {#if row.url}<img src={row.url} alt="" />{/if}
-          </div>
-          <input class="col-url text-small" bind:value={row.url} />
-          <button class="del-btn text-small" on:click={() => removeRow(i)}
-            >×</button
+    {#if !isSuggestion}
+      <div class="items-table">
+        <div class="table-header">
+          <span class="col-name text-small" style="color: var(--color-grey)"
+            >Name</span
           >
+          <div class="col-thumb"></div>
+          <span class="col-url text-small" style="color: var(--color-grey)"
+            >URL</span
+          >
+          <div class="del-spacer"></div>
         </div>
-      {/each}
-      <div class="add-row">
-        <button class="text-small" on:click={addRow}>+ Add</button>
+        {#each rows as row, i}
+          <div class="table-row">
+            <input class="col-name text-small" bind:value={row.name} />
+            <div class="col-thumb">
+              {#if row.url}<img src={row.url} alt="" />{/if}
+            </div>
+            <input class="col-url text-small" bind:value={row.url} />
+            <button class="del-btn text-small" on:click={() => removeRow(i)}
+              >×</button
+            >
+          </div>
+        {/each}
       </div>
+    {/if}
+
+    <div class="add-row">
+      {#if !isSuggestion}
+        <button class="text-small" on:click={addRow}>+ Add</button>
+      {:else}
+        <div></div>
+      {/if}
+      {#if isNew}
+        <label
+          class="text-small suggest-check"
+          style="color: var(--color-grey)"
+        >
+          <input type="checkbox" bind:checked={isSuggestion} />
+          Don't want to create a list? Suggest one instead
+        </label>
+      {:else}
+        <div class="delete-group">
+          <button class="text-small delete-btn" on:click={handleDelete}>Delete</button>
+          {#if confirmDelete}
+            <button class="text-small delete-btn confirm-delete-btn" on:click={handleDelete}>Are you sure?</button>
+          {/if}
+        </div>
+      {/if}
     </div>
 
     {#if error}
@@ -265,8 +391,16 @@
     {/if}
   </div>
 
-  <button class="edit-fab text-small active" on:click={save} disabled={saving}>
-    {isNew ? (saving ? "Creating" : "Create") : saving ? "Saving" : "Editing"}
+  <button
+    class="edit-fab text-small"
+    on:click={isSuggestion ? submitSuggestion : save}
+    disabled={saving}
+  >
+    {#if isSuggestion}
+      {suggSubmitted ? "Suggested!" : "Suggest List"}
+    {:else}
+      {isNew ? (saving ? "Submitting" : "Submit") : saving ? "Saving" : "Save and Close"}
+    {/if}
   </button>
 {/if}
 
@@ -337,19 +471,32 @@
     padding-bottom: 60px;
   }
 
+  .instruction-row {
+    text-transform: uppercase;
+  }
+
+  .success-text {
+    color: var(--color-green) !important;
+  }
+
+  .delete-text {
+    color: var(--color-red) !important;
+  }
+
   /* meta rows */
   .meta {
     display: flex;
     flex-direction: column;
     text-transform: uppercase;
+    padding: 0 var(--spacing-margin);
+    border-bottom: 1px solid black;
   }
 
   .field-row {
     display: flex;
     align-items: center;
     gap: var(--spacing-md);
-    padding: var(--spacing-margin);
-    padding-bottom: var(--spacing-md);
+    padding: var(--spacing-margin) 0;
     border-bottom: var(--border);
     /* min-height: calc(25px + var(--spacing-md)); */
   }
@@ -370,7 +517,7 @@
   }
 
   .field-row-black {
-    border-bottom: 1px solid var(--color-black);
+    border-bottom: unset;
   }
 
   .field-row.highlight label {
@@ -395,33 +542,25 @@
   .items-table {
     display: flex;
     flex-direction: column;
-    padding: var(--spacing-margin);
-    gap: var(--spacing-md);
+    padding: 0 var(--spacing-margin);
   }
 
   .table-header {
     display: flex;
     gap: var(--spacing-md);
-    padding-bottom: var(--spacing-md);
+    padding: var(--spacing-margin) 0;
     border-bottom: var(--border);
     color: var(--color-text-faded);
     text-transform: uppercase;
-  }
-
-  @media (min-width: 740px) {
-    .table-header {
-      align-items: center;
-      padding-left: 2px;
-    }
+    align-items: center;
   }
 
   .table-row {
     display: flex;
     align-items: center;
     gap: var(--spacing-md);
-    padding-bottom: var(--spacing-md);
+    padding: var(--spacing-margin) 0;
     border-bottom: var(--border);
-    min-height: calc(25px + var(--spacing-md));
   }
 
   .col-name {
@@ -459,6 +598,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    aspect-ratio: 1;
   }
 
   .thumb-empty {
@@ -481,7 +621,34 @@
   }
 
   .add-row {
-    padding-top: var(--spacing-md);
+    padding: var(--spacing-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .delete-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--spacing-sm);
+  }
+
+  .delete-btn {
+    color: var(--color-red);
+    border-color: var(--color-red);
+  }
+
+  .suggest-check {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+
+  .suggest-check input[type="checkbox"] {
+    accent-color: var(--color-black);
   }
 
   .error {
@@ -495,6 +662,17 @@
     right: var(--spacing-margin);
     z-index: 10;
     cursor: pointer;
+    color: var(--color-black);
+    background-color: var(--color-white);
+    border-color: var(--color-black);
+  }
+
+  .edit-fab:hover {
+    color: var(--color-white);
+    background-color: var(--color-black);
+  }
+
+  .edit-fab.active {
     color: var(--color-white);
     background-color: var(--color-black);
     border-color: var(--color-black);

@@ -23,7 +23,7 @@ Two separate processes are required:
    bun run dev
    ```
 
-The Vite dev server proxies API calls to the backend (see `vite.config.js`).
+The Vite dev server proxies API calls to the backend (see `vite.config.js`), including WebSocket proxying at `/ws`.
 
 ### Testing
 
@@ -58,8 +58,30 @@ Custom HTTP server using Bun's native server. Key components:
   - `items`: Items in lists (list_id FK, name, JSON data blob)
   - `elo_ratings`: Computed Elo scores (list_name, item_name, rating)
   - `list_votes`: Vote tracking (list_name, user_id, timestamp)
+  - `comments`: Per-list chat comments (id, list_name, author, text, timestamp)
+  - `suggestions`: User-submitted list suggestions (id, title, description, author, email, created_at)
 
 **Password verification**: Uses Bun's built-in password hashing. Master password (if set via env var) can authenticate to any list.
+
+### WebSocket Architecture
+
+The server maintains live WS connections for real-time features:
+
+```typescript
+const connectedClients = new Set<any>();          // all connected WS clients
+const listRooms = new Map<string, Set<any>>();     // per-list chat rooms
+const wsListMap = new Map<any, string>();          // ws -> listName lookup
+```
+
+**Message types**:
+- `stats` (server → all): `{ type, online, votesLastHour }` — broadcast after every vote and periodically
+- `join` (client → server): `{ type, listName }` — subscribe to a list room; server replies with `history`
+- `history` (server → client): `{ type, comments: [...] }` — last 50 comments for the joined list
+- `comment` (client → server): `{ type, listName, author, text }` — saved to DB, broadcast to room
+
+Upgrade happens at `/ws`. On `close`, the client is removed from `connectedClients`, its room, and `wsListMap`.
+
+**Scale note**: State is fully in-memory — fine for single-instance Railway deployment. Multi-instance would require Redis pub/sub.
 
 ### Frontend (Svelte SPA)
 
@@ -81,12 +103,22 @@ Located in `src/`. Uses manual URL-based routing (NOT svelte-spa-router despite 
     - Font size reduced to 16px for content and buttons
     - Scrollable columns (TITLE, DESCRIP, PREVIEW) have 200px width, 100px min-width
     - LOOK column has left border to separate from scrolling content
-- `CreateView.svelte`: Create new lists
+- `EditView.svelte`: Create new lists AND edit existing ones (replaces old CreateView + Edit)
+  - **Create flow**: shows instruction row → `createSuccess` state → 2s delay → navigates to vote page
+  - **Edit flow**: shows instruction row → `saveSuccess` ("success. closing...") → 2s delay → navigates to vote page
+  - **Delete flow**: requires password first (flashes red label if empty), then shows "Are you sure?" inline button, then `deleteInProgress` state ("Deleting... Good bye.") → 2s delay → navigates home
+  - **Suggestion mode**: checkbox to submit a list idea without creating it (saves to `suggestions` table via `/suggest-list`)
 - `VoteView.svelte`: Elo voting interface with keyboard shortcuts (Arrow keys, 1/2, Space/Enter)
-- `ListDetailView.svelte`: Container that switches between:
-  - `Grid.svelte`: Card-based item display
-  - `List.svelte`: Table-based item display
-  - `Edit.svelte`: List editing interface
+  - **Chat panel**: toggled by "Chat" button in list-name-bar; appears as right-side panel in `view-and-chat` flex row
+  - `view-and-chat` wrapper: `display: flex` row containing `view-panel` (all existing vote UI) and `comments-panel` (280px, border-left)
+  - Anonymous auto-assigned names (`adj-noun-NNNN` format) stored in localStorage, editable inline in chat header
+  - Joins list room via `joinList()` when chat is opened; messages auto-scroll to bottom via `requestAnimationFrame`
+  - `onDestroy` cleans up the `chatMessages` subscription
+- `TickerTape.svelte`: Scrolling ticker showing recent ranking changes + online stats
+  - Right side shows `{$onlineCount} online · {$votesLastHour}/hr` from WS store
+  - Layout: `ticker-wrap` with `ticker-overflow` (flex: 1, overflow hidden) + `online-count` (flex-shrink: 0, border-left)
+- `Header.svelte`: Shared header component
+- `ListView.svelte`: Table-based item display for list detail view
 
 **Routing logic** (App.svelte):
 - Checks `window.location.pathname` and URL params
@@ -96,6 +128,15 @@ Located in `src/`. Uses manual URL-based routing (NOT svelte-spa-router despite 
 - All backend communication
 - Cookie-based password caching per list (security concern)
 - Custom password prompt via DOM manipulation
+
+**WebSocket store** (`src/lib/ws.js`):
+- Svelte writable stores: `onlineCount`, `votesLastHour`, `chatMessages`, `chatName`
+- `chatName` auto-persists to localStorage; generated as `adj-noun-NNNN` on first visit
+- `connect()` guard: `if (ws && ws.readyState <= WebSocket.OPEN) return` prevents duplicate connections
+- `scheduleReconnect()` guard: single `reconnectTimer` prevents exponential reconnect growth (both `onerror` and `onclose` can fire on failure)
+- `joinList(listName)`: clears local messages, sends `join` if connected
+- `sendComment(listName, author, text)`: sends `comment` message if connected
+- Auto-connects on module load (`if (typeof window !== "undefined") connect()`)
 
 ### Data Model
 
@@ -134,7 +175,6 @@ The codebase is transitioning from vanilla JS to Svelte:
 - `/archive/public/`: Original HTML/JS/CSS files (still served at `/archive/public/*`)
 - `/public/`: Fonts and legacy entry point
 - `/src/`: New Svelte components
-- Server has commented-out production static file serving (lines 180-198)
 
 ## Common Issues
 
@@ -148,12 +188,19 @@ The codebase is transitioning from vanilla JS to Svelte:
 
 Uses `x-forwarded-for` header for IP identification (server.ts:97), which can be spoofed. Consider session-based approach.
 
+### Svelte Reactive Statement Pitfalls
+
+- Do NOT use `tick()` inside a `$:` reactive statement — it triggers extra render cycles and can freeze the browser
+- Use `store.subscribe(() => ...)` with `requestAnimationFrame` for DOM side effects after store changes (e.g. scroll-to-bottom)
+- WS reconnect logic: guard with a single `reconnectTimer` variable; both `onerror` and `onclose` fire on failed connections, causing exponential growth if unguarded
+
 ## Database Schema Notes
 
-- Manual migration code exists in server.ts (lines 254-269) for adding `created_at` column
+- All tables created with `CREATE TABLE IF NOT EXISTS` for idempotent startup migrations
+- Manual migration code exists in server.ts for adding `created_at` column to existing `lists` tables
 - Item names duplicated between `items` and `elo_ratings` tables (should use FK to items.id)
 - No explicit indexes defined (likely needed on foreign keys and list_name)
 
 ## Production Deployment
 
-Currently unclear - commented code suggests serving from `dist/` directory after Vite build, but deployment process not documented.
+Deployed on Railway (single instance). Backend serves static files from `dist/` after Vite build. WebSocket state is fully in-memory — acceptable for single-instance; would need Redis pub/sub for multi-instance.

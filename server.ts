@@ -95,8 +95,12 @@ class Server {
     const self = this;
     Bun.serve({
       port: PORT,
-      async fetch(req) {
+      async fetch(req, server) {
         const url = new URL(req.url);
+        if (url.pathname === "/ws") {
+          if (server.upgrade(req)) return undefined;
+          return new Response("WebSocket upgrade failed", { status: 400 });
+        }
         switch (req.method) {
           case "GET":
             if (url.pathname in self.get_map) return await self.get_map[url.pathname](req);
@@ -120,8 +124,65 @@ class Server {
         }
         return new Response("Invalid path or method", { status: 400 });
       },
+      websocket: {
+        open(ws) {
+          connectedClients.add(ws);
+          broadcastStats();
+        },
+        close(ws) {
+          connectedClients.delete(ws);
+          const listName = wsListMap.get(ws);
+          if (listName) {
+            listRooms.get(listName)?.delete(ws);
+            wsListMap.delete(ws);
+          }
+          broadcastStats();
+        },
+        async message(ws, rawMsg) {
+          try {
+            const msg = JSON.parse(rawMsg.toString());
+            if (msg.type === "join") {
+              const prev = wsListMap.get(ws);
+              if (prev) listRooms.get(prev)?.delete(ws);
+              wsListMap.set(ws, msg.listName);
+              if (!listRooms.has(msg.listName)) listRooms.set(msg.listName, new Set());
+              listRooms.get(msg.listName)!.add(ws);
+              const comments = await dbAll(
+                "SELECT author, text, timestamp FROM comments WHERE list_name = ? ORDER BY timestamp ASC LIMIT 50",
+                [msg.listName]
+              );
+              ws.send(JSON.stringify({ type: "history", comments }));
+            } else if (msg.type === "comment") {
+              const { listName, author, text } = msg;
+              if (!listName || !text?.trim()) return;
+              const timestamp = new Date().toISOString();
+              const safeAuthor = (author || "anon").slice(0, 32);
+              const safeText = text.trim().slice(0, 500);
+              await db.execute({
+                sql: "INSERT INTO comments (list_name, author, text, timestamp) VALUES (?, ?, ?, ?)",
+                args: [listName, safeAuthor, safeText, timestamp],
+              });
+              const broadcast = JSON.stringify({ type: "comment", author: safeAuthor, text: safeText, timestamp });
+              const room = listRooms.get(listName);
+              if (room) for (const client of room) client.send(broadcast);
+            }
+          } catch (e) {
+            console.error("WS message error:", e);
+          }
+        },
+      },
     });
   }
+}
+
+const connectedClients = new Set<any>();
+const listRooms = new Map<string, Set<any>>();
+const wsListMap = new Map<any, string>();
+
+async function broadcastStats() {
+  const result = await dbGet("SELECT COUNT(*) as count FROM list_votes WHERE timestamp > datetime('now', '-1 hour')");
+  const msg = JSON.stringify({ type: "stats", online: connectedClients.size, votesLastHour: result?.count ?? 0 });
+  for (const ws of connectedClients) ws.send(msg);
 }
 
 const app = new Server();
@@ -184,6 +245,22 @@ await db.executeMultiple(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     list_name TEXT,
     user_id INTEGER,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (list_name) REFERENCES lists (name)
+  );
+  CREATE TABLE IF NOT EXISTS suggestions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT,
+    description TEXT,
+    author TEXT,
+    email TEXT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    list_name TEXT,
+    author TEXT,
+    text TEXT,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (list_name) REFERENCES lists (name)
   );
@@ -411,7 +488,7 @@ app.post("/vote", 100, async (req) => {
   const listData = listDataRow?.data ? JSON.parse(listDataRow.data as string) : {};
   listData.totalVotingTimeSeconds = (listData.totalVotingTimeSeconds || 0) + Math.round(sessionTime / 1000);
 
-  return runQueries(
+  const res = await runQueries(
     [
       "INSERT OR REPLACE INTO elo_ratings (list_name, item_name, rating) VALUES (?, ?, ?)",
       "INSERT OR REPLACE INTO elo_ratings (list_name, item_name, rating) VALUES (?, ?, ?)",
@@ -431,6 +508,8 @@ app.post("/vote", 100, async (req) => {
     `Elo updated.`,
     `Failed to update Elo.`
   );
+  broadcastStats();
+  return res;
 });
 
 app.get("/get-elo-history", async (req) => {
@@ -515,14 +594,18 @@ app.post("/heartbeat", 5000, async (req) => {
 });
 
 app.get("/stats", async (_req) => {
-  const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-  let onlineUsers = 0;
-  for (const [ip, timestamp] of heartbeatMap) {
-    if (timestamp < fiveMinutesAgo) heartbeatMap.delete(ip);
-    else onlineUsers++;
-  }
   const result = await dbGet("SELECT COUNT(*) as count FROM list_votes WHERE timestamp > datetime('now', '-1 hour')");
-  return Response.json({ onlineUsers, votesLastHour: result?.count ?? 0 });
+  return Response.json({ onlineUsers: connectedClients.size, votesLastHour: result?.count ?? 0 });
+});
+
+app.post("/suggest-list", 5000, async (req) => {
+  const { title, description, author, email } = await req.json();
+  if (!title) return jsonError("title required");
+  await db.execute({
+    sql: "INSERT INTO suggestions (title, description, author, email) VALUES (?, ?, ?, ?)",
+    args: [title, description || "", author || "", email || ""],
+  });
+  return Response.json({ ok: true });
 });
 
 app.serve();

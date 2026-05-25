@@ -8,6 +8,7 @@
     getEloHistory,
     navigate,
   } from "../lib/api.js";
+  import { joinList, sendComment, chatMessages, chatName } from "../lib/ws.js";
   import Header from "./Header.svelte";
   import HomeDropdown from "./HomeDropdown.svelte";
   import GridItem from "./GridItem.svelte";
@@ -155,6 +156,29 @@
     if (viewMode !== "vote") loadRankings();
   }
 
+  let showComments = false;
+  let commentText = "";
+  let editingName = false;
+  let messagesEl;
+
+  $: if (showComments && listName) joinList(listName);
+
+  function scrollToBottom() {
+    if (messagesEl) requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; });
+  }
+
+  const unsubMessages = chatMessages.subscribe(() => scrollToBottom());
+
+  let _chatName = "";
+  chatName.subscribe((v) => (_chatName = v));
+
+  function submitComment() {
+    const text = commentText.trim();
+    if (!text) return;
+    sendComment(listName, _chatName, text);
+    commentText = "";
+  }
+
   let error = null;
   let selectedItem = 0;
   let hoveredItem = 0;
@@ -290,6 +314,7 @@
     window.removeEventListener("keydown", handleKeydown);
     if (eloAnimTimer) clearInterval(eloAnimTimer);
     if (loserAnimTimer) clearInterval(loserAnimTimer);
+    unsubMessages();
   });
 </script>
 
@@ -316,14 +341,21 @@
         <span>{listName}</span>
         <span class="chevron open">▾</span>
       </div>
-      <button
-        class="text-small"
-        class:active={viewMode !== "vote"}
-        on:click={() => {
-          showDropdown = false;
-          toggleView();
-        }}>{viewButtonLabel}</button
-      >
+      <div class="right-controls">
+        <button
+          class="text-small"
+          class:active={viewMode !== "vote"}
+          on:click={() => {
+            showDropdown = false;
+            toggleView();
+          }}>{viewButtonLabel}</button
+        >
+        <button
+          class="text-small"
+          class:active={showComments}
+          on:click={() => (showComments = !showComments)}>Chat</button
+        >
+      </div>
     </div>
     <HomeDropdown {isMobile} />
   </div>
@@ -342,19 +374,28 @@
       <span>{listName}</span>
       <span class="chevron">▾</span>
     </div>
-    <button
-      class="text-small"
-      class:active={viewMode !== "vote"}
-      on:click={toggleView}>{viewButtonLabel}</button
-    >
+    <div class="right-controls">
+      <button
+        class="text-small"
+        class:active={viewMode !== "vote"}
+        on:click={toggleView}>{viewButtonLabel}</button
+      >
+      <button
+        class="text-small"
+        class:active={showComments}
+        on:click={() => (showComments = !showComments)}>Chat</button
+      >
+    </div>
   </div>
 {/if}
 
-{#if loading}
-  <!-- loading -->
-{:else if error}
-  <p class="text-base">{error}</p>
-{:else if pairData}
+<div class="view-and-chat">
+  <div class="view-panel">
+    {#if loading}
+      <!-- loading -->
+    {:else if error}
+      <p class="text-base">{error}</p>
+    {:else if pairData}
   {#if viewMode !== "vote"}
     <div class="mobile-grid-container">
       <div class="grid-data">
@@ -612,7 +653,48 @@
       </div>
     </div>
   {/if}
-{/if}
+    {/if}
+  </div>
+  {#if showComments}
+    <div class="comments-panel">
+        <div class="comments-header">
+          <span class="text-small" style="text-transform: uppercase; color: var(--color-grey)">Chat</span>
+          <div class="chat-name-wrap">
+            {#if editingName}
+              <input
+                class="text-small chat-name-input"
+                bind:value={$chatName}
+                autofocus
+                on:blur={() => (editingName = false)}
+                on:keydown={(e) => e.key === "Enter" && (editingName = false)}
+              />
+            {:else}
+              <span class="text-small chat-name-display" on:click={() => (editingName = true)}>{$chatName}</span>
+            {/if}
+          </div>
+        </div>
+        <div class="comments-messages" bind:this={messagesEl}>
+          {#each $chatMessages as msg}
+            <div class="comment">
+              <div class="comment-meta text-small">{msg.author} · {timeAgo(msg.timestamp)}</div>
+              <div class="comment-text text-small">{msg.text}</div>
+            </div>
+          {/each}
+          {#if $chatMessages.length === 0}
+            <div class="comments-empty text-small">No messages yet. Say something!</div>
+          {/if}
+        </div>
+        <div class="comments-input">
+          <input
+            class="text-small"
+            placeholder="Say something..."
+            bind:value={commentText}
+            on:keydown={(e) => e.key === "Enter" && submitComment()}
+          />
+        </div>
+      </div>
+  {/if}
+</div>
 
 <style>
   .list-name-bar {
@@ -1024,5 +1106,118 @@
     right: var(--spacing-margin);
     z-index: 10;
     cursor: pointer;
+  }
+
+  .right-controls {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+  }
+
+  .view-and-chat {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .view-panel {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .comments-panel {
+    width: 280px;
+    flex-shrink: 0;
+    border-left: var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .comments-header {
+    padding: var(--spacing-margin);
+    border-bottom: var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    gap: var(--spacing-md);
+  }
+
+  .chat-name-wrap {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .chat-name-display {
+    cursor: pointer;
+    color: var(--color-black);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    border-bottom: 1px dashed var(--color-border);
+  }
+
+  .chat-name-input {
+    border: none;
+    outline: none;
+    border-bottom: 1px solid var(--color-black);
+    background: transparent;
+    text-align: right;
+    width: 100%;
+  }
+
+  .comments-messages {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    padding: var(--spacing-margin);
+    scrollbar-width: none;
+  }
+
+  .comments-messages::-webkit-scrollbar {
+    display: none;
+  }
+
+  .comment {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .comment-meta {
+    color: var(--color-grey);
+  }
+
+  .comment-text {
+    color: var(--color-black);
+    word-break: break-word;
+  }
+
+  .comments-empty {
+    color: var(--color-grey);
+    text-align: center;
+    padding-top: var(--spacing-lg);
+  }
+
+  .comments-input {
+    border-top: var(--border);
+    flex-shrink: 0;
+  }
+
+  .comments-input input {
+    width: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: var(--spacing-margin);
+    box-sizing: border-box;
   }
 </style>

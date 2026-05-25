@@ -29,6 +29,7 @@ export default defineConfig({
       "/recent-changes": "http://localhost:3000",
       "/stats": "http://localhost:3000",
       "/heartbeat": "http://localhost:3000",
+      "/ws": { target: "ws://localhost:3000", ws: true },
     },
   },
   // Enable SPA routing - serve index.html for all routes

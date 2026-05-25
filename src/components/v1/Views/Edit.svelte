@@ -1,6 +1,12 @@
 <script>
   import { createEventDispatcher, afterUpdate, onMount } from "svelte";
-  import { createList, updateListMetadata, deleteList, addItem, deleteItem } from "../../../lib/api.js";
+  import {
+    createList,
+    updateListMetadata,
+    deleteList,
+    addItem,
+    deleteItem,
+  } from "../../../lib/api.js";
 
   export let isNew = false;
   export let items = [];
@@ -43,7 +49,8 @@
       author: listAuthor,
       accentColor: accentColor,
     };
-    metadataDirty = JSON.stringify(currentMetadata) !== JSON.stringify(initialMetadata);
+    metadataDirty =
+      JSON.stringify(currentMetadata) !== JSON.stringify(initialMetadata);
   }
 
   function findObjectDifference(oldList, newList) {
@@ -84,7 +91,9 @@
   }
 
   function isObjectEqual(objA, objB) {
-    return objA.picture === objB.picture && objA.description === objB.description;
+    return (
+      objA.picture === objB.picture && objA.description === objB.description
+    );
   }
 
   async function saveChanges() {
@@ -112,8 +121,13 @@
       // Create the list
       const response = await createList(
         listTitle,
-        { description: listDescription, prompt: listPrompt, author: listAuthor, accentColor },
-        password
+        {
+          description: listDescription,
+          prompt: listPrompt,
+          author: listAuthor,
+          accentColor,
+        },
+        password,
       );
 
       if (response.error) {
@@ -127,7 +141,7 @@
       document.cookie = `${encodeURIComponent(listTitle)}=${encodeURIComponent(password)}; expires=${expires}; path=/`;
 
       // Add items
-      const itemsToAdd = tableData.filter(i => i.name && i.name.trim());
+      const itemsToAdd = tableData.filter((i) => i.name && i.name.trim());
       for (const item of itemsToAdd) {
         try {
           await addItem(listTitle, {
@@ -153,15 +167,26 @@
   async function saveExistingList() {
     try {
       // Validate that all items have names
-      const itemsWithoutNames = tableData.filter(item => !item.name || !item.name.trim());
+      const itemsWithoutNames = tableData.filter(
+        (item) => !item.name || !item.name.trim(),
+      );
       if (itemsWithoutNames.length > 0) {
-        alert(`Cannot save: ${itemsWithoutNames.length} item(s) are missing names. All items must have a name.`);
+        alert(
+          `Cannot save: ${itemsWithoutNames.length} item(s) are missing names. All items must have a name.`,
+        );
         return;
       }
 
       // Save metadata changes if any
       if (metadataDirty) {
-        await updateListMetadata(listName, listTitle, listDescription, listPrompt, listAuthor, accentColor);
+        await updateListMetadata(
+          listName,
+          listTitle,
+          listDescription,
+          listPrompt,
+          listAuthor,
+          accentColor,
+        );
 
         // Update initial metadata and dispatch event if name changed
         initialMetadata = {
@@ -232,7 +257,11 @@
   }
 
   async function handleDeleteList() {
-    if (confirm("Are you sure you want to delete this list? This action cannot be undone.")) {
+    if (
+      confirm(
+        "Are you sure you want to delete this list? This action cannot be undone.",
+      )
+    ) {
       try {
         await deleteList(listName);
         window.location.href = "/";
@@ -244,7 +273,10 @@
   }
 
   function addNewItem() {
-    tableData = [...tableData, { name: "", picture: "", description: "", elo: 1000 }];
+    tableData = [
+      ...tableData,
+      { name: "", picture: "", description: "", elo: 1000 },
+    ];
     dirty = true;
   }
 
@@ -267,8 +299,8 @@
   }
 
   function handlePaste(event, index, field) {
-    const pastedText = event.clipboardData.getData('text');
-    const lines = pastedText.split('\n').filter(line => line.trim());
+    const pastedText = event.clipboardData.getData("text");
+    const lines = pastedText.split("\n").filter((line) => line.trim());
 
     // If multiple lines, fill or create multiple rows
     if (lines.length > 1) {
@@ -296,7 +328,12 @@
 
   onMount(() => {
     if (isNew && tableData.length === 0) {
-      tableData = Array.from({ length: 5 }, () => ({ name: "", picture: "", description: "", elo: 1000 }));
+      tableData = Array.from({ length: 5 }, () => ({
+        name: "",
+        picture: "",
+        description: "",
+        elo: 1000,
+      }));
     }
   });
 
@@ -441,23 +478,38 @@
   <div class="action-buttons-row">
     <div class="button-cell color-picker-cell">
       <input type="color" bind:value={accentColor} class="color-picker-input" />
-      <button class="color-swatch" style="background-color: {accentColor};" on:click={() => document.querySelector('.color-picker-input').click()}></button>
+      <button
+        class="color-swatch"
+        style="background-color: {accentColor};"
+        on:click={() => document.querySelector(".color-picker-input").click()}
+      ></button>
     </div>
     {#if !isNew}
       <div class="button-cell">
-        <button class="action-button" on:click={() => window.history.back()}> VIEW </button>
+        <button class="action-button" on:click={() => window.history.back()}>
+          VIEW
+        </button>
       </div>
       <div class="button-cell">
-        <button class="action-button" on:click={handleDeleteList}> DELETE </button>
+        <button class="action-button" on:click={handleDeleteList}>
+          DELETE
+        </button>
       </div>
     {/if}
     <div class="button-cell">
-      <button class="action-button" on:click={saveChanges} disabled={isNew && submitting}>
+      <button
+        class="action-button"
+        on:click={saveChanges}
+        disabled={isNew && submitting}
+      >
         {isNew && submitting ? "SAVING..." : "SAVE"}
       </button>
     </div>
     <div class="button-cell">
-      <button class="action-button" on:click={() => document.getElementById("csvFile").click()}>
+      <button
+        class="action-button"
+        on:click={() => document.getElementById("csvFile").click()}
+      >
         IMPORT CSV
       </button>
     </div>
@@ -513,7 +565,7 @@
             type="text"
             bind:value={item.name}
             on:input={handleInputChange}
-            on:paste={(e) => handlePaste(e, index, 'name')}
+            on:paste={(e) => handlePaste(e, index, "name")}
           />
         </div>
         <div class="table-cell url-cell">
@@ -521,7 +573,7 @@
             type="text"
             bind:value={item.picture}
             on:input={handleInputChange}
-            on:paste={(e) => handlePaste(e, index, 'picture')}
+            on:paste={(e) => handlePaste(e, index, "picture")}
           />
         </div>
         <div class="table-cell preview-cell">
@@ -534,7 +586,7 @@
             type="text"
             bind:value={item.description}
             on:input={handleInputChange}
-            on:paste={(e) => handlePaste(e, index, 'description')}
+            on:paste={(e) => handlePaste(e, index, "description")}
           />
         </div>
         {#if !isNew}
@@ -685,6 +737,7 @@
   /* Items Table */
   .items-table {
     border: none;
+    padding: 0 var(--spacing-margin);
   }
 
   .table-row {
@@ -710,7 +763,7 @@
     border-left: none;
   }
 
-/* Header Row */
+  /* Header Row */
   .header-row .table-cell {
     font-size: var(--font-size-header);
     text-transform: uppercase;
@@ -791,7 +844,7 @@
     display: block;
   }
 
-/* Add Item Row */
+  /* Add Item Row */
   .add-item-row {
     display: flex;
     align-items: stretch;
