@@ -280,6 +280,9 @@ await db.executeMultiple(`
   );
 `);
 
+// Migrations for columns added after initial schema
+try { await db.execute({ sql: "ALTER TABLE suggestions ADD COLUMN email TEXT", args: [] }); } catch {}
+
 const K = 32;
 
 function jsonError(msg, error_status = 400) {
