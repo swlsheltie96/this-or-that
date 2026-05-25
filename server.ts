@@ -113,7 +113,10 @@ class Server {
         if (isCrawler) {
           const listName = url.searchParams.get("listName");
           if (listName) {
-            const html = await buildOGHtml(listName, url.origin);
+            const proto = req.headers.get("x-forwarded-proto") || url.protocol.replace(":", "");
+            const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || url.host;
+            const origin = `${proto}://${host}`;
+            const html = await buildOGHtml(listName, origin);
             if (html) return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
           }
         }
