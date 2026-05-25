@@ -27,6 +27,8 @@ export default defineConfig({
       "/change-password": "http://localhost:3000",
       "/get-elo-history": "http://localhost:3000",
       "/recent-changes": "http://localhost:3000",
+      "/og-image": "http://localhost:3000",
+      "/admin": "http://localhost:3000",
       "/stats": "http://localhost:3000",
       "/heartbeat": "http://localhost:3000",
       "/ws": { target: "ws://localhost:3000", ws: true },

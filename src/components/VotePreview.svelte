@@ -1,6 +1,7 @@
 <script>
   import { onMount, onDestroy } from "svelte";
-  import { getPairForVoting, getListsWithPopularity, navigate } from "../lib/api.js";
+  import { getListsWithPopularity, navigate } from "../lib/api.js";
+  import { getCachedTopItems } from "../lib/listCache.js";
 
   export let listName = "";
 
@@ -8,28 +9,37 @@
   let allLists = [];
   let cycleInterval;
   let currentListName = "";
+  let prefetchedPair = null;
 
-  async function loadPair(name) {
+  async function showList(name) {
     try {
-      const data = await getPairForVoting(name);
+      const items = await getCachedTopItems(name);
+      if (!items || items.length < 2) return;
       currentListName = name;
-      pair = {
-        item1: {
-          ...data.item1,
-          data: data.item1.data ? JSON.parse(data.item1.data) : {},
-        },
-        item2: {
-          ...data.item2,
-          data: data.item2.data ? JSON.parse(data.item2.data) : {},
-        },
-      };
-    } catch (e) {}
+      pair = { item1: items[0], item2: items[1] };
+    } catch {}
+  }
+
+  async function prefetchNext() {
+    if (allLists.length === 0) return;
+    const pick = allLists[Math.floor(Math.random() * allLists.length)];
+    const items = await getCachedTopItems(pick.name);
+    if (items && items.length >= 2) {
+      prefetchedPair = { listName: pick.name, item1: items[0], item2: items[1] };
+    }
   }
 
   async function cycleRandom() {
     if (allLists.length === 0) return;
-    const pick = allLists[Math.floor(Math.random() * allLists.length)];
-    await loadPair(pick.name);
+    if (prefetchedPair) {
+      currentListName = prefetchedPair.listName;
+      pair = { item1: prefetchedPair.item1, item2: prefetchedPair.item2 };
+      prefetchedPair = null;
+    } else {
+      const pick = allLists[Math.floor(Math.random() * allLists.length)];
+      await showList(pick.name);
+    }
+    prefetchNext();
   }
 
   function handleClick() {
@@ -37,11 +47,8 @@
   }
 
   $: if (listName) {
-    if (cycleInterval) {
-      clearInterval(cycleInterval);
-      cycleInterval = null;
-    }
-    loadPair(listName);
+    if (cycleInterval) { clearInterval(cycleInterval); cycleInterval = null; }
+    showList(listName);
   }
 
   onMount(async () => {

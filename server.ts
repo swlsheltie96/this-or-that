@@ -1,5 +1,7 @@
 import config from "./config.json";
 import { createClient } from "@libsql/client";
+import { Filter as BadWordsFilter } from "bad-words";
+import { Resvg } from "@resvg/resvg-js";
 
 const PORT = process.env.PORT || config.port;
 const LRU_SIZE = process.env.LRU_SIZE || config.lru_size;
@@ -11,6 +13,9 @@ const MASTER_PASSWORD = process.env.MASTER_PASSWORD
 const TURSO_URL = process.env.TURSO_URL || "file:./lists.db";
 const TURSO_TOKEN = process.env.TURSO_TOKEN || "";
 const db = createClient({ url: TURSO_URL, authToken: TURSO_TOKEN });
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || null;
+const badWords = new BadWordsFilter();
+badWords.removeWords('God', 'damn', 'hell', 'sex');
 
 console.log(`Serving...`);
 console.log(`\tPort: ${PORT}`);
@@ -101,6 +106,14 @@ class Server {
           if (server.upgrade(req)) return undefined;
           return new Response("WebSocket upgrade failed", { status: 400 });
         }
+        const ua = req.headers.get("user-agent") || "";
+        if (/facebookexternalhit|Twitterbot|Slackbot|LinkedInBot|WhatsApp|TelegramBot|Discordbot|Applebot/i.test(ua)) {
+          const listName = url.searchParams.get("listName");
+          if (listName) {
+            const html = await buildOGHtml(listName, url.origin);
+            if (html) return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+          }
+        }
         switch (req.method) {
           case "GET":
             if (url.pathname in self.get_map) return await self.get_map[url.pathname](req);
@@ -155,6 +168,7 @@ class Server {
             } else if (msg.type === "comment") {
               const { listName, author, text } = msg;
               if (!listName || !text?.trim()) return;
+              if (!isClean(text)) return;
               const timestamp = new Date().toISOString();
               const safeAuthor = (author || "anon").slice(0, 32);
               const safeText = text.trim().slice(0, 500);
@@ -305,10 +319,159 @@ async function dbAll(sql, args = []) {
   return result.rows;
 }
 
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+const URL_RE = /https?:\/\/|www\./i;
+
+function isClean(text: string): boolean {
+  if (URL_RE.test(text)) return false;
+  try { return !badWords.isProfane(text); } catch { return true; }
+}
+
+// ── Admin auth ─────────────────────────────────────────────────────────────
+
+function checkAdminAuth(req: Request): boolean {
+  if (!ADMIN_PASSWORD) return false;
+  const auth = req.headers.get("authorization");
+  if (!auth?.startsWith("Basic ")) return false;
+  const decoded = Buffer.from(auth.slice(6), "base64").toString("utf-8");
+  const pass = decoded.slice(decoded.indexOf(":") + 1);
+  return pass === ADMIN_PASSWORD;
+}
+
+function requireAdmin(req: Request): Response | null {
+  if (checkAdminAuth(req)) return null;
+  return new Response("Unauthorized", { status: 401, headers: { "WWW-Authenticate": 'Basic realm="Admin"' } });
+}
+
+// ── OG image generation ────────────────────────────────────────────────────
+
+async function fetchAsBase64(url: string): Promise<string | null> {
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 3000);
+    const resp = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(timer);
+    if (!resp.ok) return null;
+    const buf = await resp.arrayBuffer();
+    const ct = resp.headers.get("content-type") || "image/jpeg";
+    return `data:${ct};base64,${Buffer.from(buf).toString("base64")}`;
+  } catch { return null; }
+}
+
+async function generateOGImage(listName: string, item1: any, item2: any): Promise<Buffer> {
+  const W = 1200, H = 630, PAD = 60, IMG_W = 480, IMG_H = 400, IMG_TOP = 80;
+  const [b1, b2] = await Promise.all([
+    item1.data?.picture ? fetchAsBase64(item1.data.picture) : null,
+    item2.data?.picture ? fetchAsBase64(item2.data.picture) : null,
+  ]);
+  const n1 = escapeHtml((item1.name || "").slice(0, 28).toUpperCase());
+  const n2 = escapeHtml((item2.name || "").slice(0, 28).toUpperCase());
+  const rx = W - PAD - IMG_W;
+  const cx = W / 2;
+  const ory = IMG_TOP + IMG_H / 2 + 8;
+  const img1El = b1
+    ? `<image href="${b1}" x="${PAD}" y="${IMG_TOP}" width="${IMG_W}" height="${IMG_H}" preserveAspectRatio="xMidYMid meet"/>`
+    : `<rect x="${PAD}" y="${IMG_TOP}" width="${IMG_W}" height="${IMG_H}" fill="#d9d9d9"/>`;
+  const img2El = b2
+    ? `<image href="${b2}" x="${rx}" y="${IMG_TOP}" width="${IMG_W}" height="${IMG_H}" preserveAspectRatio="xMidYMid meet"/>`
+    : `<rect x="${rx}" y="${IMG_TOP}" width="${IMG_W}" height="${IMG_H}" fill="#d9d9d9"/>`;
+  const svg = `<?xml version="1.0" encoding="utf-8"?>
+<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <rect width="${W}" height="${H}" fill="#ffffff"/>
+  ${img1El}${img2El}
+  <line x1="${cx}" y1="${IMG_TOP}" x2="${cx}" y2="${IMG_TOP + IMG_H}" stroke="#d9d9d9" stroke-width="1"/>
+  <rect x="${cx - 28}" y="${ory - 20}" width="56" height="28" fill="#ffffff"/>
+  <text x="${cx}" y="${ory}" text-anchor="middle" font-size="16" font-family="Helvetica,Arial,sans-serif" fill="#999999" letter-spacing="3">OR</text>
+  <text x="${PAD + IMG_W / 2}" y="${IMG_TOP + IMG_H + 46}" text-anchor="middle" font-size="22" font-family="Helvetica,Arial,sans-serif" fill="#000000">${n1}</text>
+  <text x="${rx + IMG_W / 2}" y="${IMG_TOP + IMG_H + 46}" text-anchor="middle" font-size="22" font-family="Helvetica,Arial,sans-serif" fill="#000000">${n2}</text>
+  <text x="${cx}" y="${H - 18}" text-anchor="middle" font-size="15" font-family="Helvetica,Arial,sans-serif" fill="#cccccc" letter-spacing="3">${escapeHtml(listName.slice(0, 50).toUpperCase())}</text>
+</svg>`;
+  const resvg = new Resvg(svg, { fitTo: { mode: "width" as const, value: W }, font: { loadSystemFonts: true } });
+  return Buffer.from(resvg.render().asPng());
+}
+
+async function buildOGHtml(listName: string, origin: string): Promise<string | null> {
+  const row = await dbGet("SELECT data FROM lists WHERE name = ?", [listName]);
+  if (!row) return null;
+  const d = row.data ? JSON.parse(row.data as string) : {};
+  const desc = d.description || `Vote on ${listName}`;
+  const img = `${origin}/og-image?listName=${encodeURIComponent(listName)}`;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>${escapeHtml(listName)}</title>
+<meta property="og:title" content="${escapeHtml(listName)}"/>
+<meta property="og:description" content="${escapeHtml(desc)}"/>
+<meta property="og:image" content="${img}"/><meta property="og:image:width" content="1200"/><meta property="og:image:height" content="630"/>
+<meta property="og:type" content="website"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="${escapeHtml(listName)}"/>
+<meta name="twitter:description" content="${escapeHtml(desc)}"/>
+<meta name="twitter:image" content="${img}"/>
+</head><body></body></html>`;
+}
+
+// ── Admin HTML ─────────────────────────────────────────────────────────────
+
+async function buildAdminHtml(): Promise<string> {
+  const [lists, comments, suggestions] = await Promise.all([
+    dbAll(`SELECT lists.name, COUNT(DISTINCT items.id) as item_count, COUNT(DISTINCT list_votes.id) as vote_count
+           FROM lists LEFT JOIN items ON lists.id = items.list_id
+           LEFT JOIN list_votes ON lists.name = list_votes.list_name
+           GROUP BY lists.name ORDER BY lists.created_at DESC`),
+    dbAll(`SELECT id, list_name, author, text, timestamp FROM comments ORDER BY timestamp DESC LIMIT 300`),
+    dbAll(`SELECT id, title, author, email, description, timestamp FROM suggestions ORDER BY timestamp DESC`),
+  ]);
+  const listsRows = lists.map(l =>
+    `<tr data-name="${escapeHtml(String(l.name))}">
+      <td>${escapeHtml(String(l.name))}</td>
+      <td class="meta">${l.item_count} items · ${l.vote_count} votes</td>
+      <td><button class="del" onclick="delList(this)">Delete</button></td></tr>`).join("");
+  const commentRows = comments.map(c =>
+    `<tr data-id="${c.id}">
+      <td class="meta">${escapeHtml(String(c.list_name))}</td>
+      <td class="meta">${escapeHtml(String(c.author))}</td>
+      <td>${escapeHtml(String(c.text))}</td>
+      <td class="meta ts">${String(c.timestamp).slice(0,16)}</td>
+      <td><button class="del" onclick="delComment(this)">Delete</button></td></tr>`).join("");
+  const suggRows = suggestions.map(s =>
+    `<tr data-id="${s.id}">
+      <td><b>${escapeHtml(String(s.title))}</b></td>
+      <td class="meta">${escapeHtml(String(s.author || ""))}${s.email ? " · " + escapeHtml(String(s.email)) : ""}</td>
+      <td>${escapeHtml(String(s.description || ""))}</td>
+      <td class="meta ts">${String(s.timestamp).slice(0,16)}</td>
+      <td><button class="del" onclick="delSugg(this)">Delete</button></td></tr>`).join("");
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Admin</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:Helvetica,Arial,sans-serif;font-size:13px;padding:24px;color:#000}
+h1{font-size:12px;text-transform:uppercase;letter-spacing:2px;margin-bottom:20px}
+h2{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#999;margin:24px 0 8px;padding-bottom:6px;border-bottom:1px solid #d9d9d9}
+table{width:100%;border-collapse:collapse}td{padding:6px 10px;border-bottom:1px solid #d9d9d9;vertical-align:top}
+.meta{color:#999;font-size:11px}.ts{white-space:nowrap}
+.del{font-family:inherit;font-size:11px;border:1px solid #cc0000;color:#cc0000;background:white;cursor:pointer;padding:2px 8px;border-radius:2px}
+.del:hover{background:#cc0000;color:white}
+</style></head><body>
+<h1>Admin · This or That</h1>
+<h2>Lists (${lists.length})</h2><table><tbody>${listsRows}</tbody></table>
+<h2>Comments (${comments.length})</h2><table><tbody>${commentRows}</tbody></table>
+<h2>Suggestions (${suggestions.length})</h2><table><tbody>${suggRows}</tbody></table>
+<script>
+async function post(url,body){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});return r.ok;}
+function delList(b){const r=b.closest('tr');if(!confirm('Delete "'+r.dataset.name+'"?'))return;post('/admin/delete-list',{name:r.dataset.name}).then(ok=>{if(ok)r.remove()});}
+function delComment(b){const r=b.closest('tr');post('/admin/delete-comment',{id:+r.dataset.id}).then(ok=>{if(ok)r.remove()});}
+function delSugg(b){const r=b.closest('tr');post('/admin/delete-suggestion',{id:+r.dataset.id}).then(ok=>{if(ok)r.remove()});}
+</script></body></html>`;
+}
+
 app.post("/create-list", 10000, async (req) => {
   const body = await req.json();
   const listName = body.listName;
   const data = body.data;
+  if (!isClean(listName)) return jsonError("List name contains inappropriate content.");
+  if (data?.description && !isClean(data.description)) return jsonError("Description contains inappropriate content.");
   const password = await Bun.password.hash(body.password);
   return runQuery(
     "INSERT INTO lists (name, data, password) VALUES (?, ?, ?)",
@@ -362,6 +525,7 @@ app.post("/add-item", 0, async (req) => {
   const row = await dbGet("SELECT id, password FROM lists WHERE name = ?", [listName]);
   if (!row) return jsonError(`List "${listName}" does not exist.`);
   if (!(await passwordVerify(password, row.password))) return jsonError("Invalid password.", 401);
+  if (!isClean(newItem.name)) return jsonError("Item name contains inappropriate content.");
   const existing = await dbGet("SELECT id FROM items WHERE list_id = ? AND name = ?", [row.id, newItem.name]);
   if (existing) return jsonError(`Item "${newItem.name}" already exists.`);
   return runQuery("INSERT INTO items (list_id, name, data) VALUES (?, ?, ?)",
@@ -605,6 +769,67 @@ app.post("/suggest-list", 5000, async (req) => {
     sql: "INSERT INTO suggestions (title, description, author, email) VALUES (?, ?, ?, ?)",
     args: [title, description || "", author || "", email || ""],
   });
+  return Response.json({ ok: true });
+});
+
+// ── OG image endpoint ──────────────────────────────────────────────────────
+
+app.get("/og-image", async (req) => {
+  const listName = new URL(req.url).searchParams.get("listName");
+  if (!listName) return jsonError("listName required");
+  const listRow = await dbGet("SELECT id FROM lists WHERE name = ?", [listName]);
+  if (!listRow) return jsonError("List not found", 404);
+  const items = await dbAll(`
+    SELECT items.name, items.data, COALESCE(elo_ratings.rating, 1000) as elo
+    FROM items LEFT JOIN elo_ratings ON items.name = elo_ratings.item_name AND elo_ratings.list_name = ?
+    WHERE items.list_id = ? ORDER BY elo DESC LIMIT 2`, [listName, listRow.id]);
+  if (items.length < 2) return jsonError("Not enough items");
+  const parse = (item: any) => ({ name: item.name, data: item.data ? JSON.parse(item.data as string) : {} });
+  try {
+    const png = await generateOGImage(listName, parse(items[0]), parse(items[1]));
+    return new Response(png, { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=3600" } });
+  } catch (e) {
+    console.error("OG image error:", e);
+    return jsonError("Failed to generate image", 500);
+  }
+});
+
+// ── Admin endpoints ────────────────────────────────────────────────────────
+
+app.get("/admin", async (req) => {
+  const authErr = requireAdmin(req);
+  if (authErr) return authErr;
+  return new Response(await buildAdminHtml(), { headers: { "Content-Type": "text/html; charset=utf-8" } });
+});
+
+app.post("/admin/delete-comment", 0, async (req) => {
+  const authErr = requireAdmin(req);
+  if (authErr) return authErr;
+  const { id } = await req.json();
+  await db.execute({ sql: "DELETE FROM comments WHERE id = ?", args: [id] });
+  return Response.json({ ok: true });
+});
+
+app.post("/admin/delete-list", 0, async (req) => {
+  const authErr = requireAdmin(req);
+  if (authErr) return authErr;
+  const { name } = await req.json();
+  const row = await dbGet("SELECT id FROM lists WHERE name = ?", [name]);
+  if (!row) return jsonError("Not found", 404);
+  return runQueries(
+    ["DELETE FROM items WHERE list_id = ?", "DELETE FROM elo_ratings WHERE list_name = ?",
+     "DELETE FROM elo_history WHERE list_name = ?", "DELETE FROM list_votes WHERE list_name = ?",
+     "DELETE FROM comments WHERE list_name = ?", "DELETE FROM lists WHERE name = ?"],
+    [[row.id], [name], [name], [name], [name], [name]],
+    "Deleted", "Failed to delete"
+  );
+});
+
+app.post("/admin/delete-suggestion", 0, async (req) => {
+  const authErr = requireAdmin(req);
+  if (authErr) return authErr;
+  const { id } = await req.json();
+  await db.execute({ sql: "DELETE FROM suggestions WHERE id = ?", args: [id] });
   return Response.json({ ok: true });
 });
 

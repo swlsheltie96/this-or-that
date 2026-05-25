@@ -1,6 +1,7 @@
 <script>
   import { onMount, onDestroy, createEventDispatcher } from "svelte";
   import { getListsWithPopularity, navigate } from "../lib/api.js";
+  import { preloadList } from "../lib/listCache.js";
 
   export let isMobile = false;
 
@@ -61,7 +62,9 @@
 
   function setActive(i) {
     activeIndex = i;
-    dispatch("activeList", { listName: filteredLists[i]?.name });
+    const name = filteredLists[i]?.name;
+    dispatch("activeList", { listName: name });
+    if (name) preloadList(name);
   }
 
   function startCycling() {
@@ -108,6 +111,7 @@
     try {
       const res = await getListsWithPopularity();
       lists = res.lists || [];
+      if (lists.length > 0) preloadList(lists[0].name);
       if (!isMobile) startCycling();
     } catch (e) {}
   });

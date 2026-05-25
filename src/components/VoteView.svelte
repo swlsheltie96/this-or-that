@@ -149,6 +149,7 @@
   let prevListName = listName;
   $: if (listName !== prevListName) {
     prevListName = listName;
+    prefetchedPairData = null;
     showDropdown = false;
     historyCache = new Map();
     itemHistory = [];
@@ -179,6 +180,24 @@
     commentText = "";
   }
 
+  let prefetchedPairData = null;
+
+  function parsePairData(pair) {
+    return {
+      item1: { ...pair.item1, data: pair.item1.data ? JSON.parse(pair.item1.data) : {}, elo: pair.item1.elo ?? 1000 },
+      item2: { ...pair.item2, data: pair.item2.data ? JSON.parse(pair.item2.data) : {}, elo: pair.item2.elo ?? 1000 },
+    };
+  }
+
+  async function prefetchNextPair() {
+    try {
+      const data = await getPairForVoting(listName);
+      prefetchedPairData = parsePairData(data);
+      if (prefetchedPairData.item1.data?.picture) new Image().src = prefetchedPairData.item1.data.picture;
+      if (prefetchedPairData.item2.data?.picture) new Image().src = prefetchedPairData.item2.data.picture;
+    } catch {}
+  }
+
   let error = null;
   let selectedItem = 0;
   let hoveredItem = 0;
@@ -189,31 +208,25 @@
   let loserAnimTimer = null;
 
   async function loadPair() {
-    try {
-      loading = true;
-      error = null;
-      const [pair, info] = await Promise.all([
-        getPairForVoting(listName),
-        getListInfo(listName),
-      ]);
-      pairData = {
-        item1: {
-          ...pair.item1,
-          data: pair.item1.data ? JSON.parse(pair.item1.data) : {},
-          elo: pair.item1.elo ?? 1000,
-        },
-        item2: {
-          ...pair.item2,
-          data: pair.item2.data ? JSON.parse(pair.item2.data) : {},
-          elo: pair.item2.elo ?? 1000,
-        },
-      };
-      listInfo = info || {};
-    } catch (e) {
-      error = e.message;
-    } finally {
+    error = null;
+    if (prefetchedPairData) {
+      pairData = prefetchedPairData;
+      prefetchedPairData = null;
       loading = false;
+      getListInfo(listName).then(info => { listInfo = info || {}; }).catch(() => {});
+    } else {
+      loading = true;
+      try {
+        const [pair, info] = await Promise.all([getPairForVoting(listName), getListInfo(listName)]);
+        pairData = parsePairData(pair);
+        listInfo = info || {};
+      } catch (e) {
+        error = e.message;
+      } finally {
+        loading = false;
+      }
     }
+    prefetchNextPair();
   }
 
   function animateElo(from, to, onUpdate, timerRef, setTimer) {

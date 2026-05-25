@@ -8,7 +8,7 @@
 <div class="list-view-item">
   <div class="image-wrap">
     {#if picture}
-      <img src={picture} alt={name} />
+      <img src={picture} alt={name} loading="lazy" />
     {:else}
       <div class="img-empty"></div>
     {/if}
