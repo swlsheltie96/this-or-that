@@ -107,7 +107,10 @@ class Server {
           return new Response("WebSocket upgrade failed", { status: 400 });
         }
         const ua = req.headers.get("user-agent") || "";
-        if (/facebookexternalhit|Twitterbot|Slackbot|LinkedInBot|WhatsApp|TelegramBot|Discordbot|Applebot/i.test(ua)) {
+        const secFetch = req.headers.get("sec-fetch-mode");
+        const isKnownBot = /facebookexternalhit|Twitterbot|Slackbot|LinkedInBot|WhatsApp|TelegramBot|Discordbot|Applebot|opengraph|iframely|embedly/i.test(ua);
+        const isCrawler = isKnownBot || (!secFetch && !ua.includes("Mozilla"));
+        if (isCrawler) {
           const listName = url.searchParams.get("listName");
           if (listName) {
             const html = await buildOGHtml(listName, url.origin);
