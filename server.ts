@@ -168,7 +168,7 @@ class Server {
             } else if (msg.type === "comment") {
               const { listName, author, text } = msg;
               if (!listName || !text?.trim()) return;
-              if (!isClean(text)) return;
+              if (!isClean(text) || !isClean(author || "")) return;
               const timestamp = new Date().toISOString();
               const safeAuthor = (author || "anon").slice(0, 32);
               const safeText = text.trim().slice(0, 500);
@@ -399,19 +399,29 @@ async function generateOGImage(listName: string, item1: any, item2: any): Promis
 }
 
 async function buildOGHtml(listName: string, origin: string): Promise<string | null> {
-  const row = await dbGet("SELECT data FROM lists WHERE name = ?", [listName]);
-  if (!row) return null;
+  const [row, listRow] = await Promise.all([
+    dbGet("SELECT data FROM lists WHERE name = ?", [listName]),
+    dbGet("SELECT id FROM lists WHERE name = ?", [listName]),
+  ]);
+  if (!row || !listRow) return null;
   const d = row.data ? JSON.parse(row.data as string) : {};
+  const items = await dbAll(`
+    SELECT items.name, COALESCE(elo_ratings.rating, 1000) as elo
+    FROM items LEFT JOIN elo_ratings ON items.name = elo_ratings.item_name AND elo_ratings.list_name = ?
+    WHERE items.list_id = ? ORDER BY elo DESC LIMIT 2`, [listName, listRow.id]);
+  const itemTitle = items.length >= 2
+    ? `${escapeHtml(listName)}: ${escapeHtml(items[0].name as string)} or ${escapeHtml(items[1].name as string)}`
+    : escapeHtml(listName);
   const desc = d.description || `Vote on ${listName}`;
   const img = `${origin}/og-image?listName=${encodeURIComponent(listName)}`;
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
-<title>${escapeHtml(listName)}</title>
-<meta property="og:title" content="${escapeHtml(listName)}"/>
+<title>${itemTitle}</title>
+<meta property="og:title" content="${itemTitle}"/>
 <meta property="og:description" content="${escapeHtml(desc)}"/>
 <meta property="og:image" content="${img}"/><meta property="og:image:width" content="1200"/><meta property="og:image:height" content="630"/>
 <meta property="og:type" content="website"/>
 <meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="${escapeHtml(listName)}"/>
+<meta name="twitter:title" content="${itemTitle}"/>
 <meta name="twitter:description" content="${escapeHtml(desc)}"/>
 <meta name="twitter:image" content="${img}"/>
 </head><body></body></html>`;
@@ -777,6 +787,9 @@ app.post("/suggest-list", 5000, async (req) => {
 
 // ── OG image endpoint ──────────────────────────────────────────────────────
 
+const ogImageCache = new Map<string, { buf: Buffer; ts: number }>();
+const OG_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
 app.get("/og-image", async (req) => {
   const listName = new URL(req.url).searchParams.get("listName");
   if (!listName) return jsonError("listName required");
@@ -787,9 +800,14 @@ app.get("/og-image", async (req) => {
     FROM items LEFT JOIN elo_ratings ON items.name = elo_ratings.item_name AND elo_ratings.list_name = ?
     WHERE items.list_id = ? ORDER BY elo DESC LIMIT 2`, [listName, listRow.id]);
   if (items.length < 2) return jsonError("Not enough items");
+  const cached = ogImageCache.get(listName);
+  if (cached && Date.now() - cached.ts < OG_CACHE_TTL) {
+    return new Response(cached.buf, { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=3600" } });
+  }
   const parse = (item: any) => ({ name: item.name, data: item.data ? JSON.parse(item.data as string) : {} });
   try {
     const png = await generateOGImage(listName, parse(items[0]), parse(items[1]));
+    ogImageCache.set(listName, { buf: png, ts: Date.now() });
     return new Response(png, { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=3600" } });
   } catch (e) {
     console.error("OG image error:", e);
