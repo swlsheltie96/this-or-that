@@ -110,7 +110,7 @@ class Server {
         const secFetch = req.headers.get("sec-fetch-mode");
         const isKnownBot = /facebookexternalhit|Twitterbot|Slackbot|LinkedInBot|WhatsApp|TelegramBot|Discordbot|Applebot|opengraph|iframely|embedly/i.test(ua);
         const isCrawler = isKnownBot || (!secFetch && !ua.includes("Mozilla"));
-        if (isCrawler) {
+        if (isCrawler && url.pathname !== "/og-image") {
           const listName = url.searchParams.get("listName");
           if (listName) {
             const proto = req.headers.get("x-forwarded-proto") || url.protocol.replace(":", "");
