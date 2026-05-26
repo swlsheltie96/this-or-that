@@ -146,6 +146,11 @@
   $: viewButtonLabel =
     viewMode === "grid" ? "Grid" : viewMode === "list" ? "List" : "View";
 
+  $: if (listName) {
+    const suffix = viewMode === "vote" ? "Vote" : viewMode === "grid" ? "Grid" : "List";
+    document.title = `${listName} · ${suffix} | This or That`;
+  }
+
   let prevListName = listName;
   $: if (listName !== prevListName) {
     prevListName = listName;
@@ -319,6 +324,8 @@
 
   function handleKeydown(e) {
     if (voting || !pairData) return;
+    const tag = document.activeElement?.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA") return;
     if (e.key === "1" || e.key === "ArrowLeft") {
       castVote(pairData.item1.name, pairData.item2.name, 1);
     } else if (e.key === "2" || e.key === "ArrowRight") {
@@ -342,6 +349,7 @@
     if (loserAnimTimer) clearInterval(loserAnimTimer);
     unsubMessages();
     unsubNewComment();
+    document.title = "This or That";
   });
 </script>
 
