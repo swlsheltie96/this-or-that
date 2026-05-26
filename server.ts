@@ -359,34 +359,6 @@ function requireAdmin(req: Request): Response | null {
 
 // ── OG image generation ────────────────────────────────────────────────────
 
-let ogFontPath: string | null | undefined = undefined; // undefined = not yet resolved
-
-async function getOgFontPath(): Promise<string | null> {
-  if (ogFontPath !== undefined) return ogFontPath;
-  const systemPaths = [
-    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
-    "/usr/share/fonts/opentype/noto/NotoSans-Regular.ttf",
-  ];
-  for (const p of systemPaths) {
-    if (await Bun.file(p).exists()) { ogFontPath = p; return p; }
-  }
-  try {
-    const res = await fetch("https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Me5WZLCzYlKw.ttf", {
-      signal: AbortSignal.timeout(8000),
-    });
-    if (res.ok) {
-      const buf = await res.arrayBuffer();
-      const tmp = `/tmp/og-font.ttf`;
-      await Bun.write(tmp, buf);
-      ogFontPath = tmp;
-      return tmp;
-    }
-  } catch {}
-  ogFontPath = null;
-  return null;
-}
 
 async function fetchAsBase64(url: string): Promise<string | null> {
   try {
@@ -401,41 +373,32 @@ async function fetchAsBase64(url: string): Promise<string | null> {
   } catch { return null; }
 }
 
-async function generateOGImage(listName: string, item1: any, item2: any): Promise<Buffer> {
-  const W = 1200, H = 630, PAD = 60, IMG_W = 480, IMG_H = 400, IMG_TOP = 80;
+async function generateOGImage(_listName: string, item1: any, item2: any): Promise<Buffer> {
   const [b1, b2] = await Promise.all([
     item1.data?.picture ? fetchAsBase64(item1.data.picture) : null,
     item2.data?.picture ? fetchAsBase64(item2.data.picture) : null,
   ]);
-  const n1 = escapeHtml((item1.name || "").slice(0, 28).toUpperCase());
-  const n2 = escapeHtml((item2.name || "").slice(0, 28).toUpperCase());
-  const rx = W - PAD - IMG_W;
-  const cx = W / 2;
-  const ory = IMG_TOP + IMG_H / 2 + 8;
   const img1El = b1
-    ? `<image href="${b1}" x="${PAD}" y="${IMG_TOP}" width="${IMG_W}" height="${IMG_H}" preserveAspectRatio="xMidYMid meet"/>`
-    : `<rect x="${PAD}" y="${IMG_TOP}" width="${IMG_W}" height="${IMG_H}" fill="#d9d9d9"/>`;
+    ? `<image href="${b1}" x="40" y="69.8984" width="490.2" height="490.2" preserveAspectRatio="xMidYMid slice"/>`
+    : `<rect x="40" y="69.8984" width="490.2" height="490.2" fill="#d9d9d9"/>`;
   const img2El = b2
-    ? `<image href="${b2}" x="${rx}" y="${IMG_TOP}" width="${IMG_W}" height="${IMG_H}" preserveAspectRatio="xMidYMid meet"/>`
-    : `<rect x="${rx}" y="${IMG_TOP}" width="${IMG_W}" height="${IMG_H}" fill="#d9d9d9"/>`;
-  const svg = `<?xml version="1.0" encoding="utf-8"?>
-<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-  <rect width="${W}" height="${H}" fill="#ffffff"/>
-  ${img1El}${img2El}
-  <line x1="${cx}" y1="${IMG_TOP}" x2="${cx}" y2="${IMG_TOP + IMG_H}" stroke="#d9d9d9" stroke-width="1"/>
-  <rect x="${cx - 28}" y="${ory - 20}" width="56" height="28" fill="#ffffff"/>
-  <text x="${cx}" y="${ory}" text-anchor="middle" font-size="16" font-family="Roboto,sans-serif" fill="#999999" letter-spacing="3">OR</text>
-  <text x="${PAD + IMG_W / 2}" y="${IMG_TOP + IMG_H + 46}" text-anchor="middle" font-size="22" font-family="Roboto,sans-serif" fill="#000000">${n1}</text>
-  <text x="${rx + IMG_W / 2}" y="${IMG_TOP + IMG_H + 46}" text-anchor="middle" font-size="22" font-family="Roboto,sans-serif" fill="#000000">${n2}</text>
-  <text x="${cx}" y="${H - 18}" text-anchor="middle" font-size="15" font-family="Roboto,sans-serif" fill="#cccccc" letter-spacing="3">${escapeHtml(listName.slice(0, 50).toUpperCase())}</text>
+    ? `<image href="${b2}" x="669.8" y="69.8984" width="490.2" height="490.2" preserveAspectRatio="xMidYMid slice"/>`
+    : `<rect x="669.8" y="69.8984" width="490.2" height="490.2" fill="#d9d9d9"/>`;
+  const svg = `<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0)">
+<rect width="1200" height="630" fill="white"/>
+${img1El}
+${img2El}
+<path d="M574.468 288.477C583.332 288.477 589.894 291.325 594.155 297.021C597.482 301.465 599.146 307.15 599.146 314.077C599.146 321.574 597.243 327.806 593.438 332.773C588.971 338.607 582.603 341.523 574.331 341.523C566.606 341.523 560.534 338.971 556.113 333.867C552.171 328.945 550.2 322.725 550.2 315.205C550.2 308.415 551.886 302.604 555.259 297.773C559.588 291.576 565.991 288.477 574.468 288.477ZM575.151 335.439C581.144 335.439 585.474 333.298 588.14 329.014C590.828 324.707 592.173 319.762 592.173 314.18C592.173 308.278 590.623 303.527 587.524 299.927C584.448 296.326 580.233 294.526 574.878 294.526C569.683 294.526 565.444 296.315 562.163 299.893C558.882 303.447 557.241 308.7 557.241 315.649C557.241 321.209 558.643 325.903 561.445 329.731C564.271 333.537 568.84 335.439 575.151 335.439Z" fill="black"/>
+<path d="M630.625 312.847C633.815 312.847 636.333 312.209 638.179 310.933C640.047 309.657 640.981 307.355 640.981 304.028C640.981 300.451 639.683 298.013 637.085 296.714C635.695 296.03 633.838 295.688 631.514 295.688H614.902V312.847H630.625ZM608.101 289.844H631.343C635.171 289.844 638.327 290.402 640.811 291.519C645.527 293.66 647.886 297.614 647.886 303.379C647.886 306.387 647.259 308.848 646.006 310.762C644.775 312.676 643.044 314.214 640.811 315.376C642.77 316.174 644.24 317.222 645.22 318.521C646.222 319.819 646.781 321.927 646.895 324.844L647.134 331.577C647.202 333.491 647.362 334.915 647.612 335.85C648.022 337.445 648.752 338.47 649.8 338.926V340.054H641.46C641.232 339.621 641.05 339.062 640.913 338.379C640.776 337.695 640.662 336.374 640.571 334.414L640.161 326.04C640.002 322.759 638.783 320.56 636.504 319.443C635.205 318.828 633.166 318.521 630.386 318.521H614.902V340.054H608.101V289.844Z" fill="black"/>
+</g>
+<defs>
+<clipPath id="clip0">
+<rect width="1200" height="630" fill="white"/>
+</clipPath>
+</defs>
 </svg>`;
-  const fontPath = await getOgFontPath();
-  const resvg = new Resvg(svg, {
-    fitTo: { mode: "width" as const, value: W },
-    font: fontPath
-      ? { loadSystemFonts: false, fontFiles: [fontPath], sansSerifFamily: "Roboto" }
-      : { loadSystemFonts: true },
-  });
+  const resvg = new Resvg(svg, { fitTo: { mode: "width" as const, value: 1200 } });
   return Buffer.from(resvg.render().asPng());
 }
 
