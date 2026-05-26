@@ -1,4 +1,13 @@
-import { getSortedList } from './api.js';
+import { getSortedList, getListInfo } from './api.js';
+
+const infoCache = new Map();
+
+export function getCachedListInfo(listName) {
+  if (!infoCache.has(listName)) {
+    infoCache.set(listName, getListInfo(listName).catch(() => null));
+  }
+  return infoCache.get(listName);
+}
 
 const cache = new Map();
 

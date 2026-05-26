@@ -351,7 +351,7 @@ async function updateItem(listName, itemName, data) {
 }
 
 // Update list metadata (description, prompt, author, name)
-async function updateListMetadata(listName, newListName, description, prompt, author, accentColor) {
+async function updateListMetadata(listName, newListName, description, prompt, author, accentColor, noImages = false) {
   const password = await login(listName);
   const response = await fetch(`${server}/update-list-metadata`, {
     method: "POST",
@@ -365,6 +365,7 @@ async function updateListMetadata(listName, newListName, description, prompt, au
       prompt: prompt,
       author: author,
       accentColor: accentColor,
+      noImages: noImages,
       password: password,
     }),
   });

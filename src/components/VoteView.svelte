@@ -161,14 +161,23 @@
   let commentText = "";
   let editingName = false;
   let messagesEl;
+  let unreadCount = 0;
+  let prevChatLength = 0;
 
   $: if (showComments && listName) joinList(listName);
+  $: if (showComments) unreadCount = 0;
 
   function scrollToBottom() {
     if (messagesEl) requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; });
   }
 
-  const unsubMessages = chatMessages.subscribe(() => scrollToBottom());
+  const unsubMessages = chatMessages.subscribe((msgs) => {
+    scrollToBottom();
+    if (!showComments && msgs.length > prevChatLength) {
+      unreadCount += msgs.length - prevChatLength;
+    }
+    prevChatLength = msgs.length;
+  });
 
   let _chatName = "";
   chatName.subscribe((v) => (_chatName = v));
@@ -366,7 +375,7 @@
         <button
           class="text-small"
           class:active={showComments}
-          on:click={() => (showComments = !showComments)}>Chat</button
+          on:click={() => (showComments = !showComments)}>Chat{#if unreadCount > 0} <span class="chat-badge">{unreadCount}</span>{/if}</button
         >
       </div>
     </div>
@@ -396,7 +405,7 @@
       <button
         class="text-small"
         class:active={showComments}
-        on:click={() => (showComments = !showComments)}>Chat</button
+        on:click={() => (showComments = !showComments)}>Chat{#if unreadCount > 0} <span class="chat-badge">{unreadCount}</span>{/if}</button
       >
     </div>
   </div>
@@ -412,10 +421,10 @@
   {#if viewMode !== "vote"}
     <div class="mobile-grid-container">
       <div class="grid-data">
-        {#if listInfo?.author}<span
-            class:text-base={!isMobile}
-            class:text-small={isMobile}>By {listInfo.author}</span
-          >{/if}
+        {#if listInfo?.author}<span class="author-chip-group"><span class="grid-data-chip text-small">AUTHOR</span><span
+              class:text-base={!isMobile}
+              class:text-small={isMobile}>{listInfo.author}</span
+            ></span>{/if}
         <span
           class:text-base={!isMobile}
           class:text-small={isMobile}
@@ -529,7 +538,9 @@
         tabindex="0"
         on:click={() => castVote(pairData.item1.name, pairData.item2.name, 1)}
       >
-        {#if pairData.item1.data?.picture}
+        {#if listInfo?.noImages}
+          <div class="img-no-image text-item">{pairData.item1.name}</div>
+        {:else if pairData.item1.data?.picture}
           <img src={pairData.item1.data.picture} alt={pairData.item1.name} />
         {:else}
           <div class="img-empty"></div>
@@ -576,7 +587,9 @@
         tabindex="0"
         on:click={() => castVote(pairData.item2.name, pairData.item1.name, 2)}
       >
-        {#if pairData.item2.data?.picture}
+        {#if listInfo?.noImages}
+          <div class="img-no-image text-item">{pairData.item2.name}</div>
+        {:else if pairData.item2.data?.picture}
           <img src={pairData.item2.data.picture} alt={pairData.item2.name} />
         {:else}
           <div class="img-empty"></div>
@@ -600,7 +613,9 @@
             e.key === "Enter" &&
             castVote(pairData.item1.name, pairData.item2.name, 1)}
         >
-          {#if pairData.item1.data?.picture}
+          {#if listInfo?.noImages}
+            <div class="img-no-image text-item">{pairData.item1.name}</div>
+          {:else if pairData.item1.data?.picture}
             <img src={pairData.item1.data.picture} alt={pairData.item1.name} />
           {:else}
             <div class="img-empty"></div>
@@ -621,7 +636,9 @@
             e.key === "Enter" &&
             castVote(pairData.item2.name, pairData.item1.name, 2)}
         >
-          {#if pairData.item2.data?.picture}
+          {#if listInfo?.noImages}
+            <div class="img-no-image text-item">{pairData.item2.name}</div>
+          {:else if pairData.item2.data?.picture}
             <img src={pairData.item2.data.picture} alt={pairData.item2.name} />
           {:else}
             <div class="img-empty"></div>
@@ -847,6 +864,20 @@
     cursor: default;
   }
 
+  .img-no-image {
+    width: 100%;
+    height: 100%;
+    background: black;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--spacing-md);
+    box-sizing: border-box;
+    text-transform: uppercase;
+  }
+
   .vote-item img,
   .img-empty {
     width: 100%;
@@ -1016,6 +1047,12 @@
     flex-shrink: 0;
   }
 
+  .author-chip-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+  }
+
   .grid-data-chip {
     background-color: var(--color-grey);
     color: var(--color-white);
@@ -1125,6 +1162,22 @@
     display: flex;
     gap: var(--spacing-sm);
     align-items: center;
+  }
+
+  .chat-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-red);
+    color: white;
+    border-radius: 2px;
+    font-size: 10px;
+    min-width: 14px;
+    height: 13px;
+    padding: 0 3px;
+    margin-left: 3px;
+    line-height: 1;
+    vertical-align: middle;
   }
 
   .view-and-chat {

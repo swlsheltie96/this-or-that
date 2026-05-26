@@ -14,6 +14,11 @@ const TURSO_URL = process.env.TURSO_URL || "file:./lists.db";
 const TURSO_TOKEN = process.env.TURSO_TOKEN || "";
 const db = createClient({ url: TURSO_URL, authToken: TURSO_TOKEN });
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || null;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || "";
+const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || "";
+const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || "";
+const GOOGLE_VISION_API_KEY = process.env.GOOGLE_VISION_API_KEY || "";
 const badWords = new BadWordsFilter();
 badWords.removeWords('God', 'damn', 'hell', 'sex');
 
@@ -489,6 +494,8 @@ app.post("/create-list", 10000, async (req) => {
   const data = body.data;
   if (!isClean(listName)) return jsonError("List name contains inappropriate content.");
   if (data?.description && !isClean(data.description)) return jsonError("Description contains inappropriate content.");
+  const existing = await dbGet("SELECT id FROM lists WHERE name = ?", [listName]);
+  if (existing) return jsonError(`A list named "${listName}" already exists. Choose a different name.`);
   const password = await Bun.password.hash(body.password);
   return runQuery(
     "INSERT INTO lists (name, data, password) VALUES (?, ?, ?)",
@@ -520,12 +527,12 @@ app.post("/change-password", 0, async (req) => {
 
 app.post("/update-list-metadata", 0, async (req) => {
   const body = await req.json();
-  const { listName, newListName, description, prompt, author, accentColor, password } = body;
+  const { listName, newListName, description, prompt, author, accentColor, noImages, password } = body;
   const row = await dbGet("SELECT id, password, data FROM lists WHERE name = ?", [listName]);
   if (!row) return jsonError(`List "${listName}" does not exist.`);
   if (!(await passwordVerify(password, row.password))) return jsonError("Invalid password.", 401);
   const existingData = row.data ? JSON.parse(row.data as string) : {};
-  const updatedData = { ...existingData, description, prompt, author, accentColor };
+  const updatedData = { ...existingData, description, prompt, author, accentColor, noImages };
   if (newListName && newListName !== listName) {
     const existing = await dbGet("SELECT id FROM lists WHERE name = ?", [newListName]);
     if (existing) return jsonError(`A list named "${newListName}" already exists.`);
@@ -816,6 +823,141 @@ app.get("/og-image", async (req) => {
   } catch (e) {
     console.error("OG image error:", e);
     return jsonError("Failed to generate image", 500);
+  }
+});
+
+// ── AI generation ──────────────────────────────────────────────────────────
+
+app.post("/generate", 5, async (req) => {
+  if (!GEMINI_API_KEY) return jsonError("AI generation not configured.");
+  const { type, listName, items, urls } = await req.json();
+
+  let prompt = "";
+  if (type === "listName") {
+    if (!items?.length) return jsonError("No items provided.");
+    prompt = `I'm making a ranking list with these items: ${items.slice(0, 20).join(", ")}. Suggest a short punchy list name (3-6 words max). Reply with just the name, no quotes, no punctuation at the end.`;
+  } else if (type === "items") {
+    if (!listName) return jsonError("No list name provided.");
+    prompt = `Suggest 8 items for a ranking list called "${listName}". Reply with just the item names, one per line, nothing else.`;
+  } else if (type === "autoName") {
+    if (!urls?.length) return jsonError("No URLs provided.");
+    const fetched = await Promise.all(urls.map((url: string) => fetchAsBase64(url)));
+    console.log("Fetched images:", fetched.map(b => b ? "ok" : "null"));
+    if (!fetched.some(Boolean)) return jsonError("Could not fetch any images.");
+    const parts: any[] = [
+      { text: `Name each of these ${fetched.filter(Boolean).length} images in 2-5 words, one name per line in order. Just the names, nothing else.` },
+      ...fetched.map(b64 => b64
+        ? { inlineData: { mimeType: b64.split(";")[0].split(":")[1], data: b64.split(",")[1] } }
+        : { text: "(image unavailable, reply with a blank line)" }
+      ),
+    ];
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts }] }), signal: AbortSignal.timeout(30000) }
+      );
+      const data = await res.json();
+      console.log("Gemini autoName response:", JSON.stringify(data).slice(0, 500));
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      if (!text) return jsonError(data.error?.message || "No response from AI.");
+      const names = text.split("\n").map((l: string) => l.replace(/^[-•*\d.]+\s*/, "").trim());
+      return Response.json({ result: names });
+    } catch (e) {
+      console.error("Gemini autoName error:", e);
+      return jsonError("AI generation failed.");
+    }
+  } else {
+    return jsonError("Invalid type.");
+  }
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+        signal: AbortSignal.timeout(15000),
+      }
+    );
+    const data = await res.json();
+    console.log("Gemini response:", JSON.stringify(data));
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    if (!text) return jsonError(data.error?.message || "No response from AI.");
+    if (type === "listName") return Response.json({ result: text });
+    const resultItems = text.split("\n").map((l: string) => l.replace(/^[-•*\d.]+\s*/, "").trim()).filter(Boolean);
+    return Response.json({ result: resultItems });
+  } catch (e) {
+    return jsonError("AI generation failed.");
+  }
+});
+
+// ── Image upload ───────────────────────────────────────────────────────────
+
+app.post("/upload-image", 2, async (req) => {
+  if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
+    return jsonError("Image upload not configured.");
+  }
+  let formData: FormData;
+  try { formData = await req.formData(); } catch { return jsonError("Invalid form data."); }
+  const file = formData.get("file");
+  if (!file || typeof file === "string") return jsonError("No file provided.");
+  if (!file.type.startsWith("image/")) return jsonError("File must be an image.");
+  if (file.size > 10 * 1024 * 1024) return jsonError("Max file size is 10MB.");
+
+  const bytes = await file.arrayBuffer();
+  let suggestedName = "";
+
+  // Google Vision SafeSearch + label detection
+  if (GOOGLE_VISION_API_KEY) {
+    const b64 = Buffer.from(bytes).toString("base64");
+    try {
+      const vRes = await fetch(
+        `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_VISION_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ requests: [{ image: { content: b64 }, features: [{ type: "SAFE_SEARCH_DETECTION" }, { type: "LABEL_DETECTION", maxResults: 1 }] }] }),
+          signal: AbortSignal.timeout(10000),
+        }
+      );
+      const vData = await vRes.json();
+      const response = vData.responses?.[0];
+      const ss = response?.safeSearchAnnotation;
+      const flagged = ["LIKELY", "VERY_LIKELY"];
+      if (ss && (flagged.includes(ss.adult) || flagged.includes(ss.violence))) {
+        return jsonError("Image was flagged as inappropriate.", 400);
+      }
+      suggestedName = response?.labelAnnotations?.[0]?.description || "";
+    } catch (e) {
+      console.error("Vision API error:", e);
+    }
+  }
+
+  // Cloudinary signed upload
+  const timestamp = Math.floor(Date.now() / 1000);
+  const hasher = new Bun.CryptoHasher("sha1");
+  hasher.update(`timestamp=${timestamp}${CLOUDINARY_API_SECRET}`);
+  const signature = hasher.digest("hex");
+
+  const upload = new FormData();
+  upload.append("file", new Blob([bytes], { type: file.type }), file.name || "upload");
+  upload.append("api_key", CLOUDINARY_API_KEY);
+  upload.append("timestamp", String(timestamp));
+  upload.append("signature", signature);
+
+  try {
+    const cRes = await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+      { method: "POST", body: upload, signal: AbortSignal.timeout(30000) }
+    );
+    const cData = await cRes.json();
+    console.log("Cloudinary response:", JSON.stringify(cData));
+    if (!cRes.ok) return jsonError(cData.error?.message || "Upload failed.");
+    return Response.json({ url: cData.secure_url, suggestedName });
+  } catch (e) {
+    console.error("Cloudinary upload error:", e);
+    return jsonError("Upload failed.");
   }
 });
 

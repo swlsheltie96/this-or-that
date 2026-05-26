@@ -1,11 +1,12 @@
 <script>
   import { onMount, onDestroy } from "svelte";
   import { getListsWithPopularity, navigate } from "../lib/api.js";
-  import { getCachedTopItems } from "../lib/listCache.js";
+  import { getCachedTopItems, getCachedListInfo } from "../lib/listCache.js";
 
   export let listName = "";
 
   let pair = null;
+  let noImages = false;
   let allLists = [];
   let cycleInterval;
   let currentListName = "";
@@ -13,9 +14,10 @@
 
   async function showList(name) {
     try {
-      const items = await getCachedTopItems(name);
+      const [items, info] = await Promise.all([getCachedTopItems(name), getCachedListInfo(name)]);
       if (!items || items.length < 2) return;
       currentListName = name;
+      noImages = info?.noImages || false;
       pair = { item1: items[0], item2: items[1] };
     } catch {}
   }
@@ -25,7 +27,8 @@
     const pick = allLists[Math.floor(Math.random() * allLists.length)];
     const items = await getCachedTopItems(pick.name);
     if (items && items.length >= 2) {
-      prefetchedPair = { listName: pick.name, item1: items[0], item2: items[1] };
+      const info = await getCachedListInfo(pick.name);
+      prefetchedPair = { listName: pick.name, item1: items[0], item2: items[1], noImages: info?.noImages || false };
     }
   }
 
@@ -33,6 +36,7 @@
     if (allLists.length === 0) return;
     if (prefetchedPair) {
       currentListName = prefetchedPair.listName;
+      noImages = prefetchedPair.noImages;
       pair = { item1: prefetchedPair.item1, item2: prefetchedPair.item2 };
       prefetchedPair = null;
     } else {
@@ -71,7 +75,9 @@
   <div class="vote-preview" on:click={handleClick} style="cursor: pointer;">
     <div class="images-row">
       <div class="image-wrap">
-        {#if pair.item1.data?.picture}
+        {#if noImages}
+          <div class="img-no-image text-item">{pair.item1.name}</div>
+        {:else if pair.item1.data?.picture}
           <img src={pair.item1.data.picture} alt={pair.item1.name} />
         {:else}
           <div class="img-empty"></div>
@@ -79,7 +85,9 @@
       </div>
       <div class="or text-small">or</div>
       <div class="image-wrap">
-        {#if pair.item2.data?.picture}
+        {#if noImages}
+          <div class="img-no-image text-item">{pair.item2.name}</div>
+        {:else if pair.item2.data?.picture}
           <img src={pair.item2.data.picture} alt={pair.item2.name} />
         {:else}
           <div class="img-empty"></div>
@@ -128,6 +136,20 @@
 
   .img-empty {
     background: var(--color-grey);
+  }
+
+  .img-no-image {
+    width: 100%;
+    height: 100%;
+    background: black;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--spacing-md);
+    box-sizing: border-box;
+    text-transform: uppercase;
   }
 
   .or {

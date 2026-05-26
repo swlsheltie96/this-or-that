@@ -25,6 +25,7 @@
   let description = "";
   let prompt = "";
   let author = "";
+  let noImages = false;
   let password = "";
 
   let rows = Array.from({ length: 5 }, () => ({ name: "", url: "" }));
@@ -91,6 +92,7 @@
       description = info.description || "";
       prompt = info.prompt || "";
       author = info.author || "";
+      noImages = info.noImages || false;
       rows = items.length
         ? items.map((item) => ({
             name: item.name,
@@ -106,6 +108,80 @@
   });
 
   let fileInput;
+  let uploadingRow = -1;
+  let uploadError = "";
+  let autoNaming = false;
+
+  async function autoNameRows() {
+    const targets = rows.map((r, i) => ({ i, url: r.url })).filter(({ url, i }) => url && !rows[i].name.trim());
+    if (!targets.length) return;
+    autoNaming = true;
+    try {
+      const res = await fetch("/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "autoName", urls: targets.map(t => t.url) }),
+      });
+      const data = await res.json();
+      if (data.result?.length) {
+        data.result.forEach((name, idx) => {
+          if (targets[idx]) rows[targets[idx].i] = { ...rows[targets[idx].i], name: name || "" };
+        });
+        rows = rows;
+      }
+    } catch {}
+    autoNaming = false;
+  }
+
+  let bulkUploading = false;
+  let bulkProgress = "";
+
+  async function uploadFile(file) {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/upload-image", { method: "POST", body: fd });
+    return res.json();
+  }
+
+  async function handleUpload(e, i) {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = "";
+    uploadingRow = i;
+    uploadError = "";
+    try {
+      const data = await uploadFile(file);
+      if (!data.url) { uploadError = data.error || "Upload failed."; return; }
+      rows[i] = { ...rows[i], url: data.url };
+      rows = rows;
+    } catch {
+      uploadError = "Upload failed.";
+    } finally {
+      uploadingRow = -1;
+    }
+  }
+
+  async function handleBulkUpload(e) {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    e.target.value = "";
+    bulkUploading = true;
+    uploadError = "";
+    const newRows = [];
+    for (let i = 0; i < files.length; i++) {
+      bulkProgress = `${i + 1}/${files.length}`;
+      try {
+        const data = await uploadFile(files[i]);
+        if (data.url) newRows.push({ name: "", url: data.url });
+        else uploadError = data.error || "One or more uploads failed.";
+      } catch {
+        uploadError = "One or more uploads failed.";
+      }
+    }
+    rows = [...rows.filter(r => r.name.trim() || r.url), ...newRows];
+    bulkUploading = false;
+    bulkProgress = "";
+  }
 
   function addRow() {
     rows = [...rows, { name: "", url: "" }];
@@ -152,7 +228,7 @@
       if (isNew) {
         await createList(
           title.trim(),
-          { description, prompt, author },
+          { description, prompt, author, noImages },
           password,
         );
         setListPassword(title.trim(), password);
@@ -174,6 +250,7 @@
           prompt,
           author,
           "",
+          noImages,
         );
         const keptNames = new Set(validRows.map((r) => r.name.trim()));
         for (const name of existingItemNames) {
@@ -312,6 +389,12 @@
         <label class="text-small">Author</label>
         <input class="text-small" bind:value={author} />
       </div>
+      {#if !isSuggestion}
+        <div class="field-row">
+          <label class="text-small" for="no-images-check">No Images</label>
+          <input id="no-images-check" type="checkbox" bind:checked={noImages} class="no-images-check" />
+        </div>
+      {/if}
       {#if isSuggestion}
         <div class="field-row field-row-black">
           <label class="text-small">Email</label>
@@ -341,30 +424,50 @@
           <span class="col-name text-small" style="color: var(--color-grey)"
             >Name</span
           >
-          <div class="col-thumb"></div>
-          <span class="col-url text-small" style="color: var(--color-grey)"
-            >URL</span
-          >
+          {#if !noImages}
+            <div class="col-thumb"></div>
+            <span class="col-url text-small" style="color: var(--color-grey)"
+              >URL</span
+            >
+          {/if}
           <div class="del-spacer"></div>
         </div>
         {#each rows as row, i}
           <div class="table-row">
             <input class="col-name text-small" bind:value={row.name} />
-            <div class="col-thumb">
-              {#if row.url}<img src={row.url} alt="" />{/if}
-            </div>
-            <input class="col-url text-small" bind:value={row.url} />
-            <button class="del-btn text-small" on:click={() => removeRow(i)}
-              >×</button
-            >
+            {#if !noImages}
+              <div class="col-thumb">
+                {#if row.url}<img src={row.url} alt="" />{/if}
+              </div>
+              <input class="col-url text-small" bind:value={row.url} />
+              <label class="upload-btn text-small" class:uploading={uploadingRow === i}>
+                <input type="file" accept="image/*" style="display:none" on:change={(e) => handleUpload(e, i)} />
+                {uploadingRow === i ? "..." : "↑"}
+              </label>
+            {/if}
+            <button class="del-btn text-small" on:click={() => removeRow(i)}>×</button>
           </div>
         {/each}
+        {#if uploadError}
+          <p class="error text-small">{uploadError}</p>
+        {/if}
       </div>
     {/if}
 
     <div class="add-row">
       {#if !isSuggestion}
-        <button class="text-small" on:click={addRow}>+ Add</button>
+        <div class="add-row-left">
+          <button class="text-small" on:click={addRow}>+ Add</button>
+          {#if !noImages}
+            <label class="text-small suggest-btn bulk-upload-btn" class:uploading={bulkUploading}>
+              <input type="file" accept="image/*" multiple style="display:none" on:change={handleBulkUpload} disabled={bulkUploading} />
+              {bulkUploading ? `Uploading ${bulkProgress}...` : "+ Upload Images"}
+            </label>
+            <button class="text-small suggest-btn" on:click={autoNameRows} disabled={autoNaming}>
+              {autoNaming ? "..." : "Auto-name"}
+            </button>
+          {/if}
+        </div>
       {:else}
         <div></div>
       {/if}
@@ -520,6 +623,10 @@
     border-bottom: unset;
   }
 
+  .no-images-check {
+    accent-color: var(--color-black);
+  }
+
   .field-row.highlight label {
     background-color: red;
     color: white;
@@ -620,11 +727,52 @@
     text-align: center;
   }
 
+  .upload-btn {
+    flex-shrink: 0;
+    cursor: pointer;
+    width: 20px;
+    text-align: center;
+    opacity: 0.4;
+    border: none;
+    background: none;
+    padding: 0;
+    font-family: var(--font-family);
+  }
+
+  .upload-btn:hover {
+    opacity: 1;
+  }
+
+  .upload-btn.uploading {
+    opacity: 0.4;
+    cursor: default;
+  }
+
   .add-row {
     padding: var(--spacing-md);
     display: flex;
     align-items: center;
     justify-content: space-between;
+  }
+
+  .add-row-left {
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: center;
+  }
+
+  .suggest-btn {
+    color: var(--color-grey);
+    border-color: var(--color-grey);
+  }
+
+  .bulk-upload-btn {
+    cursor: pointer;
+  }
+
+  .bulk-upload-btn.uploading {
+    opacity: 0.5;
+    cursor: default;
   }
 
   .delete-group {

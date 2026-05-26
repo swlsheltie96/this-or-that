@@ -28,6 +28,8 @@ export default defineConfig({
       "/get-elo-history": "http://localhost:3000",
       "/recent-changes": "http://localhost:3000",
       "/og-image": "http://localhost:3000",
+      "/upload-image": "http://localhost:3000",
+      "/generate": "http://localhost:3000",
       "/admin": "http://localhost:3000",
       "/stats": "http://localhost:3000",
       "/heartbeat": "http://localhost:3000",

@@ -27,6 +27,12 @@
     font-size: 0.8rem;
 }
 
+.text-item {
+    font-family: var(--font-family);
+    font-size: 2rem;
+    line-height: 1.1;
+}
+
 @media (max-width: 740px) {
 .text-base {
     font-family:var(--font-family);

@@ -133,8 +133,11 @@
 
   <div class="list-header" class:mobile={isMobile}>
     <div class="list-header-data">
+      <div class="list-data-left text-small">
+        <span class="grid-data-chip text-small">AUTHOR</span>
+        {listInfo.author || "—"}
+      </div>
       <div class="list-data text-small">
-        By {listInfo.author}<br />
         {listInfo.itemCount} items<br />
         {listInfo.voteCount} votes<br />
         {formatTimestamp(listInfo.lastVoteTimestamp)}
@@ -169,8 +172,10 @@
             <div class="item-data name text-base">{item.name}</div>
           </div>
           <div class="item-data img">
-            {#if item.data?.picture}
-              <img src={item.data.picture} alt={item.name} />
+            {#if listInfo?.noImages}
+              <div class="img-no-image text-item">{item.name}</div>
+            {:else if item.data?.picture}
+              <img src={item.data.picture} alt={item.name} loading="lazy" />
             {:else}
               <div class="img-empty"></div>
             {/if}
@@ -188,8 +193,10 @@
           </div>
 
           <div class="item-data img">
-            {#if item.data?.picture}
-              <img src={item.data.picture} alt={item.name} />
+            {#if listInfo?.noImages}
+              <div class="img-no-image text-item">{item.name}</div>
+            {:else if item.data?.picture}
+              <img src={item.data.picture} alt={item.name} loading="lazy" />
             {:else}
               <div class="img-empty"></div>
             {/if}
@@ -252,6 +259,34 @@
   .list-data {
     text-align: right;
     width: 100%;
+  }
+
+  .list-data-left {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+
+  .img-no-image {
+    width: 100%;
+    height: 100%;
+    background: black;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--spacing-md);
+    box-sizing: border-box;
+    text-transform: uppercase;
+  }
+
+  .grid-data-chip {
+    background-color: var(--color-grey);
+    color: var(--color-white);
+    padding: 0 var(--spacing-sm);
+    padding-top: 1px;
+    flex-shrink: 0;
   }
   .list-actions {
     width: var(--desktop-max-width);
