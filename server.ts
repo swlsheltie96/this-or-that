@@ -414,8 +414,8 @@ async function buildOGHtml(listName: string, origin: string): Promise<string | n
     FROM items LEFT JOIN elo_ratings ON items.name = elo_ratings.item_name AND elo_ratings.list_name = ?
     WHERE items.list_id = ? ORDER BY elo DESC LIMIT 2`, [listName, listRow.id]);
   const itemTitle = items.length >= 2
-    ? `${escapeHtml(listName)}: ${escapeHtml(items[0].name as string)} or ${escapeHtml(items[1].name as string)}`
-    : escapeHtml(listName);
+    ? `${escapeHtml(items[0].name as string)} or ${escapeHtml(items[1].name as string)} | This or That: ${escapeHtml(listName)}`
+    : `This or That: ${escapeHtml(listName)}`;
   const desc = d.description || `Vote on ${listName}`;
   const img = `${origin}/og-image?listName=${encodeURIComponent(listName)}`;
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
