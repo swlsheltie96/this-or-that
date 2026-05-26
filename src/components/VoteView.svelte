@@ -8,7 +8,7 @@
     getEloHistory,
     navigate,
   } from "../lib/api.js";
-  import { joinList, sendComment, chatMessages, chatName } from "../lib/ws.js";
+  import { joinList, sendComment, chatMessages, chatName, newCommentEvent } from "../lib/ws.js";
   import Header from "./Header.svelte";
   import HomeDropdown from "./HomeDropdown.svelte";
   import GridItem from "./GridItem.svelte";
@@ -153,6 +153,8 @@
     showDropdown = false;
     historyCache = new Map();
     itemHistory = [];
+    unreadCount = 0;
+    joinList(listName);
     loadPair();
     if (viewMode !== "vote") loadRankings();
   }
@@ -162,7 +164,7 @@
   let editingName = false;
   let messagesEl;
   let unreadCount = 0;
-  let prevChatLength = 0;
+  let prevEventCount = 0;
 
   $: if (showComments && listName) joinList(listName);
   $: if (showComments) unreadCount = 0;
@@ -171,12 +173,13 @@
     if (messagesEl) requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; });
   }
 
-  const unsubMessages = chatMessages.subscribe((msgs) => {
-    scrollToBottom();
-    if (!showComments && msgs.length > prevChatLength) {
-      unreadCount += msgs.length - prevChatLength;
+  const unsubMessages = chatMessages.subscribe(() => scrollToBottom());
+
+  const unsubNewComment = newCommentEvent.subscribe((count) => {
+    if (!showComments && count > prevEventCount) {
+      unreadCount += count - prevEventCount;
     }
-    prevChatLength = msgs.length;
+    prevEventCount = count;
   });
 
   let _chatName = "";
@@ -328,6 +331,7 @@
   }
 
   onMount(async () => {
+    joinList(listName);
     loadPair();
     window.addEventListener("keydown", handleKeydown);
   });
@@ -337,6 +341,7 @@
     if (eloAnimTimer) clearInterval(eloAnimTimer);
     if (loserAnimTimer) clearInterval(loserAnimTimer);
     unsubMessages();
+    unsubNewComment();
   });
 </script>
 

@@ -3,6 +3,7 @@ import { writable } from "svelte/store";
 export const onlineCount = writable(0);
 export const votesLastHour = writable(0);
 export const chatMessages = writable([]);
+export const newCommentEvent = writable(0);
 
 function makeRandomName() {
   const adj = ["swift", "quiet", "bright", "clever", "wild", "calm", "bold", "crisp"];
@@ -59,6 +60,7 @@ function connect() {
         chatMessages.set(msg.comments);
       } else if (msg.type === "comment") {
         chatMessages.update((msgs) => [...msgs, msg]);
+        newCommentEvent.update((n) => n + 1);
       }
     } catch {}
   };
