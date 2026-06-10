@@ -384,7 +384,6 @@
       <div class="right-controls">
         <button
           class="text-base"
-          \n
           class:active={viewMode !== "vote"}
           on:click={() => {
             showDropdown = false;
@@ -400,7 +399,6 @@
   <div class="list-name-bar">
     <button
       class="text-base"
-      \n
       class:active={viewMode === "vote"}
       on:click={() => (viewMode = "vote")}>Vote</button
     >
