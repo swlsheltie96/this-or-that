@@ -14,7 +14,8 @@
   let prefetchedPair = null;
 
   let name1El, name2El;
-  let name1Pos = 0, name2Pos = 0;
+  let name1Pos = 0,
+    name2Pos = 0;
   let unsubNameTick;
   let prevPair = null;
 
@@ -144,9 +145,15 @@
       </div>
     </div>
     <div class="names-row">
-      <div class="name text-base"><span class="name-inner" bind:this={name1El}>{pair.item1.name}</span></div>
+      <div class="name text-base"
+        ><span class="name-inner" bind:this={name1El}>{pair.item1.name}</span
+        ></div
+      >
       <div class="or text-base" aria-hidden="true">or</div>
-      <div class="name text-base"><span class="name-inner" bind:this={name2El}>{pair.item2.name}</span></div>
+      <div class="name text-base"
+        ><span class="name-inner" bind:this={name2El}>{pair.item2.name}</span
+        ></div
+      >
     </div>
   </div>
 {/if}
@@ -199,7 +206,6 @@
     white-space: nowrap;
   }
 
-
   .names-row .or {
     visibility: hidden;
   }
@@ -216,7 +222,7 @@
   .img-empty {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
   }
 
   .img-empty {
