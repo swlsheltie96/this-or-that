@@ -165,6 +165,7 @@
     if (viewMode !== "vote") loadRankings();
   }
 
+  let unreadCount = 0;
   let commentText = "";
   let showChat = false;
 
