@@ -368,7 +368,6 @@
     <div class="list-name-bar no-border">
       <button
         class="text-base"
-        \n
         class:active={viewMode === "vote"}
         on:click={() => {
           viewMode = "vote";
@@ -415,7 +414,6 @@
     <div class="right-controls">
       <button
         class="text-base"
-        \n
         class:active={viewMode !== "vote"}
         on:click={toggleView}>{viewButtonLabel}</button
       >
