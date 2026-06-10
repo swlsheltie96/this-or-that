@@ -73,7 +73,7 @@
         > -->
       </div>
       <div class="preview-bottom text-base">
-        <span>Follow</span>
+        <a href="https://www.instagram.com/this____or__that?utm_source=qr" target="_blank" rel="noopener noreferrer">Follow</a>
         <span>Info</span>
       </div>
     </div>
