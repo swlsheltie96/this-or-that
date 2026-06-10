@@ -23,7 +23,7 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-md);
-    padding-bottom: var(--spacing-margin);
+    padding-bottom: var(--spacing-sm);
     border-bottom: var(--border);
   }
 

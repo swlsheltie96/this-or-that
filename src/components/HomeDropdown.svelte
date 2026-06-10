@@ -14,6 +14,19 @@
   let listItemEls = [];
   let activeIndex = 0;
   let cycleTimer = null;
+  const labelStyles = new Map();
+
+  function getLabelStyle(name) {
+    if (!labelStyles.has(name)) {
+      const left = Math.floor(Math.random() * 55) + 5;
+      const rotation = Math.floor(Math.random() * 36) - 18;
+      labelStyles.set(
+        name,
+        `left:${left}%;top:50%;transform:translateY(-50%) rotate(${rotation}deg);`,
+      );
+    }
+    return labelStyles.get(name);
+  }
 
   const sortOptions = [
     { key: "recent", label: "Recently Voted" },
@@ -121,19 +134,19 @@
 
 <div class="home-dropdown">
   <div class="controls-row">
-    <button class="text-small" on:click={cycleSortBy}>Sort: {sortLabel}</button>
-    <button class="text-small" on:click={() => navigate("/?view=edit")}
-      >Create</button
-    >
-  </div>
-
-  <div class="search-bar text-base">
     <input
       type="text"
       placeholder="Search..."
       bind:value={searchQuery}
-      class="text-base"
+      class="text-base search-input"
     />
+    <div class="controls-buttons">
+      <button class="text-base" on:click={cycleSortBy}>Sort: {sortLabel}</button
+      >
+      <button class="text-base" on:click={() => navigate("/?view=edit")}
+        >Create</button
+      >
+    </div>
   </div>
 
   <div class="lists-wrapper">
@@ -160,17 +173,21 @@
           on:click={() =>
             navigate(`/?view=vote&listName=${encodeURIComponent(list.name)}`)}
         >
+          <span
+            class="vote-now-label text-small"
+            style={getLabelStyle(list.name)}>VOTE NOW</span
+          >
           <span class="name">{list.name}</span>
           <span class="count">{list.itemCount}</span>
           <span class="recency">{timeAgo(list.lastVoteTimestamp)}</span>
         </div>
       {/each}
       {#if isMobile}<div class="list-spacer"></div>{/if}
-      <div class="list-footer text-small"
+      <!-- <div class="list-footer text-small"
         ><a href="https://www.shannonlin.xyz"
           >Designed and built by Shannon Lin</a
         ></div
-      >
+      > -->
     </div>
     <slot />
   </div>
@@ -187,23 +204,24 @@
   .controls-row {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    padding: var(--spacing-margin);
-    border-bottom: var(--border);
+    align-items: center;
+    padding: var(--spacing-sm) 0 var(--spacing-sm) var(--spacing-margin);
     gap: var(--spacing-md);
   }
 
-  .search-bar {
-    border-bottom: var(--border);
-    padding: var(--spacing-lg) 0;
-  }
-
-  .search-bar input {
-    width: 100%;
+  .search-input {
+    flex: 1;
+    min-width: 0;
     border: none;
     outline: none;
     background: transparent;
-    padding: 0 var(--spacing-margin);
+    padding: 0;
+  }
+
+  .controls-buttons {
+    display: flex;
+    gap: var(--spacing-md);
+    flex-shrink: 0;
   }
 
   .lists-wrapper {
@@ -218,7 +236,7 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding: 0 var(--spacing-margin);
+    /* padding: 0 var(--spacing-margin); */
     /* scroll-snap-type: y mandatory; */
     scrollbar-width: none;
   }
@@ -232,23 +250,75 @@
     display: block;
     height: calc(var(--spacing-margin) / 2);
   }
-
+  @media (max-width: 740px) {
+    .controls-row {
+      flex-direction: column-reverse;
+      padding: 0;
+    }
+    .controls-buttons {
+      width: 100%;
+      justify-content: space-between;
+    }
+    .search-input {
+      width: 100%;
+      padding: var(--spacing-md) 0;
+    }
+    .lists::before {
+      content: "";
+      display: none;
+    }
+  }
   .list-spacer {
     height: calc(100% - 4em - var(--spacing-margin));
   }
 
   .list-item {
+    position: relative;
     display: flex;
     gap: var(--spacing-md);
-    padding: var(--spacing-md) 0;
+    padding: var(--spacing-md) var(--spacing-margin);
     cursor: pointer;
-    opacity: 0.5;
-    transition: opacity 0.2s ease;
+    transition: none;
     scroll-snap-align: start;
-    cursor: pointer;
+    border-bottom: 1.5px solid var(--color-black);
+    overflow: hidden;
+  }
+  @media (max-width: 740px) {
+    .list-item {
+      padding: var(--spacing-md) 0;
+    }
   }
 
-  .list-item.active {
+  .list-item:hover {
+    background-color: var(--color-black);
+    color: var(--color-white);
+    border-radius: var(--border-radius);
+  }
+
+  .list-item:has(+ .list-item:hover) {
+    border-bottom-color: transparent;
+  }
+
+  .list-item:last-child {
+    border-bottom: none;
+  }
+
+  .vote-now-label {
+    position: absolute;
+    background: var(--color-white);
+    color: var(--color-black);
+    padding: 2px var(--spacing-sm);
+    /* border-radius: var(--border-radius); */
+
+    text-transform: uppercase;
+    pointer-events: none;
+    opacity: 0;
+    /* transition: opacity 0.1s; */
+    white-space: nowrap;
+    z-index: 1;
+  }
+
+  .list-item:hover .vote-now-label {
     opacity: 1;
   }
 
@@ -258,7 +328,7 @@
 
   @media (min-width: 740px) {
     .list-item {
-      padding: var(--spacing-sm) 0;
+      padding: 12px var(--spacing-margin);
     }
   }
 
@@ -282,7 +352,7 @@
   }
 
   .list-footer {
-    padding: var(--spacing-md) 0;
+    padding: var(--spacing-md) var(--spacing-margin);
     padding-bottom: var(--spacing-margin);
     opacity: 0.4;
   }

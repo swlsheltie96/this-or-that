@@ -2,7 +2,6 @@
   import { onMount, onDestroy } from "svelte";
   import { getRecentChanges } from "../lib/api.js";
   import { onTick } from "../lib/sharedTick.js";
-  import { onlineCount, votesLastHour } from "../lib/ws.js";
 
   export let isMobile = false;
 
@@ -69,16 +68,11 @@
         {/each}
       </div>
     </div>
-    <div class="online-count text-small">
-      <span class="online-dot"></span>
-      {$onlineCount} online &nbsp;·&nbsp; {$votesLastHour}/hr
-    </div>
   </div>
 {/if}
 
 <style>
   .ticker-wrap {
-    border-bottom: var(--border);
     display: flex;
     align-items: center;
     padding: var(--spacing-margin) 0;
@@ -102,25 +96,6 @@
     padding: 0 var(--spacing-sm);
   }
 
-  .online-count {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    padding: 0 var(--spacing-margin);
-    border-left: var(--border);
-    color: var(--color-grey);
-    white-space: nowrap;
-  }
-
-  .online-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: var(--color-green);
-    flex-shrink: 0;
-  }
-
   .ticker-entry {
     display: flex;
     gap: var(--spacing-md);
@@ -133,13 +108,9 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: var(--color-grey);
-    padding: 0 var(--spacing-sm);
-  }
-  @media (min-width: 740px) {
-    .list-name {
-      padding-top: 2px;
-    }
+    background-color: var(--color-black);
+    padding: 2px var(--spacing-sm);
+    border-radius: 2px;
   }
 
   .item-name {

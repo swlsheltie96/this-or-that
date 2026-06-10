@@ -1,4 +1,5 @@
 import { writable } from "svelte/store";
+import { predicates, objects } from "friendly-words";
 
 export const onlineCount = writable(0);
 export const votesLastHour = writable(0);
@@ -6,12 +7,9 @@ export const chatMessages = writable([]);
 export const newCommentEvent = writable(0);
 
 function makeRandomName() {
-  const adj = ["swift", "quiet", "bright", "clever", "wild", "calm", "bold", "crisp"];
-  const noun = ["fox", "owl", "bear", "wolf", "hawk", "deer", "lynx", "crow"];
-  const a = adj[Math.floor(Math.random() * adj.length)];
-  const n = noun[Math.floor(Math.random() * noun.length)];
-  const num = Math.floor(Math.random() * 9000) + 1000;
-  return `${a}-${n}-${num}`;
+  const a = predicates[Math.floor(Math.random() * predicates.length)];
+  const n = objects[Math.floor(Math.random() * objects.length)];
+  return `${a}${n}`.toLowerCase();
 }
 
 function loadName() {

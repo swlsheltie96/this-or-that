@@ -21,7 +21,10 @@
     if (
       path.includes("vote.html") ||
       (urlParams.has("view") && urlParams.get("view") === "vote") ||
-      (urlParams.has("view") && (urlParams.get("view") === "listview" || urlParams.get("view") === "grid" || urlParams.get("view") === "list"))
+      (urlParams.has("view") &&
+        (urlParams.get("view") === "listview" ||
+          urlParams.get("view") === "grid" ||
+          urlParams.get("view") === "list"))
     ) {
       listName = urlParams.get("listName") || "";
       return "vote";
@@ -57,7 +60,8 @@
     class:vote-layout={currentView === "vote"}
     class:mobile-home={currentView === "home" && isMobile}
     class:desktop-home={currentView === "home" && !isMobile}
-    class:mobile-edit={(currentView === "edit" || currentView === "create") && isMobile}
+    class:mobile-edit={(currentView === "edit" || currentView === "create") &&
+      isMobile}
   >
     {#if currentView === "home" && isMobile}
       <Header />
@@ -98,6 +102,8 @@
   .app-container {
     display: flex;
     flex-direction: column;
+    padding: var(--spacing-sm);
+    gap: var(--spacing-sm);
   }
 
   .mobile-info {
@@ -106,7 +112,7 @@
     text-transform: uppercase;
   }
   .app-container.vote-layout {
-    height: 100dvh;
+    height: calc(100dvh - 2 * var(--spacing-sm));
     overflow: hidden;
   }
 
@@ -123,7 +129,7 @@
   }
 
   .app-container.desktop-home {
-    height: 100dvh;
+    height: calc(100dvh - 2 * var(--spacing-sm));
     overflow: hidden;
   }
 </style>

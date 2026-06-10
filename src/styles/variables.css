@@ -5,8 +5,10 @@
   --color-black: #000000;
   --color-white: #ffffff;
   --color-highlight:  lightgoldenrodyellow;
-  --color-grey: lightgrey;
-    --color-green: rgb(32, 165, 32);
+  --color-grey: #dedede;
+  --color-bkggrey: #f0f0f0;
+    --color-green:#00C100;
+  --color-lime: #d1eb89;
       --color-red: rgb(255, 65, 65);
 
   /* Typography */
@@ -22,8 +24,12 @@
     --spacing-xlg: 32px;
     --spacing-margin: 20px;
 
+  /* Dimensions */
+  --button-height: calc(1.2rem + 2 * var(--spacing-md));
+
   /* Borders */
-  --border: 1px solid var(--color-grey);
+  --border: 1.5px solid var(--color-black);
+  --border-radius: 4px;
 
 --desktop-max-width: 60vw;
 
@@ -37,7 +43,7 @@
 
 @media (min-width: 740px) {
   :root {
-          --spacing-margin: 10px;
-
+    --spacing-margin: 10px;
+    --button-height: calc(1.2rem + 2 * var(--spacing-margin));
   }
 }

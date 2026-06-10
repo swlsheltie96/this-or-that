@@ -108,24 +108,34 @@
   });
 
   let fileInput;
+  let bulkFileInput;
   let uploadingRow = -1;
   let uploadError = "";
   let autoNaming = false;
 
   async function autoNameRows() {
-    const targets = rows.map((r, i) => ({ i, url: r.url })).filter(({ url, i }) => url && !rows[i].name.trim());
+    const targets = rows
+      .map((r, i) => ({ i, url: r.url }))
+      .filter(({ url, i }) => url && !rows[i].name.trim());
     if (!targets.length) return;
     autoNaming = true;
     try {
       const res = await fetch("/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "autoName", urls: targets.map(t => t.url) }),
+        body: JSON.stringify({
+          type: "autoName",
+          urls: targets.map((t) => t.url),
+        }),
       });
       const data = await res.json();
       if (data.result?.length) {
         data.result.forEach((name, idx) => {
-          if (targets[idx]) rows[targets[idx].i] = { ...rows[targets[idx].i], name: name || "" };
+          if (targets[idx])
+            rows[targets[idx].i] = {
+              ...rows[targets[idx].i],
+              name: name || "",
+            };
         });
         rows = rows;
       }
@@ -151,7 +161,10 @@
     uploadError = "";
     try {
       const data = await uploadFile(file);
-      if (!data.url) { uploadError = data.error || "Upload failed."; return; }
+      if (!data.url) {
+        uploadError = data.error || "Upload failed.";
+        return;
+      }
       rows[i] = { ...rows[i], url: data.url };
       rows = rows;
     } catch {
@@ -178,7 +191,7 @@
         uploadError = "One or more uploads failed.";
       }
     }
-    rows = [...rows.filter(r => r.name.trim() || r.url), ...newRows];
+    rows = [...rows.filter((r) => r.name.trim() || r.url), ...newRows];
     bulkUploading = false;
     bulkProgress = "";
   }
@@ -314,33 +327,47 @@
   <div class="dropdown-overlay">
     <Header />
     <div class="list-name-bar no-border">
-      <button class="text-small" disabled>Vote</button>
+      <button class="text-base" disabled>Editing</button>
       <div
         class="list-name-center text-small"
         on:click={() => (showDropdown = false)}
       >
         <span>{listName}</span>
-        <span class="chevron open">▾</span>
+        <span class="chevron open">⏷</span>
       </div>
-      <button class="text-small" disabled>List</button>
+      <button class="text-base" disabled>Save & Close</button>
     </div>
     <HomeDropdown {isMobile} />
   </div>
 {:else}
   {#if isMobile}<Header />{/if}
-  {#if !isNew}
-    <div class="list-name-bar">
-      <button class="text-small" disabled>Vote</button>
+  <div class="list-name-bar">
+    {#if isNew}
+      <button class="text-base" on:click={() => navigate("/")}>Back</button>
+      <div class="list-name-center text-small"></div>
+      <button
+        class="text-base"
+        on:click={isSuggestion ? submitSuggestion : save}
+        disabled={saving}
+      >
+        {#if isSuggestion}
+          {suggSubmitted ? "Suggested!" : "Suggest List"}
+        {:else}
+          {saving ? "Submitting" : "Submit"}
+        {/if}
+      </button>
+    {:else}
+      <button class="text-base" disabled>Editing</button>
       <div
         class="list-name-center text-small"
         on:click={() => (showDropdown = true)}
       >
         <span>{listName}</span>
-        <span class="chevron">▾</span>
+        <span class="chevron">⏷</span>
       </div>
-      <button class="text-small" disabled>List</button>
-    </div>
-  {/if}
+      <button class="text-base" on:click={save}>Save & Close</button>
+    {/if}
+  </div>
 
   <div class="scroll-area">
     <input
@@ -351,160 +378,220 @@
       style="display:none"
     />
 
-    <div
-      class="field-row instruction-row"
-      class:success={createSuccess || saveSuccess}
-      class:deleting={deleteInProgress}
-      style="padding-left: var(--spacing-margin); padding-right: var(--spacing-margin);"
-    >
-      <span class="text-small"
-        class:success-text={createSuccess || saveSuccess}
-        class:delete-text={deleteInProgress}
-        style={createSuccess || saveSuccess || deleteInProgress ? "" : "color: var(--color-grey)"}
-      >
-        {#if createSuccess}
-          list created successfully!!! :)))))
-        {:else if saveSuccess}
-          success. closing...
-        {:else if deleteInProgress}
-          Deleting... Good bye.
-        {:else if isNew}
-          Name your list, add some items, and start ranking.
-        {:else}
-          Edit your list, add or remove items.
-        {/if}
-      </span>
-    </div>
-
-    <div class="meta">
-      <div class="field-row" class:highlight={titleHighlight}>
-        <label class="text-small">Title</label>
-        <input class="text-small" bind:value={title} placeholder="List name" />
-      </div>
-      <div class="field-row">
-        <label class="text-small">Description</label>
-        <input class="text-small" bind:value={description} />
-      </div>
-      <div class="field-row">
-        <label class="text-small">Author</label>
-        <input class="text-small" bind:value={author} />
-      </div>
-      {#if !isSuggestion}
-        <div class="field-row">
-          <label class="text-small" for="no-images-check">No Images</label>
-          <input id="no-images-check" type="checkbox" bind:checked={noImages} class="no-images-check" />
-        </div>
-      {/if}
-      {#if isSuggestion}
-        <div class="field-row field-row-black">
-          <label class="text-small">Email</label>
-          <input class="text-small" type="email" bind:value={suggEmail} />
-        </div>
-      {/if}
-      {#if !isSuggestion}
-        <div
-          class="field-row field-row-black"
-          class:highlight={passwordHighlight}
-        >
-          <label class="text-small">Password</label>
-          <input
-            class="text-small"
-            type="password"
-            bind:value={password}
-            bind:this={passwordInputEl}
-            on:input={() => (passwordHighlight = false)}
-          />
-        </div>
-      {/if}
-    </div>
-
-    {#if !isSuggestion}
-      <div class="items-table">
-        <div class="table-header">
-          <span class="col-name text-small" style="color: var(--color-grey)"
-            >Name</span
+    <div class="two-col">
+      <div class="meta-col-wrap">
+        <div class="meta">
+          <div
+            class="field-row instruction-row"
+            class:success={createSuccess || saveSuccess}
+            class:deleting={deleteInProgress}
           >
-          {#if !noImages}
-            <div class="col-thumb"></div>
-            <span class="col-url text-small" style="color: var(--color-grey)"
-              >URL</span
+            <span
+              class="text-small"
+              class:success-text={createSuccess || saveSuccess}
+              class:delete-text={deleteInProgress}
+              style={createSuccess || saveSuccess || deleteInProgress
+                ? ""
+                : "color: var(--color-grey)"}
             >
-          {/if}
-          <div class="del-spacer"></div>
-        </div>
-        {#each rows as row, i}
-          <div class="table-row">
-            <input class="col-name text-small" bind:value={row.name} />
-            {#if !noImages}
-              <div class="col-thumb">
-                {#if row.url}<img src={row.url} alt="" />{/if}
-              </div>
-              <input class="col-url text-small" bind:value={row.url} />
-              <label class="upload-btn text-small" class:uploading={uploadingRow === i}>
-                <input type="file" accept="image/*" style="display:none" on:change={(e) => handleUpload(e, i)} />
-                {uploadingRow === i ? "..." : "↑"}
-              </label>
-            {/if}
-            <button class="del-btn text-small" on:click={() => removeRow(i)}>×</button>
+              {#if createSuccess}
+                list created successfully!!! :)))))
+              {:else if saveSuccess}
+                success. closing...
+              {:else if deleteInProgress}
+                Deleting... Good bye.
+              {:else if isNew}
+                Name your list, add some items, and start ranking.
+              {:else}
+                Edit your list, add or remove items.
+              {/if}
+            </span>
+            <div class="col-thumb" style="visibility:hidden"></div>
           </div>
-        {/each}
-        {#if uploadError}
-          <p class="error text-small">{uploadError}</p>
+          <div class="field-row" class:highlight={titleHighlight}>
+            <label class="text-small">Title</label>
+            <input
+              class="text-small"
+              bind:value={title}
+              placeholder="List name"
+            />
+          </div>
+          <div class="field-row">
+            <label class="text-small">Description</label>
+            <input class="text-small" bind:value={description} />
+          </div>
+          <div class="field-row">
+            <label class="text-small">Author</label>
+            <input class="text-small" bind:value={author} />
+          </div>
+          {#if isNew}
+            <div
+              class="field-row"
+              on:click={() => (isSuggestion = !isSuggestion)}
+              style="cursor:pointer"
+            >
+              <label class="text-small" style="cursor:pointer"
+                >Suggest Only</label
+              >
+              <input
+                class="text-small"
+                style="visibility:hidden; flex:1"
+                tabindex="-1"
+                readonly
+              />
+              <span class="text-small" style="flex-shrink:0"
+                >{isSuggestion ? "On" : "Off"}</span
+              >
+            </div>
+          {/if}
+          {#if !isSuggestion}
+            <div
+              class="field-row"
+              on:click={() => (noImages = !noImages)}
+              style="cursor:pointer"
+            >
+              <label class="text-small" style="cursor:pointer">No Images</label>
+              <input
+                class="text-small"
+                style="visibility:hidden; flex:1"
+                tabindex="-1"
+                readonly
+              />
+              <span class="text-small" style="flex-shrink:0"
+                >{noImages ? "On" : "Off"}</span
+              >
+            </div>
+          {/if}
+          {#if isSuggestion}
+            <div class="field-row">
+              <label class="text-small">Email</label>
+              <input class="text-small" type="email" bind:value={suggEmail} />
+            </div>
+          {/if}
+          {#if !isSuggestion}
+            <div class="field-row" class:highlight={passwordHighlight}>
+              <label class="text-small">Password</label>
+              <input
+                class="text-small"
+                type="password"
+                autocapitalize="none"
+                autocorrect="off"
+                bind:value={password}
+                bind:this={passwordInputEl}
+                on:input={() => (passwordHighlight = false)}
+              />
+            </div>
+          {/if}
+        </div>
+
+        <div class="meta-actions">
+          {#if !isNew && !isSuggestion}
+            <div class="delete-group">
+              <button class="text-base delete-btn" on:click={handleDelete}
+                >Delete</button
+              >
+              {#if confirmDelete}
+                <button
+                  class="text-base delete-btn confirm-delete-btn"
+                  on:click={handleDelete}>Are you sure?</button
+                >
+              {/if}
+            </div>
+          {/if}
+        </div>
+      </div>
+
+      <div class="items-col">
+        {#if !isSuggestion}
+          <div class="items-table">
+            <div class="table-header">
+              <span class="col-name text-small" style="color: var(--color-grey)"
+                >Name</span
+              >
+              {#if !noImages}
+                <div class="col-thumb"></div>
+                <span
+                  class="col-url text-small"
+                  style="color: var(--color-grey)">URL</span
+                >
+                <div class="upload-spacer"></div>
+              {/if}
+              <div class="del-spacer"></div>
+            </div>
+            {#each rows as row, i}
+              <div class="table-row">
+                <input class="col-name text-small" bind:value={row.name} />
+                {#if !noImages}
+                  <div class="col-thumb">
+                    {#if row.url}<img src={row.url} alt="" />{/if}
+                  </div>
+                  <input class="col-url text-small" bind:value={row.url} />
+                  <label
+                    class="upload-btn text-small"
+                    class:uploading={uploadingRow === i}
+                  >
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style="display:none"
+                      on:change={(e) => handleUpload(e, i)}
+                    />
+                    {uploadingRow === i ? "..." : "↑"}
+                  </label>
+                {/if}
+                <button class="del-btn text-small" on:click={() => removeRow(i)}
+                  >×</button
+                >
+              </div>
+            {/each}
+            {#if uploadError}
+              <p class="error text-small">{uploadError}</p>
+            {/if}
+          </div>
+        {/if}
+
+        <div class="add-row">
+          {#if !isSuggestion}
+            <button class="text-base" on:click={addRow}>Add Row</button>
+            {#if !noImages}
+              <div class="upload-actions">
+                <input
+                  bind:this={bulkFileInput}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  style="display:none"
+                  on:change={handleBulkUpload}
+                  disabled={bulkUploading}
+                />
+                <button
+                  class="text-base bulk-upload-btn"
+                  class:uploading={bulkUploading}
+                  disabled={bulkUploading}
+                  on:click={() => bulkFileInput.click()}
+                >
+                  {bulkUploading
+                    ? `Uploading ${bulkProgress}...`
+                    : "Upload Images"}
+                </button>
+                <button
+                  class="text-base"
+                  on:click={autoNameRows}
+                  disabled={autoNaming}
+                >
+                  {autoNaming ? "..." : "Auto-name"}
+                </button>
+              </div>
+            {/if}
+          {/if}
+        </div>
+
+        {#if error}
+          <p class="error text-small">{error}</p>
         {/if}
       </div>
-    {/if}
-
-    <div class="add-row">
-      {#if !isSuggestion}
-        <div class="add-row-left">
-          <button class="text-small" on:click={addRow}>+ Add</button>
-          {#if !noImages}
-            <label class="text-small suggest-btn bulk-upload-btn" class:uploading={bulkUploading}>
-              <input type="file" accept="image/*" multiple style="display:none" on:change={handleBulkUpload} disabled={bulkUploading} />
-              {bulkUploading ? `Uploading ${bulkProgress}...` : "+ Upload Images"}
-            </label>
-            <button class="text-small suggest-btn" on:click={autoNameRows} disabled={autoNaming}>
-              {autoNaming ? "..." : "Auto-name"}
-            </button>
-          {/if}
-        </div>
-      {:else}
-        <div></div>
-      {/if}
-      {#if isNew}
-        <label
-          class="text-small suggest-check"
-          style="color: var(--color-grey)"
-        >
-          <input type="checkbox" bind:checked={isSuggestion} />
-          Don't want to create a list? Suggest one instead
-        </label>
-      {:else}
-        <div class="delete-group">
-          <button class="text-small delete-btn" on:click={handleDelete}>Delete</button>
-          {#if confirmDelete}
-            <button class="text-small delete-btn confirm-delete-btn" on:click={handleDelete}>Are you sure?</button>
-          {/if}
-        </div>
-      {/if}
     </div>
-
-    {#if error}
-      <p class="error text-small">{error}</p>
-    {/if}
   </div>
-
-  <button
-    class="edit-fab text-small"
-    on:click={isSuggestion ? submitSuggestion : save}
-    disabled={saving}
-  >
-    {#if isSuggestion}
-      {suggSubmitted ? "Suggested!" : "Suggest List"}
-    {:else}
-      {isNew ? (saving ? "Submitting" : "Submit") : saving ? "Saving" : "Save and Close"}
-    {/if}
-  </button>
 {/if}
 
 <style>
@@ -516,21 +603,23 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: var(--color-white);
+    background: var(--color-bkggrey);
     z-index: 50;
     display: flex;
     flex-direction: column;
+    padding: var(--spacing-sm);
+    gap: var(--spacing-sm);
+    box-sizing: border-box;
   }
 
   .list-name-bar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--spacing-margin);
-    border-bottom: var(--border);
+    /* padding: var(--spacing-sm) 0; */
+    /* border-bottom: var(--border); */
     gap: var(--spacing-md);
   }
-
   .list-name-bar.no-border {
     border-bottom: none;
   }
@@ -586,13 +675,55 @@
     color: var(--color-red) !important;
   }
 
+  .two-col {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .meta-col-wrap {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .items-col {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .meta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm) 0;
+  }
+
+  @media (min-width: 740px) {
+    .two-col {
+      flex-direction: row;
+      align-items: flex-start;
+      gap: var(--spacing-margin);
+    }
+
+    .meta-col-wrap {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .meta {
+      border-bottom: none;
+    }
+
+    .items-col {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
   /* meta rows */
   .meta {
     display: flex;
     flex-direction: column;
     text-transform: uppercase;
-    padding: 0 var(--spacing-margin);
-    border-bottom: 1px solid black;
   }
 
   .field-row {
@@ -602,6 +733,12 @@
     padding: var(--spacing-margin) 0;
     border-bottom: var(--border);
     /* min-height: calc(25px + var(--spacing-md)); */
+  }
+
+  @media (max-width: 740px) {
+    .field-row {
+      padding: 10px 0;
+    }
   }
 
   .field-row label {
@@ -617,6 +754,10 @@
     text-align: right;
     text-transform: uppercase;
     min-width: 0;
+  }
+
+  .field-row input[type="password"] {
+    text-transform: none;
   }
 
   .field-row-black {
@@ -649,7 +790,7 @@
   .items-table {
     display: flex;
     flex-direction: column;
-    padding: 0 var(--spacing-margin);
+    /* padding: 0 var(--spacing-margin); */
   }
 
   .table-header {
@@ -668,6 +809,12 @@
     gap: var(--spacing-md);
     padding: var(--spacing-margin) 0;
     border-bottom: var(--border);
+  }
+
+  @media (max-width: 740px) {
+    .table-row {
+      padding: 10px 0;
+    }
   }
 
   .col-name {
@@ -694,8 +841,8 @@
   }
 
   .col-thumb {
-    width: 25px;
-    height: 25px;
+    width: 1em;
+    height: 1em;
     flex-shrink: 0;
     overflow: hidden;
   }
@@ -705,14 +852,14 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    aspect-ratio: 1;
   }
 
   .thumb-empty {
     background: var(--color-grey);
   }
 
-  .del-spacer {
+  .del-spacer,
+  .upload-spacer {
     flex-shrink: 0;
     width: 20px;
   }
@@ -749,7 +896,7 @@
   }
 
   .add-row {
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm) 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -761,13 +908,10 @@
     align-items: center;
   }
 
-  .suggest-btn {
-    color: var(--color-grey);
-    border-color: var(--color-grey);
-  }
-
-  .bulk-upload-btn {
-    cursor: pointer;
+  .upload-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
   }
 
   .bulk-upload-btn.uploading {
@@ -783,50 +927,11 @@
   }
 
   .delete-btn {
-    color: var(--color-red);
-    border-color: var(--color-red);
-  }
-
-  .suggest-check {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    cursor: pointer;
-    text-transform: uppercase;
-  }
-
-  .suggest-check input[type="checkbox"] {
-    accent-color: var(--color-black);
+    background-color: var(--color-red);
   }
 
   .error {
     padding: var(--spacing-margin);
     color: red;
-  }
-
-  .edit-fab {
-    position: fixed;
-    bottom: var(--spacing-margin);
-    right: var(--spacing-margin);
-    z-index: 10;
-    cursor: pointer;
-    color: var(--color-black);
-    background-color: var(--color-white);
-    border-color: var(--color-black);
-  }
-
-  .edit-fab:hover {
-    color: var(--color-white);
-    background-color: var(--color-black);
-  }
-
-  .edit-fab.active {
-    color: var(--color-white);
-    background-color: var(--color-black);
-    border-color: var(--color-black);
-  }
-
-  .edit-fab:disabled {
-    opacity: 0.7;
   }
 </style>

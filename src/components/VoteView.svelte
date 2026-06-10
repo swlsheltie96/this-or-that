@@ -8,7 +8,7 @@
     getEloHistory,
     navigate,
   } from "../lib/api.js";
-  import { joinList, sendComment, chatMessages, chatName, newCommentEvent } from "../lib/ws.js";
+  import { joinList, sendComment, chatMessages, chatName } from "../lib/ws.js";
   import Header from "./Header.svelte";
   import HomeDropdown from "./HomeDropdown.svelte";
   import GridItem from "./GridItem.svelte";
@@ -49,7 +49,7 @@
   $: sparkPoints = (() => {
     if (itemHistory.length < 2) return "";
     const W = 120;
-    const H = (gridHeaderHeight - 6) || 18;
+    const H = 30;
     const ratings = itemHistory.map((h) => h.rating);
     const min = Math.min(...ratings);
     const max = Math.max(...ratings);
@@ -147,7 +147,8 @@
     viewMode === "grid" ? "Grid" : viewMode === "list" ? "List" : "View";
 
   $: if (listName) {
-    const suffix = viewMode === "vote" ? "Vote" : viewMode === "grid" ? "Grid" : "List";
+    const suffix =
+      viewMode === "vote" ? "Vote" : viewMode === "grid" ? "Grid" : "List";
     document.title = `${listName} · ${suffix} | This or That`;
   }
 
@@ -164,28 +165,120 @@
     if (viewMode !== "vote") loadRankings();
   }
 
-  let showComments = false;
   let commentText = "";
-  let editingName = false;
-  let messagesEl;
-  let unreadCount = 0;
-  let prevEventCount = 0;
+  let showChat = false;
 
-  $: if (showComments && listName) joinList(listName);
-  $: if (showComments) unreadCount = 0;
+  $: if (commentText) showChat = true;
 
-  function scrollToBottom() {
-    if (messagesEl) requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; });
+  // ── Effects ────────────────────────────────────────────
+  const EFFECTS = [
+    "arc-float",
+    "crit-hit",
+    "loser-shake",
+    "winner-flash",
+    "particle-burst",
+    "praise-text",
+    "streak-fire",
+    "screen-shake",
+    "ripple-ring",
+    "ko-upset",
+    "combo-multiplier",
+    "pixel-scatter",
+  ];
+  const PRAISE = [
+    "NICE!",
+    "GREAT!",
+    "SICK!",
+    "WOW!",
+    "YEAH!",
+    "LET'S GO!",
+    "FIRE!",
+  ];
+
+  let activeEffect = null;
+  let effectPayload = {};
+  let streakCount = 0;
+  let comboCount = 0;
+  let lastVoteTime = 0;
+  let effectTimer = null;
+  let particles = [];
+
+  let debugMode = false;
+  let debugEffect = EFFECTS[0];
+
+  function clearEffect() {
+    activeEffect = null;
+    effectPayload = {};
+    particles = [];
   }
 
-  const unsubMessages = chatMessages.subscribe(() => scrollToBottom());
+  function runEffect(effectName, delta, winnerItem) {
+    if (effectTimer) clearTimeout(effectTimer);
+    clearEffect();
+    activeEffect = effectName;
+    effectPayload = { delta, winnerItem };
 
-  const unsubNewComment = newCommentEvent.subscribe((count) => {
-    if (!showComments && count > prevEventCount) {
-      unreadCount += count - prevEventCount;
+    if (effectName === "particle-burst") {
+      particles = Array.from({ length: 8 }, (_, i) => ({
+        angle: (i / 8) * 360,
+        color: ["#ff4141", "#ffd700", "#00c100", "#00aaff", "#ff69b4"][i % 5],
+      }));
     }
-    prevEventCount = count;
-  });
+    if (effectName === "praise-text") {
+      effectPayload.word = PRAISE[Math.floor(Math.random() * PRAISE.length)];
+    }
+    if (effectName === "ko-upset") {
+      effectPayload.word = delta >= 20 ? "UPSET!" : "KO!";
+    }
+    if (effectName === "combo-multiplier") {
+      effectPayload.combo = comboCount;
+    }
+    if (effectName === "streak-fire") {
+      effectPayload.streak = streakCount;
+    }
+    if (effectName === "pixel-scatter") {
+      particles = Array.from({ length: 12 }, (_, i) => ({
+        x: Math.random() * 100,
+        delay: Math.random() * 0.2,
+        size: 4 + Math.random() * 6,
+      }));
+    }
+
+    effectTimer = setTimeout(clearEffect, 1200);
+  }
+
+  function triggerEffect(delta, winnerItem, isUpset) {
+    const now = Date.now();
+    streakCount++;
+    if (now - lastVoteTime < 2000) {
+      comboCount++;
+    } else {
+      comboCount = 1;
+    }
+    lastVoteTime = now;
+
+    let pool = [...EFFECTS];
+    if (!isUpset) pool = pool.filter((e) => e !== "ko-upset");
+    if (streakCount < 5) pool = pool.filter((e) => e !== "streak-fire");
+    if (comboCount < 3) pool = pool.filter((e) => e !== "combo-multiplier");
+    if (pool.length === 0) pool = ["arc-float"];
+
+    const chosen = pool[Math.floor(Math.random() * pool.length)];
+    runEffect(chosen, delta, winnerItem);
+  }
+
+  function previewEffect(name) {
+    runEffect(name, 24, 1);
+  }
+
+  let messagesEl;
+  function scrollToBottom() {
+    if (messagesEl)
+      requestAnimationFrame(() => {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      });
+  }
+  const unsubMessages = chatMessages.subscribe(() => scrollToBottom());
 
   let _chatName = "";
   chatName.subscribe((v) => (_chatName = v));
@@ -201,8 +294,16 @@
 
   function parsePairData(pair) {
     return {
-      item1: { ...pair.item1, data: pair.item1.data ? JSON.parse(pair.item1.data) : {}, elo: pair.item1.elo ?? 1000 },
-      item2: { ...pair.item2, data: pair.item2.data ? JSON.parse(pair.item2.data) : {}, elo: pair.item2.elo ?? 1000 },
+      item1: {
+        ...pair.item1,
+        data: pair.item1.data ? JSON.parse(pair.item1.data) : {},
+        elo: pair.item1.elo ?? 1000,
+      },
+      item2: {
+        ...pair.item2,
+        data: pair.item2.data ? JSON.parse(pair.item2.data) : {},
+        elo: pair.item2.elo ?? 1000,
+      },
     };
   }
 
@@ -210,8 +311,10 @@
     try {
       const data = await getPairForVoting(listName);
       prefetchedPairData = parsePairData(data);
-      if (prefetchedPairData.item1.data?.picture) new Image().src = prefetchedPairData.item1.data.picture;
-      if (prefetchedPairData.item2.data?.picture) new Image().src = prefetchedPairData.item2.data.picture;
+      if (prefetchedPairData.item1.data?.picture)
+        new Image().src = prefetchedPairData.item1.data.picture;
+      if (prefetchedPairData.item2.data?.picture)
+        new Image().src = prefetchedPairData.item2.data.picture;
     } catch {}
   }
 
@@ -230,11 +333,18 @@
       pairData = prefetchedPairData;
       prefetchedPairData = null;
       loading = false;
-      getListInfo(listName).then(info => { listInfo = info || {}; }).catch(() => {});
+      getListInfo(listName)
+        .then((info) => {
+          listInfo = info || {};
+        })
+        .catch(() => {});
     } else {
       loading = true;
       try {
-        const [pair, info] = await Promise.all([getPairForVoting(listName), getListInfo(listName)]);
+        const [pair, info] = await Promise.all([
+          getPairForVoting(listName),
+          getListInfo(listName),
+        ]);
         pairData = parsePairData(pair);
         listInfo = info || {};
       } catch (e) {
@@ -301,6 +411,8 @@
     eloPopup = { item, delta };
     animateWinnerElo(winnerElo, winnerElo + delta);
     animateLoserElo(loserElo, loserElo - delta);
+    const isUpset = loserElo - winnerElo > 150;
+    triggerEffect(delta, item, isUpset);
     setTimeout(() => {
       eloPopup = null;
     }, 1000);
@@ -323,9 +435,13 @@
   }
 
   function handleKeydown(e) {
-    if (voting || !pairData) return;
     const tag = document.activeElement?.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA") return;
+    if (e.key === "d" || e.key === "D") {
+      debugMode = !debugMode;
+      return;
+    }
+    if (voting || !pairData) return;
     if (e.key === "1" || e.key === "ArrowLeft") {
       castVote(pairData.item1.name, pairData.item2.name, 1);
     } else if (e.key === "2" || e.key === "ArrowRight") {
@@ -347,22 +463,19 @@
     window.removeEventListener("keydown", handleKeydown);
     if (eloAnimTimer) clearInterval(eloAnimTimer);
     if (loserAnimTimer) clearInterval(loserAnimTimer);
+    if (effectTimer) clearTimeout(effectTimer);
     unsubMessages();
-    unsubNewComment();
     document.title = "This or That";
   });
 </script>
-
-{#if !showDropdown && viewMode !== "vote"}
-  <button class="edit-fab text-small" on:click={navigateToEdit}>Edit</button>
-{/if}
 
 {#if showDropdown}
   <div class="dropdown-overlay">
     <Header />
     <div class="list-name-bar no-border">
       <button
-        class="text-small"
+        class="text-base"
+        \n
         class:active={viewMode === "vote"}
         on:click={() => {
           viewMode = "vote";
@@ -374,21 +487,17 @@
         on:click={() => (showDropdown = false)}
       >
         <span>{listName}</span>
-        <span class="chevron open">▾</span>
+        <span class="chevron open">⏷</span>
       </div>
       <div class="right-controls">
         <button
-          class="text-small"
+          class="text-base"
+          \n
           class:active={viewMode !== "vote"}
           on:click={() => {
             showDropdown = false;
             toggleView();
           }}>{viewButtonLabel}</button
-        >
-        <button
-          class="text-small"
-          class:active={showComments}
-          on:click={() => (showComments = !showComments)}>Chat{#if unreadCount > 0} <span class="chat-badge">{unreadCount}</span>{/if}</button
         >
       </div>
     </div>
@@ -398,7 +507,8 @@
   {#if isMobile}<Header />{/if}
   <div class="list-name-bar">
     <button
-      class="text-small"
+      class="text-base"
+      \n
       class:active={viewMode === "vote"}
       on:click={() => (viewMode = "vote")}>Vote</button
     >
@@ -407,336 +517,459 @@
       on:click={() => (showDropdown = true)}
     >
       <span>{listName}</span>
-      <span class="chevron">▾</span>
+      <span class="chevron">⏷</span>
     </div>
     <div class="right-controls">
       <button
-        class="text-small"
+        class="text-base"
+        \n
         class:active={viewMode !== "vote"}
         on:click={toggleView}>{viewButtonLabel}</button
-      >
-      <button
-        class="text-small"
-        class:active={showComments}
-        on:click={() => (showComments = !showComments)}>Chat{#if unreadCount > 0} <span class="chat-badge">{unreadCount}</span>{/if}</button
       >
     </div>
   </div>
 {/if}
 
 <div class="view-and-chat">
-  <div class="view-panel">
+  <div class="view-panel" class:fx-shaking={activeEffect === "screen-shake"}>
     {#if loading}
       <!-- loading -->
     {:else if error}
       <p class="text-base">{error}</p>
     {:else if pairData}
-  {#if viewMode !== "vote"}
-    <div class="mobile-grid-container">
-      <div class="grid-data">
-        {#if listInfo?.author}<span class="author-chip-group"><span class="grid-data-chip text-small">AUTHOR</span><span
-              class:text-base={!isMobile}
-              class:text-small={isMobile}>{listInfo.author}</span
-            ></span>{/if}
-        <span
-          class:text-base={!isMobile}
-          class:text-small={isMobile}
-          class="grid-data-right"
-          bind:clientHeight={gridHeaderHeight}
-        >
-          <span class="grid-data-chip text-small">Votes</span>
-          {listInfo?.voteCount ?? 0}
-          <span class="grid-data-chip text-small">Last Voted</span>{timeAgo(
-            listInfo?.lastVoteTimestamp,
-          )}
-          <span class="grid-data-chip text-small">Length</span
-          >{listInfo?.itemCount ?? rankedItems.length}
-        </span>
-      </div>
-      <div class="grid-header">
-        <span class:text-base={!isMobile} class:text-small={isMobile}
-          >{gridHeaderName}</span
-        >
-        {#if itemHistory.length > 0}
-          <div class="grid-header-stats">
-            <span class="grid-data-chip text-small">Votes</span>
-            <span
-              class:text-base={!isMobile}
-              class:text-small={isMobile}
-              class="item-votes">{itemHistory.length}</span
+      {#if viewMode !== "vote"}
+        <div class="mobile-grid-container">
+          <div class="grid-data">
+            {#if listInfo?.author}<span class="author-chip-group"
+                ><span class="grid-data-chip text-small">AUTHOR</span><span
+                  class="text-small">{listInfo.author}</span
+                ></span
+              >{/if}
+            <span class="text-small grid-data-right">
+              <span class="grid-data-chip text-small">Votes</span>
+              {listInfo?.voteCount ?? 0}
+              <span class="grid-data-chip text-small">Last Voted</span>{timeAgo(
+                listInfo?.lastVoteTimestamp,
+              )}
+              <span class="grid-data-chip text-small">Length</span
+              >{listInfo?.itemCount ?? rankedItems.length}
+            </span>
+          </div>
+          <div class="grid-header">
+            <span class:text-base={!isMobile} class:text-small={isMobile}
+              >{gridHeaderName}</span
             >
-            {#if recentDelta !== null}
-              <span class="grid-data-chip text-small">Recent Change</span>
-              <span
-                class:text-base={!isMobile}
-                class:text-small={isMobile}
-                class="recent-delta"
-                class:positive={recentDelta > 0}
-                class:negative={recentDelta < 0}
-                >{recentDelta > 0 ? "+" : ""}{recentDelta}</span
-              >
-            {/if}
-            {#if sparkPoints}
-              <span class="grid-data-chip text-small">History</span>
-              <svg
-                class="sparkline"
-                width="120"
-                height={gridHeaderHeight - 6}
-                viewBox="0 0 120 {gridHeaderHeight - 6}"
-              >
-                <polyline
-                  points={sparkPoints}
-                  fill="none"
-                  stroke="var(--color-grey)"
-                  stroke-width="1"
-                  stroke-linejoin="round"
-                  stroke-linecap="round"
-                />
-              </svg>
-            {/if}
-          </div>
-        {/if}
-      </div>
-      <div
-        class="grid-scroll"
-        bind:this={gridScrollEl}
-        on:scroll={handleGridScroll}
-      >
-        {#if viewMode === "grid"}
-          <div class="grid-items">
-            {#each rankedItems as item, i}
-              <div
-                bind:this={itemEls[i]}
-                on:mouseenter={() => {
-                  if (!isMobile) hoveredItemName = item.name;
-                }}
-              >
-                <GridItem
-                  rank={item.rank}
-                  elo={item.elo}
-                  name={item.name}
-                  picture={item.data?.picture ?? null}
-                />
+            {#if itemHistory.length > 0}
+              <div class="grid-header-stats">
+                <span class="grid-data-chip text-small">Votes</span>
+                <span class="text-small item-votes">{itemHistory.length}</span>
+                {#if recentDelta !== null}
+                  <span class="grid-data-chip text-small">Recent Change</span>
+                  <span
+                    class="text-small recent-delta"
+                    class:positive={recentDelta > 0}
+                    class:negative={recentDelta < 0}
+                    ><span style="margin-right: var(--spacing-sm)"
+                      >{recentDelta > 0 ? "⏶" : "⏷"}</span
+                    >{Math.abs(recentDelta)}</span
+                  >
+                {/if}
+                {#if sparkPoints}
+                  <span class="grid-data-chip text-small">History</span>
+                  <svg
+                    class="sparkline"
+                    width="120"
+                    height="30"
+                    viewBox="0 0 120 30"
+                    preserveAspectRatio="none"
+                  >
+                    <polyline
+                      points={sparkPoints}
+                      fill="none"
+                      stroke="var(--color-white)"
+                      stroke-width="1"
+                      stroke-linejoin="round"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                {/if}
               </div>
-            {/each}
+            {/if}
           </div>
-        {:else}
-          <div class="list-items">
-            {#each rankedItems as item, i}
-              <div
-                bind:this={itemEls[i]}
-                on:mouseenter={() => {
-                  if (!isMobile) hoveredItemName = item.name;
-                }}
-              >
-                <ListViewItem
-                  rank={item.rank}
-                  elo={item.elo}
-                  name={item.name}
-                  picture={item.data?.picture ?? null}
-                />
+          <div
+            class="grid-scroll"
+            bind:this={gridScrollEl}
+            on:scroll={handleGridScroll}
+          >
+            {#if viewMode === "grid"}
+              <div class="grid-items">
+                {#each rankedItems as item, i}
+                  <div
+                    bind:this={itemEls[i]}
+                    on:mouseenter={() => {
+                      if (!isMobile) hoveredItemName = item.name;
+                    }}
+                  >
+                    <GridItem
+                      rank={item.rank}
+                      elo={item.elo}
+                      name={item.name}
+                      picture={item.data?.picture ?? null}
+                    />
+                  </div>
+                {/each}
               </div>
-            {/each}
+            {:else}
+              <div class="list-items">
+                {#each rankedItems as item, i}
+                  <div
+                    bind:this={itemEls[i]}
+                    on:mouseenter={() => {
+                      if (!isMobile) hoveredItemName = item.name;
+                    }}
+                  >
+                    <ListViewItem
+                      rank={item.rank}
+                      elo={item.elo}
+                      name={item.name}
+                      picture={item.data?.picture ?? null}
+                    />
+                  </div>
+                {/each}
+              </div>
+            {/if}
           </div>
-        {/if}
-      </div>
-    </div>
-  {:else if isMobile}
-    <div class="mobile-vote-container">
-      <div
-        class="mobile-image-wrap"
-        class:selected={selectedItem === 1}
-        class:loser={selectedItem === 2}
-        role="button"
-        tabindex="0"
-        on:click={() => castVote(pairData.item1.name, pairData.item2.name, 1)}
-      >
-        {#if listInfo?.noImages}
-          <div class="img-no-image text-item">{pairData.item1.name}</div>
-        {:else if pairData.item1.data?.picture}
-          <img src={pairData.item1.data.picture} alt={pairData.item1.name} />
-        {:else}
-          <div class="img-empty"></div>
-        {/if}
-      </div>
-
-      <div class="mobile-names">
-        <div class="text-base mobile-name-text">
-          {selectedItem === 1
-            ? (winnerCountElo ?? Math.round(pairData.item1.elo))
-            : selectedItem === 2
-              ? (loserCountElo ?? Math.round(pairData.item1.elo))
-              : pairData.item1.name}
-          {#if eloPopup?.item === 1}<span class="elo-popup text-base"
-              >+{eloPopup.delta}</span
-            >{/if}
-          {#if eloPopup?.item === 2}<span class="elo-popup-loser text-base"
-              >-{eloPopup.delta}</span
-            >{/if}
         </div>
-        <div class="text-small mobile-or-text" class:hidden={selectedItem !== 0}
-          >or</div
-        >
-        <div class="text-base mobile-name-text">
-          {selectedItem === 2
-            ? (winnerCountElo ?? Math.round(pairData.item2.elo))
-            : selectedItem === 1
-              ? (loserCountElo ?? Math.round(pairData.item2.elo))
-              : pairData.item2.name}
-          {#if eloPopup?.item === 2}<span class="elo-popup text-base"
-              >+{eloPopup.delta}</span
-            >{/if}
-          {#if eloPopup?.item === 1}<span class="elo-popup-loser text-base"
-              >-{eloPopup.delta}</span
-            >{/if}
-        </div>
-      </div>
-
-      <div
-        class="mobile-image-wrap"
-        class:selected={selectedItem === 2}
-        class:loser={selectedItem === 1}
-        role="button"
-        tabindex="0"
-        on:click={() => castVote(pairData.item2.name, pairData.item1.name, 2)}
-      >
-        {#if listInfo?.noImages}
-          <div class="img-no-image text-item">{pairData.item2.name}</div>
-        {:else if pairData.item2.data?.picture}
-          <img src={pairData.item2.data.picture} alt={pairData.item2.name} />
-        {:else}
-          <div class="img-empty"></div>
-        {/if}
-      </div>
-    </div>
-  {:else}
-    <div class="vote-container">
-      <div class="images-row">
-        <div
-          class="vote-item vote-item-1"
-          class:disabled={voting}
-          class:selected={selectedItem === 1}
-          class:loser={selectedItem === 2}
-          role="button"
-          tabindex="0"
-          on:mouseenter={() => (hoveredItem = 1)}
-          on:mouseleave={() => (hoveredItem = 0)}
-          on:click={() => castVote(pairData.item1.name, pairData.item2.name, 1)}
-          on:keydown={(e) =>
-            e.key === "Enter" &&
-            castVote(pairData.item1.name, pairData.item2.name, 1)}
-        >
-          {#if listInfo?.noImages}
-            <div class="img-no-image text-item">{pairData.item1.name}</div>
-          {:else if pairData.item1.data?.picture}
-            <img src={pairData.item1.data.picture} alt={pairData.item1.name} />
-          {:else}
-            <div class="img-empty"></div>
-          {/if}
-        </div>
-
-        <div
-          class="vote-item vote-item-2"
-          class:disabled={voting}
-          class:selected={selectedItem === 2}
-          class:loser={selectedItem === 1}
-          role="button"
-          tabindex="0"
-          on:mouseenter={() => (hoveredItem = 2)}
-          on:mouseleave={() => (hoveredItem = 0)}
-          on:click={() => castVote(pairData.item2.name, pairData.item1.name, 2)}
-          on:keydown={(e) =>
-            e.key === "Enter" &&
-            castVote(pairData.item2.name, pairData.item1.name, 2)}
-        >
-          {#if listInfo?.noImages}
-            <div class="img-no-image text-item">{pairData.item2.name}</div>
-          {:else if pairData.item2.data?.picture}
-            <img src={pairData.item2.data.picture} alt={pairData.item2.name} />
-          {:else}
-            <div class="img-empty"></div>
-          {/if}
-        </div>
-      </div>
-
-      <div class="names-row">
-        <div
-          class="name text-base"
-          class:hovered={hoveredItem === 1 && selectedItem === 0}
-        >
-          {selectedItem === 1
-            ? (winnerCountElo ?? Math.round(pairData.item1.elo))
-            : selectedItem === 2
-              ? (loserCountElo ?? Math.round(pairData.item1.elo))
-              : pairData.item1.name}
-          {#if eloPopup?.item === 1}<span class="elo-popup text-base"
-              >+{eloPopup.delta}</span
-            >{/if}
-          {#if eloPopup?.item === 2}<span class="elo-popup-loser text-base"
-              >-{eloPopup.delta}</span
-            >{/if}
-        </div>
-        <div class="or text-base">or</div>
-        <div
-          class="name text-base"
-          class:hovered={hoveredItem === 2 && selectedItem === 0}
-        >
-          {selectedItem === 2
-            ? (winnerCountElo ?? Math.round(pairData.item2.elo))
-            : selectedItem === 1
-              ? (loserCountElo ?? Math.round(pairData.item2.elo))
-              : pairData.item2.name}
-          {#if eloPopup?.item === 2}<span class="elo-popup text-base"
-              >+{eloPopup.delta}</span
-            >{/if}
-          {#if eloPopup?.item === 1}<span class="elo-popup-loser text-base"
-              >-{eloPopup.delta}</span
-            >{/if}
-        </div>
-      </div>
-    </div>
-  {/if}
-    {/if}
-  </div>
-  {#if showComments}
-    <div class="comments-panel">
-        <div class="comments-header">
-          <span class="text-small" style="text-transform: uppercase; color: var(--color-grey)">Chat</span>
-          <div class="chat-name-wrap">
-            {#if editingName}
-              <input
-                class="text-small chat-name-input"
-                bind:value={$chatName}
-                autofocus
-                on:blur={() => (editingName = false)}
-                on:keydown={(e) => e.key === "Enter" && (editingName = false)}
+      {:else if isMobile}
+        <div class="mobile-vote-container">
+          <div
+            class="mobile-image-wrap"
+            class:selected={selectedItem === 1}
+            class:loser={selectedItem === 2}
+            role="button"
+            tabindex="0"
+            on:click={() =>
+              castVote(pairData.item1.name, pairData.item2.name, 1)}
+          >
+            {#if listInfo?.noImages}
+              <div class="img-no-image text-item">{pairData.item1.name}</div>
+            {:else if pairData.item1.data?.picture}
+              <img
+                src={pairData.item1.data.picture}
+                alt={pairData.item1.name}
               />
             {:else}
-              <span class="text-small chat-name-display" on:click={() => (editingName = true)}>{$chatName}</span>
+              <div class="img-empty"></div>
+            {/if}
+          </div>
+
+          <div class="mobile-names">
+            <div class="text-base mobile-name-text">
+              {selectedItem === 1
+                ? (winnerCountElo ?? Math.round(pairData.item1.elo))
+                : selectedItem === 2
+                  ? (loserCountElo ?? Math.round(pairData.item1.elo))
+                  : pairData.item1.name}
+              {#if eloPopup?.item === 1}<span class="elo-popup text-base"
+                  >+{eloPopup.delta}</span
+                >{/if}
+              {#if eloPopup?.item === 2}<span class="elo-popup-loser text-base"
+                  >-{eloPopup.delta}</span
+                >{/if}
+            </div>
+            <div
+              class="text-small mobile-or-text"
+              class:hidden={selectedItem !== 0}>or</div
+            >
+            <div class="text-base mobile-name-text">
+              {selectedItem === 2
+                ? (winnerCountElo ?? Math.round(pairData.item2.elo))
+                : selectedItem === 1
+                  ? (loserCountElo ?? Math.round(pairData.item2.elo))
+                  : pairData.item2.name}
+              {#if eloPopup?.item === 2}<span class="elo-popup text-base"
+                  >+{eloPopup.delta}</span
+                >{/if}
+              {#if eloPopup?.item === 1}<span class="elo-popup-loser text-base"
+                  >-{eloPopup.delta}</span
+                >{/if}
+            </div>
+          </div>
+
+          <div
+            class="mobile-image-wrap"
+            class:selected={selectedItem === 2}
+            class:loser={selectedItem === 1}
+            role="button"
+            tabindex="0"
+            on:click={() =>
+              castVote(pairData.item2.name, pairData.item1.name, 2)}
+          >
+            {#if listInfo?.noImages}
+              <div class="img-no-image text-item">{pairData.item2.name}</div>
+            {:else if pairData.item2.data?.picture}
+              <img
+                src={pairData.item2.data.picture}
+                alt={pairData.item2.name}
+              />
+            {:else}
+              <div class="img-empty"></div>
             {/if}
           </div>
         </div>
-        <div class="comments-messages" bind:this={messagesEl}>
-          {#each $chatMessages as msg}
-            <div class="comment">
-              <div class="comment-meta text-small">{msg.author} · {timeAgo(msg.timestamp)}</div>
-              <div class="comment-text text-small">{msg.text}</div>
+      {:else}
+        <div class="vote-container">
+          <div class="images-row">
+            <div
+              class="vote-item vote-item-1"
+              class:disabled={voting}
+              class:selected={selectedItem === 1}
+              class:loser={selectedItem === 2}
+              role="button"
+              tabindex="0"
+              on:mouseenter={() => (hoveredItem = 1)}
+              on:mouseleave={() => (hoveredItem = 0)}
+              on:click={() =>
+                castVote(pairData.item1.name, pairData.item2.name, 1)}
+              on:keydown={(e) =>
+                e.key === "Enter" &&
+                castVote(pairData.item1.name, pairData.item2.name, 1)}
+            >
+              {#if listInfo?.noImages}
+                <div class="img-no-image text-item">{pairData.item1.name}</div>
+              {:else if pairData.item1.data?.picture}
+                <img
+                  src={pairData.item1.data.picture}
+                  alt={pairData.item1.name}
+                />
+              {:else}
+                <div class="img-empty"></div>
+              {/if}
             </div>
-          {/each}
-          {#if $chatMessages.length === 0}
-            <div class="comments-empty text-small">No messages yet. Say something!</div>
-          {/if}
+
+            <div
+              class="vote-item vote-item-2"
+              class:disabled={voting}
+              class:selected={selectedItem === 2}
+              class:loser={selectedItem === 1}
+              role="button"
+              tabindex="0"
+              on:mouseenter={() => (hoveredItem = 2)}
+              on:mouseleave={() => (hoveredItem = 0)}
+              on:click={() =>
+                castVote(pairData.item2.name, pairData.item1.name, 2)}
+              on:keydown={(e) =>
+                e.key === "Enter" &&
+                castVote(pairData.item2.name, pairData.item1.name, 2)}
+            >
+              {#if listInfo?.noImages}
+                <div class="img-no-image text-item">{pairData.item2.name}</div>
+              {:else if pairData.item2.data?.picture}
+                <img
+                  src={pairData.item2.data.picture}
+                  alt={pairData.item2.name}
+                />
+              {:else}
+                <div class="img-empty"></div>
+              {/if}
+            </div>
+          </div>
+
+          <div class="names-row">
+            <div
+              class="name text-base"
+              class:hovered={hoveredItem === 1 && selectedItem === 0}
+            >
+              {selectedItem === 1
+                ? (winnerCountElo ?? Math.round(pairData.item1.elo))
+                : selectedItem === 2
+                  ? (loserCountElo ?? Math.round(pairData.item1.elo))
+                  : pairData.item1.name}
+              {#if eloPopup?.item === 1}<span class="elo-popup text-base"
+                  >+{eloPopup.delta}</span
+                >{/if}
+              {#if eloPopup?.item === 2}<span class="elo-popup-loser text-base"
+                  >-{eloPopup.delta}</span
+                >{/if}
+            </div>
+            <div class="or text-base">or</div>
+            <div
+              class="name text-base"
+              class:hovered={hoveredItem === 2 && selectedItem === 0}
+            >
+              {selectedItem === 2
+                ? (winnerCountElo ?? Math.round(pairData.item2.elo))
+                : selectedItem === 1
+                  ? (loserCountElo ?? Math.round(pairData.item2.elo))
+                  : pairData.item2.name}
+              {#if eloPopup?.item === 2}<span class="elo-popup text-base"
+                  >+{eloPopup.delta}</span
+                >{/if}
+              {#if eloPopup?.item === 1}<span class="elo-popup-loser text-base"
+                  >-{eloPopup.delta}</span
+                >{/if}
+            </div>
+          </div>
         </div>
-        <div class="comments-input">
-          <input
-            class="text-small"
-            placeholder="Say something..."
-            bind:value={commentText}
-            on:keydown={(e) => e.key === "Enter" && submitComment()}
-          />
-        </div>
+      {/if}
+    {/if}
+
+    <!-- ── Effect overlays ── -->
+    {#if activeEffect === "crit-hit"}
+      <div
+        class="fx-overlay fx-crit"
+        style="--fx-side:{effectPayload.winnerItem === 1 ? '25%' : '75%'}"
+      >
+        <span class="fx-crit-label">CRIT!</span>
+        <span class="fx-crit-num">+{effectPayload.delta}</span>
       </div>
+    {/if}
+
+    {#if activeEffect === "loser-shake"}
+      <div
+        class="fx-shake-target"
+        class:fx-shake-1={effectPayload.winnerItem === 2}
+        class:fx-shake-2={effectPayload.winnerItem === 1}
+      ></div>
+    {/if}
+
+    {#if activeEffect === "winner-flash"}
+      <div
+        class="fx-flash"
+        style="--fx-side:{effectPayload.winnerItem === 1
+          ? '0'
+          : '50%'}; --fx-width:50%"
+      ></div>
+    {/if}
+
+    {#if activeEffect === "particle-burst"}
+      <div
+        class="fx-particles"
+        style="--fx-side:{effectPayload.winnerItem === 1 ? '25%' : '75%'}"
+      >
+        {#each particles as p}
+          <div
+            class="fx-particle"
+            style="--angle:{p.angle}deg; --pcolor:{p.color}"
+          ></div>
+        {/each}
+      </div>
+    {/if}
+
+    {#if activeEffect === "praise-text"}
+      <div
+        class="fx-overlay fx-praise"
+        style="--fx-side:{effectPayload.winnerItem === 1 ? '25%' : '75%'}"
+      >
+        {effectPayload.word}
+      </div>
+    {/if}
+
+    {#if activeEffect === "streak-fire"}
+      <div class="fx-overlay fx-streak">
+        🔥 {effectPayload.streak}× STREAK
+      </div>
+    {/if}
+
+    {#if activeEffect === "ripple-ring"}
+      <div
+        class="fx-ripple"
+        style="--fx-side:{effectPayload.winnerItem === 1 ? '25%' : '75%'}"
+      ></div>
+    {/if}
+
+    {#if activeEffect === "ko-upset"}
+      <div class="fx-overlay fx-ko">{effectPayload.word}</div>
+    {/if}
+
+    {#if activeEffect === "combo-multiplier"}
+      <div class="fx-overlay fx-combo">×{effectPayload.combo} COMBO</div>
+    {/if}
+
+    {#if activeEffect === "pixel-scatter"}
+      <div
+        class="fx-pixels"
+        style="--fx-side:{effectPayload.winnerItem === 1 ? '25%' : '75%'}"
+      >
+        {#each particles as p}
+          <div
+            class="fx-pixel"
+            style="--px:{p.x}%; --pdelay:{p.delay}s; --psize:{p.size}px"
+          ></div>
+        {/each}
+      </div>
+    {/if}
+
+    {#if activeEffect === "arc-float"}
+      <div
+        class="fx-overlay fx-arc"
+        style="--fx-side:{effectPayload.winnerItem === 1 ? '25%' : '75%'}"
+      >
+        +{effectPayload.delta}
+      </div>
+    {/if}
+  </div>
+</div>
+
+<!-- ── Debug panel ── -->
+{#if debugMode}
+  <div class="fx-debug-panel">
+    <div class="text-small fx-debug-title">EFFECT DEBUG (D to close)</div>
+    {#each EFFECTS as name}
+      <button
+        class="text-small fx-debug-btn"
+        class:fx-debug-active={debugEffect === name}
+        on:click={() => {
+          debugEffect = name;
+          previewEffect(name);
+        }}>{name}</button
+      >
+    {/each}
+  </div>
+{/if}
+
+<div class="bottom-row">
+  {#if showChat && $chatMessages.length > 0}
+    <div class="chat-messages-area" bind:this={messagesEl}>
+      {#each $chatMessages as msg}
+        <div class="chat-message text-small">
+          <span class="chat-msg-author">{msg.author}</span>
+          <span class="chat-msg-text">{msg.text}</span>
+        </div>
+      {/each}
+    </div>
   {/if}
+  {#if viewMode !== "vote" && !showDropdown}
+    <button class="text-base edit-float" on:click={navigateToEdit}>Edit</button>
+  {/if}
+  <div class="chat-bar">
+    <input
+      class="text-small chat-name-input"
+      bind:value={$chatName}
+      on:keydown={(e) => {
+        e.stopPropagation();
+        if (e.key === "Enter") e.target.blur();
+      }}
+    />
+    <input
+      class="text-small chat-input"
+      placeholder="Say something..."
+      bind:value={commentText}
+      on:keydown={(e) => {
+        const tag = document.activeElement?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA") e.stopPropagation();
+        if (e.key === "Enter") submitComment();
+      }}
+    />
+    <div class="chat-actions">
+      <button class="text-base send-btn" on:click={submitComment}>Send</button>
+      <button
+        class="text-base toggle-chat-btn"
+        on:click={() => (showChat = !showChat)}
+        >{showChat ? "Hide" : "Show"}</button
+      >
+    </div>
+  </div>
 </div>
 
 <style>
@@ -744,8 +977,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--spacing-margin);
-    border-bottom: var(--border);
+    /* padding: var(--spacing-sm) 0; */
+    /* border-bottom: var(--border); */
     gap: var(--spacing-md);
   }
 
@@ -792,10 +1025,13 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: var(--color-white);
+    background: var(--color-bkggrey);
     z-index: 50;
     display: flex;
     flex-direction: column;
+    padding: var(--spacing-sm);
+    gap: var(--spacing-sm);
+    box-sizing: border-box;
   }
 
   .vote-container {
@@ -805,7 +1041,8 @@
     flex: 1;
     min-height: 0;
     gap: var(--spacing-margin);
-    padding: var(--spacing-margin);
+    /* padding: var(--spacing-sm); */
+    padding-bottom: var(--spacing-md);
   }
 
   .images-row {
@@ -966,7 +1203,7 @@
     flex-direction: column;
     flex: 1;
     min-height: 0;
-    padding: var(--spacing-margin);
+    /* padding: var(--spacing-margin); */
     gap: var(--spacing-margin);
   }
 
@@ -1046,8 +1283,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--spacing-margin);
+    height: var(--button-height);
+    padding: var(--spacing-sm) 0;
     border-bottom: var(--border);
+    border-top: var(--border);
     gap: var(--spacing-md);
     text-transform: uppercase;
     color: var(--color-text-faded);
@@ -1067,24 +1306,26 @@
   }
 
   .grid-data-chip {
-    background-color: var(--color-grey);
-    color: var(--color-white);
-    padding: 0 var(--spacing-sm);
-    padding-top: 1px;
+    color: var(--color-black);
+    opacity: 0.5;
+    /* padding: 2px 8px 1px 8px; */
     display: flex;
-
+    border-radius: 100px;
     justify-content: center;
     align-items: center;
+    align-self: stretch;
   }
 
   .grid-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--spacing-margin);
+    height: var(--button-height);
+    padding: var(--spacing-sm) 0;
     border-bottom: var(--border);
     gap: var(--spacing-md);
     text-transform: uppercase;
+    /* box-sizing: border-box; */
   }
 
   @media (max-width: 740px) {
@@ -1110,11 +1351,14 @@
   }
 
   .item-votes {
-    color: var(--color-text-faded);
+    display: flex;
+    align-items: center;
   }
 
   .recent-delta {
     font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: center;
   }
 
   .recent-delta.positive {
@@ -1128,9 +1372,10 @@
   .sparkline {
     display: block;
     overflow: visible;
-    border: var(--border);
-    padding: 3px 0;
     border-radius: 2px;
+    height: calc(var(--button-height) - 2 * var(--spacing-sm));
+    padding: 3px 0;
+    background-color: var(--color-black);
   }
 
   .grid-scroll {
@@ -1142,8 +1387,8 @@
   .grid-items {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: var(--spacing-margin);
-    padding: var(--spacing-margin);
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) 0;
   }
 
   @media (min-width: 741px) {
@@ -1159,16 +1404,16 @@
   .list-items {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-margin);
-    padding: var(--spacing-margin);
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) 0;
   }
 
-  .edit-fab {
-    position: fixed;
-    bottom: var(--spacing-margin);
-    right: var(--spacing-margin);
-    z-index: 10;
-    cursor: pointer;
+  .bottom-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex-shrink: 0;
   }
 
   .right-controls {
@@ -1177,126 +1422,461 @@
     align-items: center;
   }
 
-  .chat-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--color-red);
-    color: white;
-    border-radius: 2px;
-    font-size: 10px;
-    min-width: 14px;
-    height: 13px;
-    padding: 0 3px;
-    margin-left: 3px;
-    line-height: 1;
-    vertical-align: middle;
-  }
-
   .view-and-chat {
-    display: flex;
     flex: 1;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   .view-panel {
     flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .comments-panel {
-    width: 280px;
-    flex-shrink: 0;
-    border-left: var(--border);
-    display: flex;
-    flex-direction: column;
-  }
-
-  .comments-header {
-    padding: var(--spacing-margin);
-    border-bottom: var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-shrink: 0;
-    gap: var(--spacing-md);
-  }
-
-  .chat-name-wrap {
-    min-width: 0;
-    flex: 1;
-    display: flex;
-    justify-content: flex-end;
-  }
-
-  .chat-name-display {
-    cursor: pointer;
-    color: var(--color-black);
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    max-width: 100%;
-    border-bottom: 1px dashed var(--color-border);
-  }
-
-  .chat-name-input {
-    border: none;
-    outline: none;
-    border-bottom: 1px solid var(--color-black);
-    background: transparent;
-    text-align: right;
-    width: 100%;
-  }
-
-  .comments-messages {
-    flex: 1;
     min-height: 0;
-    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md);
-    padding: var(--spacing-margin);
-    scrollbar-width: none;
+    position: relative;
   }
 
-  .comments-messages::-webkit-scrollbar {
-    display: none;
-  }
-
-  .comment {
+  .chat-messages-area {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
     display: flex;
     flex-direction: column;
     gap: 2px;
+    padding-bottom: var(--spacing-sm);
+    max-height: 30vh;
+    overflow-y: auto;
+    scrollbar-width: none;
+    pointer-events: auto;
   }
 
-  .comment-meta {
-    color: var(--color-grey);
+  .chat-messages-area::-webkit-scrollbar {
+    display: none;
   }
 
-  .comment-text {
-    color: var(--color-black);
-    word-break: break-word;
+  .chat-message {
+    display: flex;
+    gap: var(--spacing-md);
+    /* text-transform: uppercase; */
   }
 
-  .comments-empty {
-    color: var(--color-grey);
-    text-align: center;
-    padding-top: var(--spacing-lg);
-  }
-
-  .comments-input {
-    border-top: var(--border);
+  .chat-msg-author {
     flex-shrink: 0;
+    color: var(--color-white);
+    background-color: var(--color-black);
+    padding: 2px var(--spacing-sm) 1px var(--spacing-sm);
+    border-radius: 2px;
   }
 
-  .comments-input input {
-    width: 100%;
+  .chat-msg-text {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--color-black);
+    background-color: var(--color-white);
+    padding: 2px var(--spacing-sm) 1px var(--spacing-sm);
+    border-radius: 2px;
+  }
+
+  .chat-bar {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-sm) var(--spacing-sm)
+      var(--spacing-margin);
+    border: var(--border);
+    border-radius: var(--border-radius);
+  }
+
+  @media (max-width: 740px) {
+    .chat-bar {
+      padding: var(--spacing-sm);
+    }
+  }
+  .chat-name-input {
+    flex-shrink: 0;
+    field-sizing: content;
     border: none;
     outline: none;
     background: transparent;
-    padding: var(--spacing-margin);
-    box-sizing: border-box;
+    border-bottom: 1.5px solid transparent;
+    padding: 0;
+    text-transform: none;
+    opacity: 0.4;
+  }
+
+  .chat-name-input:focus {
+    opacity: 1;
+  }
+
+  .chat-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 0;
+  }
+
+  .chat-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-shrink: 0;
+  }
+
+  .edit-float {
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    margin-bottom: var(--spacing-sm);
+  }
+
+  /* ── Effect overlays ──────────────────────────────── */
+
+  .fx-overlay {
+    position: absolute;
+    left: var(--fx-side, 50%);
+    top: 40%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    z-index: 20;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* arc-float */
+  .fx-arc {
+    font-size: 2rem;
+    font-weight: bold;
+    animation: fxArc 1s ease-out forwards;
+  }
+  @keyframes fxArc {
+    0% {
+      opacity: 1;
+      transform: translateX(-50%) translate(0, 0);
+    }
+    50% {
+      transform: translateX(calc(-50% + 30px)) translate(0, -40px);
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(calc(-50% + 50px)) translate(0, -20px);
+    }
+  }
+
+  /* crit-hit */
+  .fx-crit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    animation: fxCrit 1s ease-out forwards;
+  }
+  .fx-crit-label {
+    font-size: 0.9rem;
+    color: #ffd700;
+    letter-spacing: 2px;
+  }
+  .fx-crit-num {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #ff4141;
+    text-shadow: 2px 2px 0 #000;
+  }
+  @keyframes fxCrit {
+    0% {
+      opacity: 1;
+      transform: translateX(-50%) scale(0.5);
+    }
+    20% {
+      transform: translateX(-50%) scale(1.3);
+    }
+    60% {
+      transform: translateX(-50%) scale(1) translateY(-20px);
+      opacity: 1;
+    }
+    100% {
+      transform: translateX(-50%) scale(0.8) translateY(-50px);
+      opacity: 0;
+    }
+  }
+
+  /* winner-flash */
+  .fx-flash {
+    position: absolute;
+    left: var(--fx-side);
+    top: 0;
+    width: var(--fx-width);
+    height: 100%;
+    background: white;
+    pointer-events: none;
+    z-index: 10;
+    border-radius: 4px;
+    animation: fxFlash 0.5s ease-out forwards;
+  }
+  @keyframes fxFlash {
+    0% {
+      opacity: 0.7;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  /* particle-burst */
+  .fx-particles {
+    position: absolute;
+    left: var(--fx-side);
+    top: 50%;
+    pointer-events: none;
+    z-index: 20;
+  }
+  .fx-particle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: var(--pcolor);
+    border-radius: 2px;
+    animation: fxParticle 0.8s ease-out forwards;
+    transform-origin: center;
+  }
+  @keyframes fxParticle {
+    0% {
+      opacity: 1;
+      transform: rotate(var(--angle)) translateY(0px);
+    }
+    100% {
+      opacity: 0;
+      transform: rotate(var(--angle)) translateY(-60px);
+    }
+  }
+
+  /* praise-text */
+  .fx-praise {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--color-black);
+    animation: fxPraise 1s ease-out forwards;
+  }
+  @keyframes fxPraise {
+    0% {
+      opacity: 1;
+      transform: translateX(-50%) scale(1.4) translateY(0);
+    }
+    40% {
+      transform: translateX(-50%) scale(1) translateY(-10px);
+      opacity: 1;
+    }
+    100% {
+      transform: translateX(-50%) scale(0.9) translateY(-40px);
+      opacity: 0;
+    }
+  }
+
+  /* streak-fire */
+  .fx-streak {
+    left: 50%;
+    top: 30%;
+    font-size: 1.5rem;
+    font-weight: bold;
+    animation: fxStreak 1.2s ease-out forwards;
+  }
+  @keyframes fxStreak {
+    0% {
+      opacity: 0;
+      transform: translateX(-50%) scale(0.8);
+    }
+    20% {
+      opacity: 1;
+      transform: translateX(-50%) scale(1.1);
+    }
+    80% {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(-50%) scale(1) translateY(-20px);
+    }
+  }
+
+  /* screen-shake */
+  .fx-shaking {
+    animation: fxShake 0.4s ease-out;
+  }
+  @keyframes fxShake {
+    0% {
+      transform: translateX(0);
+    }
+    15% {
+      transform: translateX(-6px);
+    }
+    30% {
+      transform: translateX(6px);
+    }
+    45% {
+      transform: translateX(-4px);
+    }
+    60% {
+      transform: translateX(4px);
+    }
+    75% {
+      transform: translateX(-2px);
+    }
+    100% {
+      transform: translateX(0);
+    }
+  }
+
+  /* ripple-ring */
+  .fx-ripple {
+    position: absolute;
+    left: var(--fx-side);
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px;
+    height: 60px;
+    border: 3px solid var(--color-black);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 20;
+    animation: fxRipple 0.8s ease-out forwards;
+  }
+  @keyframes fxRipple {
+    0% {
+      opacity: 0.8;
+      transform: translate(-50%, -50%) scale(0.2);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(3);
+    }
+  }
+
+  /* ko-upset */
+  .fx-ko {
+    left: 50%;
+    top: 35%;
+    font-size: 3.5rem;
+    font-weight: bold;
+    color: var(--color-black);
+    letter-spacing: 4px;
+    animation: fxKO 1.2s ease-out forwards;
+  }
+  @keyframes fxKO {
+    0% {
+      opacity: 0;
+      transform: translateX(-50%) scale(2);
+    }
+    20% {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+    75% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(-50%) scale(0.9);
+    }
+  }
+
+  /* combo-multiplier */
+  .fx-combo {
+    left: 50%;
+    top: 30%;
+    font-size: 2rem;
+    font-weight: bold;
+    color: #ffd700;
+    text-shadow: 1px 1px 0 #000;
+    animation: fxCombo 1s ease-out forwards;
+  }
+  @keyframes fxCombo {
+    0% {
+      opacity: 0;
+      transform: translateX(-50%) translateY(10px) scale(0.8);
+    }
+    25% {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0) scale(1.2);
+    }
+    75% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-20px);
+    }
+  }
+
+  /* pixel-scatter */
+  .fx-pixels {
+    position: absolute;
+    left: var(--fx-side);
+    top: 40%;
+    pointer-events: none;
+    z-index: 20;
+  }
+  .fx-pixel {
+    position: absolute;
+    left: var(--px);
+    top: 0;
+    width: var(--psize);
+    height: var(--psize);
+    background: var(--color-black);
+    animation: fxPixel 0.9s var(--pdelay) ease-in forwards;
+  }
+  @keyframes fxPixel {
+    0% {
+      opacity: 1;
+      transform: translateY(0) rotate(0deg);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(80px) rotate(180deg);
+    }
+  }
+
+  /* ── Debug panel ──────────────────────────────────── */
+  .fx-debug-panel {
+    position: fixed;
+    bottom: 60px;
+    right: 0;
+    background: var(--color-bkggrey);
+    border: var(--border);
+    border-right: none;
+    padding: var(--spacing-sm);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    z-index: 100;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+  .fx-debug-title {
+    text-transform: uppercase;
+    opacity: 0.5;
+    margin-bottom: var(--spacing-xs);
+  }
+  .fx-debug-btn {
+    text-align: left;
+    background: none;
+    border: var(--border);
+    cursor: pointer;
+    text-transform: uppercase;
+    opacity: 0.6;
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+  .fx-debug-btn:hover {
+    opacity: 1;
+  }
+  .fx-debug-active {
+    background: var(--color-black);
+    color: var(--color-white);
+    opacity: 1;
   }
 </style>

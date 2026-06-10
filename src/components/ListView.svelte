@@ -81,7 +81,7 @@
   {#if isMobile}
     <div class="mobile-header" bind:this={mobileHeaderEl}>
       <button
-        class="text-small"
+        class="text-base"
         on:click={() =>
           navigate(`/?view=edit&listName=${encodeURIComponent(listName)}`)}
         >Edit</button
@@ -93,10 +93,10 @@
           showDropdown = !showDropdown;
         }}
       >
-        {listName} ▾
+        {listName} ⏷
       </div>
       <button
-        class="text-small"
+        class="text-base"
         on:click={() =>
           navigate(`/?view=vote&listName=${encodeURIComponent(listName)}`)}
         >Vote</button
@@ -284,7 +284,7 @@
   .grid-data-chip {
     background-color: var(--color-grey);
     color: var(--color-white);
-    padding: 0 var(--spacing-sm);
+    /* padding: 2px 8px 1px 8px; */
     padding-top: 1px;
     flex-shrink: 0;
   }
@@ -321,7 +321,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--spacing-md) 0;
+    padding: var(--spacing-md);
     border-bottom: var(--border);
   }
 

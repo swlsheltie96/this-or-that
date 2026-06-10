@@ -88,6 +88,8 @@ function createCustomPrompt(prompt_text) {
     input.type = "password";
     input.className = "text-base";
     input.required = true;
+    input.autocapitalize = "none";
+    input.autocorrect = "off";
 
     const submitButton = document.createElement("button");
     submitButton.type = "submit";
