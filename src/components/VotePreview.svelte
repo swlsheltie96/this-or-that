@@ -216,12 +216,15 @@
     border: 1.5px solid var(--color-black);
     padding: var(--spacing-lg);
     border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .image-wrap img,
   .img-empty {
-    width: 100%;
-    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
     object-fit: contain;
   }
 
