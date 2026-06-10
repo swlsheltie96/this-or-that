@@ -327,7 +327,7 @@
   <div class="dropdown-overlay">
     <Header />
     <div class="list-name-bar no-border">
-      <button class="text-base" disabled>Editing</button>
+      <button class="text-base" on:click={() => navigate(`/?view=vote&listName=${encodeURIComponent(listName)}`)}>Back</button>
       <div
         class="list-name-center text-small"
         on:click={() => (showDropdown = false)}
@@ -357,7 +357,7 @@
         {/if}
       </button>
     {:else}
-      <button class="text-base" disabled>Editing</button>
+      <button class="text-base" on:click={() => navigate(`/?view=vote&listName=${encodeURIComponent(listName)}`)}>Back</button>
       <div
         class="list-name-center text-small"
         on:click={() => (showDropdown = true)}
