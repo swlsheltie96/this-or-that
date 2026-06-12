@@ -272,13 +272,24 @@
       const itemData = item === 1 ? pairData.item1 : pairData.item2;
       flipUrl = itemData.data?.picture ?? "";
       const containerEl = isMobile
-        ? (item === 1 ? mobileWrap1El : mobileWrap2El)
-        : (item === 1 ? voteItem1El : voteItem2El);
-      const imgEl = containerEl?.querySelector("img, .img-empty, .img-no-image");
+        ? item === 1
+          ? mobileWrap1El
+          : mobileWrap2El
+        : item === 1
+          ? voteItem1El
+          : voteItem2El;
+      const imgEl = containerEl?.querySelector(
+        "img, .img-empty, .img-no-image",
+      );
       if (imgEl && containerEl) {
         const cr = containerEl.getBoundingClientRect();
         const ir = imgEl.getBoundingClientRect();
-        flipRect = { top: ir.top - cr.top, left: ir.left - cr.left, width: ir.width, height: ir.height };
+        flipRect = {
+          top: ir.top - cr.top,
+          left: ir.left - cr.left,
+          width: ir.width,
+          height: ir.height,
+        };
       }
       flipItem = item;
       if (!debugMode)
@@ -1104,8 +1115,8 @@
     justify-content: center;
     cursor: pointer;
     overflow: hidden;
-    /* border: var(--border);
-    border-radius: 4px; */
+    border: var(--border);
+    border-radius: 4px;
     padding: var(--spacing-margin);
     position: relative;
   }
