@@ -73,8 +73,8 @@
         > -->
       </div>
       <div class="preview-bottom text-base">
-        <a href="https://www.instagram.com/this____or__that?utm_source=qr" target="_blank" rel="noopener noreferrer">Follow</a>
-        <span>Info</span>
+        <span></span>
+        <a class="follow-link" href="https://www.instagram.com/this____or__that?utm_source=qr" target="_blank" rel="noopener noreferrer">Follow</a>
       </div>
     </div>
   </div>
@@ -144,6 +144,11 @@
     padding: 0 var(--spacing-margin);
   }
 
+
+  .follow-link {
+    color: var(--color-black);
+    text-decoration: underline;
+  }
 
   .preview-bottom {
     background: var(--color-lime);
