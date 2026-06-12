@@ -303,14 +303,7 @@
         const name = item === 1 ? pairData.item1.name : pairData.item2.name;
         const jumped = Math.floor(Math.random() * 5) + 1;
         const newRank = Math.floor(Math.random() * 5) + 1;
-        rankJump = {
-          name,
-          jumped,
-          newRank,
-          item,
-          x: 10 + Math.random() * 55,
-          y: 10 + Math.random() * 75,
-        };
+        rankJump = { name, jumped, newRank, item };
       }
     }
   }
@@ -481,14 +474,7 @@
         const newRank = newRanked.findIndex((r) => r.name === winner);
         const jumped = oldRank - newRank;
         if (jumped > 0) {
-          rankJump = {
-            name: winner,
-            jumped,
-            newRank: newRank + 1,
-            item,
-            x: 10 + Math.random() * 55,
-            y: 10 + Math.random() * 75,
-          };
+          rankJump = { name: winner, jumped, newRank: newRank + 1, item };
           setTimeout(() => {
             rankJump = null;
           }, 3000);

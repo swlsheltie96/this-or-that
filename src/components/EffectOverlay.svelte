@@ -34,7 +34,7 @@
 {/if}
 
 {#if rankJump?.item === item}
-  <span class="rank-jump-tag text-base" style="left:{rankJump.x}%;top:{rankJump.y}%">↑{rankJump.jumped} · {rankJump.name} → #{rankJump.newRank}</span>
+  <span class="rank-jump-tag text-base">↑{rankJump.jumped} · {rankJump.name} → #{rankJump.newRank}</span>
 {/if}
 
 <style>
@@ -139,6 +139,9 @@
 
   .rank-jump-tag {
     position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     background: black;
     color: white;
     padding: 10px 15px;
@@ -146,5 +149,6 @@
     text-transform: uppercase;
     pointer-events: none;
     white-space: nowrap;
+    text-align: center;
   }
 </style>
