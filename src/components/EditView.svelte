@@ -33,6 +33,23 @@
 
   let loading = !isNew;
   let saving = false;
+  let savingDots = "";
+  let dotsTimer = null;
+
+  function startDots() {
+    savingDots = "";
+    dotsTimer = setInterval(() => {
+      savingDots = savingDots.length >= 3 ? "" : savingDots + ".";
+    }, 100);
+  }
+
+  function stopDots() {
+    if (dotsTimer) {
+      clearInterval(dotsTimer);
+      dotsTimer = null;
+    }
+    savingDots = "";
+  }
   let error = "";
   let passwordHighlight = false;
   let titleHighlight = false;
@@ -235,6 +252,7 @@
       return;
     }
     saving = true;
+    startDots();
     error = "";
     try {
       const validRows = rows.filter((r) => r.name.trim());
@@ -286,6 +304,7 @@
       error = e.message;
     } finally {
       saving = false;
+      stopDots();
     }
   }
 
@@ -327,7 +346,12 @@
   <div class="dropdown-overlay">
     <Header />
     <div class="list-name-bar no-border">
-      <button class="text-base" on:click={() => navigate(`/?view=vote&listName=${encodeURIComponent(listName)}`)}>Back</button>
+      <button
+        class="text-base"
+        on:click={() =>
+          navigate(`/?view=vote&listName=${encodeURIComponent(listName)}`)}
+        >Back</button
+      >
       <div
         class="list-name-center text-small"
         on:click={() => (showDropdown = false)}
@@ -357,7 +381,12 @@
         {/if}
       </button>
     {:else}
-      <button class="text-base" on:click={() => navigate(`/?view=vote&listName=${encodeURIComponent(listName)}`)}>Back</button>
+      <button
+        class="text-base"
+        on:click={() =>
+          navigate(`/?view=vote&listName=${encodeURIComponent(listName)}`)}
+        >Back</button
+      >
       <div
         class="list-name-center text-small"
         on:click={() => (showDropdown = true)}
@@ -390,7 +419,7 @@
               class="text-small"
               class:success-text={createSuccess || saveSuccess}
               class:delete-text={deleteInProgress}
-              style={createSuccess || saveSuccess || deleteInProgress
+              style={createSuccess || saveSuccess || deleteInProgress || saving
                 ? ""
                 : "color: var(--color-grey)"}
             >
@@ -398,6 +427,8 @@
                 list created successfully!!! :)))))
               {:else if saveSuccess}
                 success. closing...
+              {:else if saving}
+                saving{savingDots}
               {:else if deleteInProgress}
                 Deleting... Good bye.
               {:else if isNew}

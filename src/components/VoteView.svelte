@@ -13,6 +13,7 @@
   import HomeDropdown from "./HomeDropdown.svelte";
   import GridItem from "./GridItem.svelte";
   import ListViewItem from "./ListViewItem.svelte";
+  import EffectOverlay from "./EffectOverlay.svelte";
 
   export let listName = "";
   export let isMobile = false;
@@ -169,6 +170,140 @@
   let commentText = "";
   let showChat = false;
 
+  const SOUNDS = [
+    "sound_004",
+    "sound_007",
+    "sound_009",
+    "sound_054",
+    "sound_055",
+    "sound_056",
+    "sound_057",
+    "sound_063",
+    "sound_064",
+    "sound_065",
+    "sound_066",
+    "sound_070",
+    "sound_071",
+    "sound_072",
+    "sound_076",
+    "sound_080",
+    "sound_088",
+    "sound_091",
+    "sound_097",
+    "sound_100",
+    "sound_102",
+    "sound_109",
+    "sound_124",
+  ];
+
+  function playVoteSound() {
+    const name = SOUNDS[Math.floor(Math.random() * SOUNDS.length)];
+    const audio = new Audio(`/sounds/${name}.mp3`);
+    audio.play().catch(() => {});
+  }
+
+  const TAG_WORDS = [
+    "VOTED!",
+    "YES!",
+    "NICE!",
+    "PICK!",
+    "VOTE!",
+    "✓",
+    "LFG!",
+    "WOW!",
+  ];
+  let voteTags = [];
+  let voteTagItem = 0;
+  let debugMode = false;
+  let activeEffect = "tags";
+  let rankJump = null;
+  let gridEffectItem = 0;
+  let gridEffectUrl = "";
+  let bangItem = 0;
+  let flipItem = 0;
+  let flipUrl = "";
+  let flipRect = null;
+  let voteItem1El, voteItem2El, mobileWrap1El, mobileWrap2El;
+
+  const EFFECTS = ["tags", "enlarge", "grid", "rank", "bang", "flip"];
+
+  function spawnTags(item, count) {
+    voteTagItem = item;
+    voteTags = Array.from({ length: count }, (_, i) => ({
+      id: Date.now() + i,
+      x: 10 + Math.random() * 75,
+      y: 10 + Math.random() * 75,
+      rot: 0,
+      word: TAG_WORDS[Math.floor(Math.random() * TAG_WORDS.length)],
+    }));
+    if (!debugMode) {
+      setTimeout(() => {
+        voteTags = [];
+        voteTagItem = 0;
+      }, 900);
+    }
+  }
+
+  function runEffect(item, delta) {
+    if (activeEffect === "tags") {
+      spawnTags(item, delta);
+    } else if (activeEffect === "enlarge") {
+      selectedItem = item;
+      if (!debugMode)
+        setTimeout(() => {
+          selectedItem = 0;
+        }, 900);
+    } else if (activeEffect === "grid") {
+      const itemData = item === 1 ? pairData.item1 : pairData.item2;
+      gridEffectUrl = itemData.data?.picture ?? "";
+      gridEffectItem = item;
+      if (!debugMode)
+        setTimeout(() => {
+          gridEffectItem = 0;
+          gridEffectUrl = "";
+        }, 900);
+    } else if (activeEffect === "bang") {
+      bangItem = item;
+      if (!debugMode)
+        setTimeout(() => {
+          bangItem = 0;
+        }, 900);
+    } else if (activeEffect === "flip") {
+      const itemData = item === 1 ? pairData.item1 : pairData.item2;
+      flipUrl = itemData.data?.picture ?? "";
+      const containerEl = isMobile
+        ? (item === 1 ? mobileWrap1El : mobileWrap2El)
+        : (item === 1 ? voteItem1El : voteItem2El);
+      const imgEl = containerEl?.querySelector("img, .img-empty, .img-no-image");
+      if (imgEl && containerEl) {
+        const cr = containerEl.getBoundingClientRect();
+        const ir = imgEl.getBoundingClientRect();
+        flipRect = { top: ir.top - cr.top, left: ir.left - cr.left, width: ir.width, height: ir.height };
+      }
+      flipItem = item;
+      if (!debugMode)
+        setTimeout(() => {
+          flipItem = 0;
+          flipUrl = "";
+          flipRect = null;
+        }, 1200);
+    } else if (activeEffect === "rank") {
+      if (debugMode) {
+        const name = item === 1 ? pairData.item1.name : pairData.item2.name;
+        const jumped = Math.floor(Math.random() * 5) + 1;
+        const newRank = Math.floor(Math.random() * 5) + 1;
+        rankJump = {
+          name,
+          jumped,
+          newRank,
+          item,
+          x: 10 + Math.random() * 55,
+          y: 10 + Math.random() * 75,
+        };
+      }
+    }
+  }
+
   $: if (commentText) showChat = true;
 
   let messagesEl;
@@ -302,6 +437,10 @@
   }
 
   async function castVote(winner, loser, item) {
+    if (debugMode) {
+      runEffect(item, 16);
+      return;
+    }
     if (voting) return;
     voting = true;
     selectedItem = item;
@@ -309,18 +448,42 @@
     const loserElo = item === 1 ? pairData.item2.elo : pairData.item1.elo;
     const delta = calcDelta(winnerElo, loserElo);
     eloPopup = { item, delta };
+    playVoteSound();
+    runEffect(item, delta);
     animateWinnerElo(winnerElo, winnerElo + delta);
     animateLoserElo(loserElo, loserElo - delta);
     setTimeout(() => {
       eloPopup = null;
     }, 1000);
     try {
+      const oldRank = rankedItems.findIndex((r) => r.name === winner);
       await new Promise((r) => setTimeout(r, 700));
       await vote(listName, winner, loser);
       selectedItem = 0;
       eloPopup = null;
       winnerCountElo = null;
       loserCountElo = null;
+      const res = await getSortedList(listName);
+      const newRanked = (res || []).map((r, i) => ({ ...r, rank: i + 1 }));
+      if (oldRank !== -1 && activeEffect === "rank") {
+        const newRank = newRanked.findIndex((r) => r.name === winner);
+        const jumped = oldRank - newRank;
+        if (jumped > 0) {
+          rankJump = {
+            name: winner,
+            jumped,
+            newRank: newRank + 1,
+            item,
+            x: 10 + Math.random() * 55,
+            y: 10 + Math.random() * 75,
+          };
+          setTimeout(() => {
+            rankJump = null;
+          }, 3000);
+        }
+      }
+      rankedItems = newRanked;
+      if (!isMobile) hoveredItemName = newRanked[0]?.name ?? "";
       await loadPair();
     } catch (e) {
       error = e.message;
@@ -410,6 +573,20 @@
       <span class="chevron">⏷</span>
     </div>
     <div class="right-controls">
+      {#if debugMode}
+        <button
+          class="text-base"
+          class:active={debugMode}
+          on:click={() => (debugMode = !debugMode)}>Debug</button
+        >
+        {#each EFFECTS as fx}
+          <button
+            class="text-base"
+            class:active={activeEffect === fx}
+            on:click={() => (activeEffect = fx)}>{fx}</button
+          >
+        {/each}
+      {/if}
       <button
         class="text-base"
         class:active={viewMode !== "vote"}
@@ -533,6 +710,7 @@
         <div class="mobile-vote-container">
           <div
             class="mobile-image-wrap"
+            bind:this={mobileWrap1El}
             class:selected={selectedItem === 1}
             class:loser={selectedItem === 2}
             role="button"
@@ -550,6 +728,17 @@
             {:else}
               <div class="img-empty"></div>
             {/if}
+            <EffectOverlay
+              item={1}
+              {voteTags}
+              {voteTagItem}
+              {gridEffectItem}
+              {gridEffectUrl}
+              {bangItem}
+              {flipItem}
+              {flipUrl}
+              {rankJump}
+            />
           </div>
 
           <div class="mobile-names">
@@ -587,6 +776,7 @@
 
           <div
             class="mobile-image-wrap"
+            bind:this={mobileWrap2El}
             class:selected={selectedItem === 2}
             class:loser={selectedItem === 1}
             role="button"
@@ -604,6 +794,15 @@
             {:else}
               <div class="img-empty"></div>
             {/if}
+            <EffectOverlay
+              item={2}
+              {voteTags}
+              {voteTagItem}
+              {gridEffectItem}
+              {gridEffectUrl}
+              {bangItem}
+              {rankJump}
+            />
           </div>
         </div>
       {:else}
@@ -611,6 +810,7 @@
           <div class="images-row">
             <div
               class="vote-item vote-item-1"
+              bind:this={voteItem1El}
               class:disabled={voting}
               class:selected={selectedItem === 1}
               class:loser={selectedItem === 2}
@@ -634,10 +834,23 @@
               {:else}
                 <div class="img-empty"></div>
               {/if}
+              <EffectOverlay
+                item={1}
+                {voteTags}
+                {voteTagItem}
+                {gridEffectItem}
+                {gridEffectUrl}
+                {bangItem}
+                {flipItem}
+                {flipUrl}
+                {flipRect}
+                {rankJump}
+              />
             </div>
 
             <div
               class="vote-item vote-item-2"
+              bind:this={voteItem2El}
               class:disabled={voting}
               class:selected={selectedItem === 2}
               class:loser={selectedItem === 1}
@@ -661,6 +874,15 @@
               {:else}
                 <div class="img-empty"></div>
               {/if}
+              <EffectOverlay
+                item={2}
+                {voteTags}
+                {voteTagItem}
+                {gridEffectItem}
+                {gridEffectUrl}
+                {bangItem}
+                {rankJump}
+              />
             </div>
           </div>
 
@@ -702,7 +924,6 @@
         </div>
       {/if}
     {/if}
-
   </div>
 </div>
 
@@ -710,7 +931,7 @@
   {#if showChat && $chatMessages.length > 0}
     <div class="chat-messages-area" bind:this={messagesEl}>
       {#each $chatMessages as msg}
-        <div class="chat-message text-small">
+        <div class="chat-message text-base">
           <span class="chat-msg-author">{msg.author}</span>
           <span class="chat-msg-text">{msg.text}</span>
         </div>
@@ -722,7 +943,7 @@
   {/if}
   <div class="chat-bar">
     <input
-      class="text-small chat-name-input"
+      class="text-base chat-name-input"
       bind:value={$chatName}
       on:keydown={(e) => {
         e.stopPropagation();
@@ -730,7 +951,7 @@
       }}
     />
     <input
-      class="text-small chat-input"
+      class="text-base chat-input"
       placeholder="Say something..."
       bind:value={commentText}
       on:keydown={(e) => {
@@ -883,9 +1104,10 @@
     justify-content: center;
     cursor: pointer;
     overflow: hidden;
-    border: var(--border);
-    border-radius: 4px;
+    /* border: var(--border);
+    border-radius: 4px; */
     padding: var(--spacing-margin);
+    position: relative;
   }
 
   .vote-item.disabled {
@@ -996,6 +1218,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
   }
 
   .mobile-image-wrap img,
@@ -1242,8 +1465,8 @@
 
   .chat-msg-author {
     flex-shrink: 0;
-    color: var(--color-white);
-    background-color: var(--color-black);
+    color: var(--color-black);
+    background-color: var(--color-grey);
     padding: 2px var(--spacing-sm) 1px var(--spacing-sm);
     border-radius: 2px;
   }
