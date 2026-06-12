@@ -460,6 +460,7 @@
     const delta = calcDelta(winnerElo, loserElo);
     eloPopup = { item, delta };
     playVoteSound();
+    if (!debugMode) activeEffect = EFFECTS[Math.floor(Math.random() * EFFECTS.filter(e => e !== "rank").length)];
     runEffect(item, delta);
     animateWinnerElo(winnerElo, winnerElo + delta);
     animateLoserElo(loserElo, loserElo - delta);
