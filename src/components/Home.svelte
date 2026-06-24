@@ -70,9 +70,9 @@
         {#if !showInfo}<div class="text-top text-small">{displayText}</div>{/if}
         {#if showInfo}
           <div class="info-block text-small"
-            >Voting uses the Elo rating system — the same algorithm used to rank
-            chess players. Every vote is a weighted matchup, not just a tally.
-            Create your own list to settle the score. Designed and built by
+            >Voting uses the Elo rating system, the algorithm used to rank chess
+            players. Every vote is a weighted matchup, not just a tally. Create
+            your own list to settle the score. Designed and built by
             <a href="https://www.instagram.com/swl_at_gmail_dot_com/"
               >Shannon Lin.</a
             ></div

@@ -76,16 +76,12 @@
       {:else}
         <div class="mobile-info-block text-small">Voting uses the Elo rating system — the same algorithm used to rank chess players. Every vote is a weighted matchup, not just a tally. The live Elo score animates in real time, so you can watch the rankings shift as you go.</div>
       {/if}
-      <div class="mobile-list-wrap">
-        <HomeDropdown
-          isMobile={true}
-          on:activeList={(e) => (activeListName = e.detail.listName)}
-        />
-      </div>
-      <div class="mobile-bottom-bar text-base">
-        <button class="mobile-bottom-link" on:click={() => (showMobileInfo = !showMobileInfo)}>{showMobileInfo ? 'Close' : 'Info'}</button>
-        <a class="mobile-bottom-link" href="https://www.instagram.com/this____or__that?utm_source=qr" target="_blank" rel="noopener noreferrer">Follow</a>
-      </div>
+      <HomeDropdown
+        isMobile={true}
+        showInfo={showMobileInfo}
+        on:activeList={(e) => (activeListName = e.detail.listName)}
+        on:infoToggle={() => (showMobileInfo = !showMobileInfo)}
+      />
     {/if}
     {#if !isMobile}
       <Header />
@@ -132,34 +128,6 @@
     flex-shrink: 0;
   }
 
-  .mobile-list-wrap {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-  }
-
-  .mobile-bottom-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-margin);
-    flex-shrink: 0;
-    background: var(--color-lime);
-    border-radius: var(--border-radius);
-    text-transform: uppercase;
-  }
-
-  .mobile-bottom-link {
-    color: var(--color-black);
-    text-decoration: underline;
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-family: var(--font-family);
-    font-size: inherit;
-    text-transform: uppercase;
-    padding: 0;
-  }
   .app-container.vote-layout {
     height: calc(100dvh - 2 * var(--spacing-sm));
     overflow: hidden;

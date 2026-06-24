@@ -4,6 +4,7 @@
   import { preloadList } from "../lib/listCache.js";
 
   export let isMobile = false;
+  export let showInfo = false;
 
   const dispatch = createEventDispatcher();
 
@@ -182,7 +183,13 @@
           <span class="recency">{timeAgo(list.lastVoteTimestamp)}</span>
         </div>
       {/each}
-      {#if isMobile}<div class="list-spacer"></div>{/if}
+      {#if isMobile}
+        <div class="list-spacer"></div>
+        <div class="list-footer-row text-base">
+          <button class="footer-link" on:click={() => dispatch('infoToggle')}>{showInfo ? 'Close' : 'Info'}</button>
+          <a class="footer-link" href="https://www.instagram.com/this____or__that?utm_source=qr" target="_blank" rel="noopener noreferrer">Follow</a>
+        </div>
+      {/if}
       <!-- <div class="list-footer text-small"
         ><a href="https://www.shannonlin.xyz"
           >Designed and built by Shannon Lin</a
@@ -355,5 +362,26 @@
     padding: var(--spacing-md) var(--spacing-margin);
     padding-bottom: var(--spacing-margin);
     opacity: 0.4;
+  }
+
+  .list-footer-row {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--spacing-md) 0;
+    border-top: var(--border);
+    margin-top: var(--spacing-md);
+    text-transform: uppercase;
+  }
+
+  .footer-link {
+    color: var(--color-black);
+    text-decoration: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-family);
+    font-size: inherit;
+    text-transform: uppercase;
+    padding: 0;
   }
 </style>
