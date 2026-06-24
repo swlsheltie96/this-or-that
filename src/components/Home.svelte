@@ -8,6 +8,7 @@
   export let isMobile = false;
 
   let activeListName = "";
+  let showInfo = false;
 
   const sentences = [
     "Welcome to This or That. A pairwise ranking tool powered by the Elo algorithm.",
@@ -66,15 +67,33 @@
         >
       </div>
       <div class="preview-middle">
-        <div class="text-top text-small">{displayText}</div>
-        <VotePreview listName={activeListName} />
+        {#if !showInfo}<div class="text-top text-small">{displayText}</div>{/if}
+        {#if showInfo}
+          <div class="info-block text-small"
+            >Voting uses the Elo rating system — the same algorithm used to rank
+            chess players. Every vote is a weighted matchup, not just a tally.
+            Create your own list to settle the score. Designed and built by
+            <a href="https://www.instagram.com/swl_at_gmail_dot_com/"
+              >Shannon Lin.</a
+            ></div
+          >
+        {:else}
+          <VotePreview listName={activeListName} />
+        {/if}
         <!-- <div class="text-bottom text-small"
           >click any list to start casting your vote</div
         > -->
       </div>
       <div class="preview-bottom text-base">
-        <span></span>
-        <a class="follow-link" href="https://www.instagram.com/this____or__that?utm_source=qr" target="_blank" rel="noopener noreferrer">Follow</a>
+        <button class="bottom-link" on:click={() => (showInfo = !showInfo)}
+          >{showInfo ? "Close" : "Info"}</button
+        >
+        <a
+          class="follow-link bottom-link"
+          href="https://www.instagram.com/this____or__that?utm_source=qr"
+          target="_blank"
+          rel="noopener noreferrer">Follow</a
+        >
       </div>
     </div>
   </div>
@@ -144,10 +163,23 @@
     padding: 0 var(--spacing-margin);
   }
 
-
-  .follow-link {
+  .bottom-link {
     color: var(--color-black);
     text-decoration: underline;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-family);
+    font-size: inherit;
+    text-transform: uppercase;
+    padding: 0;
+  }
+
+  .info-block {
+    padding: 0 var(--spacing-margin);
+    text-align: center;
+    line-height: 1.6;
+    text-transform: uppercase;
   }
 
   .preview-bottom {

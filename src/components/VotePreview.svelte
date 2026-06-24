@@ -95,13 +95,15 @@
       navigate(`/?view=vote&listName=${encodeURIComponent(currentListName)}`);
   }
 
-  let hoverSide = 1;
+  let hoverSide = 0;
   let hoverX = 50;
   let hoverY = 20;
-  function handleMouseEnter() {
-    hoverSide = Math.random() < 0.5 ? 1 : 2;
+  let hoverRot = -15;
+  function handleImageEnter(side) {
+    hoverSide = side;
     hoverX = 15 + Math.random() * 70;
     hoverY = 10 + Math.random() * 60;
+    hoverRot = (Math.random() - 0.5) * 40;
   }
 
   $: if (listName) {
@@ -133,13 +135,13 @@
   <div
     class="vote-preview"
     on:click={handleClick}
-    on:mouseenter={handleMouseEnter}
   >
     <div class="images-row">
       <div
         class="image-wrap"
         class:hovered={hoverSide === 1}
-        style="--hover-x:{hoverX}%;--hover-y:{hoverY}%"
+        style="--hover-x:{hoverX}%;--hover-y:{hoverY}%;--hover-rot:{hoverRot}deg"
+        on:mouseenter={() => handleImageEnter(1)}
       >
         {#if noImages}
           <div class="img-no-image text-item">{pair.item1.name}</div>
@@ -153,7 +155,8 @@
       <div
         class="image-wrap"
         class:hovered={hoverSide === 2}
-        style="--hover-x:{hoverX}%;--hover-y:{hoverY}%"
+        style="--hover-x:{hoverX}%;--hover-y:{hoverY}%;--hover-rot:{hoverRot}deg"
+        on:mouseenter={() => handleImageEnter(2)}
       >
         {#if noImages}
           <div class="img-no-image text-item">{pair.item2.name}</div>
@@ -199,7 +202,7 @@
     position: absolute;
     top: var(--hover-y);
     left: var(--hover-x);
-    transform: translate(-50%, -50%) rotate(-15deg);
+    transform: translate(-50%, -50%) rotate(var(--hover-rot));
     background: var(--color-black);
     color: var(--color-white);
     padding: 2px var(--spacing-sm);
