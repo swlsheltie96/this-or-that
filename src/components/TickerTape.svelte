@@ -80,6 +80,11 @@
     overflow: hidden;
   }
 
+  @media (max-width: 740px) {
+    .ticker-wrap {
+      padding: var(--spacing-lg) 0;
+    }
+  }
   .ticker-overflow {
     flex: 1;
     min-width: 0;

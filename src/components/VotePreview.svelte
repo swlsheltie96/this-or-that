@@ -130,9 +130,17 @@
 </script>
 
 {#if pair}
-  <div class="vote-preview" on:click={handleClick} on:mouseenter={handleMouseEnter}>
+  <div
+    class="vote-preview"
+    on:click={handleClick}
+    on:mouseenter={handleMouseEnter}
+  >
     <div class="images-row">
-      <div class="image-wrap" class:hovered={hoverSide === 1} style="--hover-x:{hoverX}%;--hover-y:{hoverY}%">
+      <div
+        class="image-wrap"
+        class:hovered={hoverSide === 1}
+        style="--hover-x:{hoverX}%;--hover-y:{hoverY}%"
+      >
         {#if noImages}
           <div class="img-no-image text-item">{pair.item1.name}</div>
         {:else if pair.item1.data?.picture}
@@ -142,7 +150,11 @@
         {/if}
       </div>
       <div class="or text-base">or</div>
-      <div class="image-wrap" class:hovered={hoverSide === 2} style="--hover-x:{hoverX}%;--hover-y:{hoverY}%">
+      <div
+        class="image-wrap"
+        class:hovered={hoverSide === 2}
+        style="--hover-x:{hoverX}%;--hover-y:{hoverY}%"
+      >
         {#if noImages}
           <div class="img-no-image text-item">{pair.item2.name}</div>
         {:else if pair.item2.data?.picture}
@@ -176,6 +188,11 @@
     cursor: pointer;
     position: relative;
   }
+  @media (max-width: 740px) {
+    .vote-preview {
+      margin: 0;
+    }
+  }
 
   .image-wrap::after {
     content: "VOTE NOW";
@@ -198,7 +215,16 @@
     opacity: 1;
   }
 
-  .images-row,
+  .images-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+
+  .images-row .or {
+    flex-shrink: 0;
+  }
+
   .names-row {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
@@ -220,6 +246,8 @@
   }
 
   .image-wrap {
+    width: 0;
+    flex: 1;
     aspect-ratio: 1 / 1;
     overflow: visible;
     position: relative;
@@ -229,12 +257,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    box-sizing: border-box;
   }
 
   .image-wrap img,
   .img-empty {
-    max-width: 100%;
-    max-height: 100%;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
   }
 
