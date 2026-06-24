@@ -300,6 +300,7 @@
 
   let _chatName = "";
   chatName.subscribe((v) => (_chatName = v));
+  let nameInputFocused = false;
 
   function submitComment() {
     const text = commentText.trim();
@@ -875,7 +876,10 @@
   <div class="chat-bar">
     <input
       class="text-base chat-name-input"
+      class:name-collapsed={isMobile && !nameInputFocused}
       bind:value={$chatName}
+      on:focus={() => (nameInputFocused = true)}
+      on:blur={() => (nameInputFocused = false)}
       on:keydown={(e) => {
         e.stopPropagation();
         if (e.key === "Enter") e.target.blur();
@@ -1402,6 +1406,8 @@
   .chat-name-input {
     flex-shrink: 0;
     field-sizing: content;
+    max-width: 8ch;
+    overflow: hidden;
     border: none;
     outline: none;
     background: transparent;
@@ -1413,6 +1419,11 @@
 
   .chat-name-input:focus {
     opacity: 1;
+    max-width: 8ch;
+  }
+
+  .chat-name-input.name-collapsed {
+    max-width: 1ch;
   }
 
   .chat-input {
