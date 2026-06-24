@@ -202,40 +202,60 @@
     audio.play().catch(() => {});
   }
 
-  const TAG_WORDS = [
-    "VOTED!",
-    "YES!",
-    "NICE!",
-    "PICK!",
-    "VOTE!",
-    "✓",
-    "LFG!",
-    "WOW!",
-  ];
+  function playTone() {
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = 660;
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.15);
+    } catch {}
+  }
+
+  function playNumberOneSound() {
+    const audio = new Audio(`/sounds/sound_064.mp3`);
+    audio.play().catch(() => {});
+  }
+
+  function triggerNumberOne(item, name) {
+    numberOneItem = item;
+    playNumberOneSound();
+    if (name && typeof speechSynthesis !== "undefined") {
+      setTimeout(() => {
+        const utterance = new SpeechSynthesisUtterance(name);
+        const apply = () => {
+          const voice = speechSynthesis.getVoices().find(v => v.name === "Good News");
+          if (voice) utterance.voice = voice;
+          speechSynthesis.speak(utterance);
+        };
+        if (speechSynthesis.getVoices().length > 0) apply();
+        else speechSynthesis.addEventListener("voiceschanged", apply, { once: true });
+      }, 600);
+    }
+    setTimeout(() => { numberOneItem = 0; }, 2000);
+  }
+
+  const TAG_WORDS = ["I VOTED"];
   let voteTags = [];
   let voteTagItem = 0;
   let debugMode = false;
   let activeEffect = "tags";
-  let rankJump = null;
-  let gridEffectItem = 0;
-  let gridEffectUrl = "";
-  let bangItem = 0;
-  let flipItem = 0;
-  let flipUrl = "";
-  let flipRect = null;
+  let rankFlash = null; // { item, text }
+  let numberOneItem = 0;
   let voteItem1El, voteItem2El, mobileWrap1El, mobileWrap2El;
 
-  const EFFECTS = ["tags", "enlarge", "grid", "rank", "bang", "flip"];
+  const EFFECTS = ["tags", "rank", "#1"];
 
-  function spawnTags(item, count) {
+  function spawnTags(item, pos = { x: 50, y: 50 }) {
     voteTagItem = item;
-    voteTags = Array.from({ length: count }, (_, i) => ({
-      id: Date.now() + i,
-      x: 10 + Math.random() * 75,
-      y: 10 + Math.random() * 75,
-      rot: 0,
-      word: TAG_WORDS[Math.floor(Math.random() * TAG_WORDS.length)],
-    }));
+    const rot = (Math.random() - 0.5) * 30;
+    voteTags = [{ id: Date.now(), x: pos.x, y: pos.y, rot, word: TAG_WORDS[0] }];
     if (!debugMode) {
       setTimeout(() => {
         voteTags = [];
@@ -244,66 +264,25 @@
     }
   }
 
-  function runEffect(item, delta) {
+  function triggerRankFlash(item, text) {
+    rankFlash = { item, text };
+    setTimeout(() => { rankFlash = null; }, 3000);
+  }
+
+  function runEffect(item, delta, pos) {
     if (activeEffect === "tags") {
-      spawnTags(item, delta);
-    } else if (activeEffect === "enlarge") {
-      selectedItem = item;
-      if (!debugMode)
-        setTimeout(() => {
-          selectedItem = 0;
-        }, 900);
-    } else if (activeEffect === "grid") {
-      const itemData = item === 1 ? pairData.item1 : pairData.item2;
-      gridEffectUrl = itemData.data?.picture ?? "";
-      gridEffectItem = item;
-      if (!debugMode)
-        setTimeout(() => {
-          gridEffectItem = 0;
-          gridEffectUrl = "";
-        }, 900);
-    } else if (activeEffect === "bang") {
-      bangItem = item;
-      if (!debugMode)
-        setTimeout(() => {
-          bangItem = 0;
-        }, 900);
-    } else if (activeEffect === "flip") {
-      const itemData = item === 1 ? pairData.item1 : pairData.item2;
-      flipUrl = itemData.data?.picture ?? "";
-      const containerEl = isMobile
-        ? item === 1
-          ? mobileWrap1El
-          : mobileWrap2El
-        : item === 1
-          ? voteItem1El
-          : voteItem2El;
-      const imgEl = containerEl?.querySelector(
-        "img, .img-empty, .img-no-image",
-      );
-      if (imgEl && containerEl) {
-        const cr = containerEl.getBoundingClientRect();
-        const ir = imgEl.getBoundingClientRect();
-        flipRect = {
-          top: ir.top - cr.top,
-          left: ir.left - cr.left,
-          width: ir.width,
-          height: ir.height,
-        };
-      }
-      flipItem = item;
-      if (!debugMode)
-        setTimeout(() => {
-          flipItem = 0;
-          flipUrl = "";
-          flipRect = null;
-        }, 1200);
+      spawnTags(item, pos);
     } else if (activeEffect === "rank") {
       if (debugMode) {
+        const newRank = Math.floor(Math.random() * 5) + 2;
         const name = item === 1 ? pairData.item1.name : pairData.item2.name;
-        const jumped = Math.floor(Math.random() * 5) + 1;
-        const newRank = Math.floor(Math.random() * 5) + 1;
-        rankJump = { name, jumped, newRank, item };
+        triggerRankFlash(item, `${name} is now #${newRank}`);
+      }
+    } else if (activeEffect === "#1") {
+      if (debugMode) {
+        const name = item === 1 ? pairData.item1.name : pairData.item2.name;
+        triggerNumberOne(item, name);
+        triggerRankFlash(item, `${name} is now #1`);
       }
     }
   }
@@ -440,9 +419,9 @@
     return Math.round(K * (1 - expected));
   }
 
-  async function castVote(winner, loser, item) {
+  async function castVote(winner, loser, item, pos = { x: 50, y: 50 }) {
     if (debugMode) {
-      runEffect(item, 16);
+      runEffect(item, 16, pos);
       return;
     }
     if (voting) return;
@@ -451,37 +430,43 @@
     const winnerElo = item === 1 ? pairData.item1.elo : pairData.item2.elo;
     const loserElo = item === 1 ? pairData.item2.elo : pairData.item1.elo;
     const delta = calcDelta(winnerElo, loserElo);
-    eloPopup = { item, delta };
-    playVoteSound();
-    if (!debugMode) activeEffect = EFFECTS[Math.floor(Math.random() * EFFECTS.filter(e => e !== "rank").length)];
-    runEffect(item, delta);
+    playTone();
+    spawnTags(item, pos);
     animateWinnerElo(winnerElo, winnerElo + delta);
     animateLoserElo(loserElo, loserElo - delta);
-    setTimeout(() => {
-      eloPopup = null;
-    }, 1000);
+    const effectStart = Date.now();
+    const effectDuration = 900;
     try {
       const oldRank = rankedItems.findIndex((r) => r.name === winner);
       await new Promise((r) => setTimeout(r, 700));
       await vote(listName, winner, loser);
       selectedItem = 0;
-      eloPopup = null;
       winnerCountElo = null;
       loserCountElo = null;
       const res = await getSortedList(listName);
       const newRanked = (res || []).map((r, i) => ({ ...r, rank: i + 1 }));
-      if (oldRank !== -1 && activeEffect === "rank") {
-        const newRank = newRanked.findIndex((r) => r.name === winner);
-        const jumped = oldRank - newRank;
+      const newRankIdx = newRanked.findIndex((r) => r.name === winner);
+      let rankFlashDuration = 0;
+      if (newRankIdx === 0 && oldRank !== 0) {
+        triggerNumberOne(item, winner);
+        triggerRankFlash(item, `${winner} is now #1`);
+        rankFlashDuration = 3000;
+        winnerCountElo = null;
+        loserCountElo = null;
+      } else if (oldRank !== -1) {
+        const jumped = oldRank - newRankIdx;
         if (jumped > 0) {
-          rankJump = { name: winner, jumped, newRank: newRank + 1, item };
-          setTimeout(() => {
-            rankJump = null;
-          }, 3000);
+          triggerRankFlash(item, `${winner} is now #${newRankIdx + 1}`);
+          rankFlashDuration = 3000;
+          winnerCountElo = null;
+          loserCountElo = null;
         }
       }
       rankedItems = newRanked;
       if (!isMobile) hoveredItemName = newRanked[0]?.name ?? "";
+      const elapsed = Date.now() - effectStart;
+      const remaining = Math.max(rankFlashDuration, effectDuration - elapsed);
+      if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
       await loadPair();
     } catch (e) {
       error = e.message;
@@ -571,17 +556,17 @@
       <span class="chevron">⏷</span>
     </div>
     <div class="right-controls">
+      <button
+        class="text-base"
+        class:active={debugMode}
+        on:click={() => (debugMode = !debugMode)}>Debug</button
+      >
       {#if debugMode}
-        <button
-          class="text-base"
-          class:active={debugMode}
-          on:click={() => (debugMode = !debugMode)}>Debug</button
-        >
         {#each EFFECTS as fx}
           <button
             class="text-base"
             class:active={activeEffect === fx}
-            on:click={() => (activeEffect = fx)}>{fx}</button
+            on:click={() => (activeEffect = fx)}>{fx}{fx === "grid" ? " (depr)" : ""}</button
           >
         {/each}
       {/if}
@@ -713,8 +698,7 @@
             class:loser={selectedItem === 2}
             role="button"
             tabindex="0"
-            on:click={() =>
-              castVote(pairData.item1.name, pairData.item2.name, 1)}
+            on:click={(e) => { const r = e.currentTarget.getBoundingClientRect(); castVote(pairData.item1.name, pairData.item2.name, 1, { x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 }); }}
           >
             {#if listInfo?.noImages}
               <div class="img-no-image text-item">{pairData.item1.name}</div>
@@ -726,49 +710,31 @@
             {:else}
               <div class="img-empty"></div>
             {/if}
-            <EffectOverlay
-              item={1}
-              {voteTags}
-              {voteTagItem}
-              {gridEffectItem}
-              {gridEffectUrl}
-              {bangItem}
-              {flipItem}
-              {flipUrl}
-              {rankJump}
-            />
+            <EffectOverlay item={1} {voteTags} {voteTagItem} />
           </div>
 
           <div class="mobile-names">
-            <div class="text-base mobile-name-text">
-              {selectedItem === 1
-                ? (winnerCountElo ?? Math.round(pairData.item1.elo))
-                : selectedItem === 2
-                  ? (loserCountElo ?? Math.round(pairData.item1.elo))
-                  : pairData.item1.name}
-              {#if eloPopup?.item === 1}<span class="elo-popup text-base"
-                  >+{eloPopup.delta}</span
-                >{/if}
-              {#if eloPopup?.item === 2}<span class="elo-popup-loser text-base"
-                  >-{eloPopup.delta}</span
-                >{/if}
+            <div class="text-base mobile-name-text" class:rank-flash={rankFlash?.item === 1}>
+              {rankFlash?.item === 1
+                ? rankFlash.text
+                : selectedItem === 1
+                  ? (winnerCountElo ?? Math.round(pairData.item1.elo))
+                  : selectedItem === 2
+                    ? (loserCountElo ?? Math.round(pairData.item1.elo))
+                    : pairData.item1.name}
             </div>
             <div
               class="text-small mobile-or-text"
               class:hidden={selectedItem !== 0}>or</div
             >
-            <div class="text-base mobile-name-text">
-              {selectedItem === 2
-                ? (winnerCountElo ?? Math.round(pairData.item2.elo))
-                : selectedItem === 1
-                  ? (loserCountElo ?? Math.round(pairData.item2.elo))
-                  : pairData.item2.name}
-              {#if eloPopup?.item === 2}<span class="elo-popup text-base"
-                  >+{eloPopup.delta}</span
-                >{/if}
-              {#if eloPopup?.item === 1}<span class="elo-popup-loser text-base"
-                  >-{eloPopup.delta}</span
-                >{/if}
+            <div class="text-base mobile-name-text" class:rank-flash={rankFlash?.item === 2}>
+              {rankFlash?.item === 2
+                ? rankFlash.text
+                : selectedItem === 2
+                  ? (winnerCountElo ?? Math.round(pairData.item2.elo))
+                  : selectedItem === 1
+                    ? (loserCountElo ?? Math.round(pairData.item2.elo))
+                    : pairData.item2.name}
             </div>
           </div>
 
@@ -779,8 +745,7 @@
             class:loser={selectedItem === 1}
             role="button"
             tabindex="0"
-            on:click={() =>
-              castVote(pairData.item2.name, pairData.item1.name, 2)}
+            on:click={(e) => { const r = e.currentTarget.getBoundingClientRect(); castVote(pairData.item2.name, pairData.item1.name, 2, { x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 }); }}
           >
             {#if listInfo?.noImages}
               <div class="img-no-image text-item">{pairData.item2.name}</div>
@@ -792,15 +757,7 @@
             {:else}
               <div class="img-empty"></div>
             {/if}
-            <EffectOverlay
-              item={2}
-              {voteTags}
-              {voteTagItem}
-              {gridEffectItem}
-              {gridEffectUrl}
-              {bangItem}
-              {rankJump}
-            />
+            <EffectOverlay item={2} {voteTags} {voteTagItem} />
           </div>
         </div>
       {:else}
@@ -816,8 +773,7 @@
               tabindex="0"
               on:mouseenter={() => (hoveredItem = 1)}
               on:mouseleave={() => (hoveredItem = 0)}
-              on:click={() =>
-                castVote(pairData.item1.name, pairData.item2.name, 1)}
+              on:click={(e) => { const r = e.currentTarget.getBoundingClientRect(); castVote(pairData.item1.name, pairData.item2.name, 1, { x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 }); }}
               on:keydown={(e) =>
                 e.key === "Enter" &&
                 castVote(pairData.item1.name, pairData.item2.name, 1)}
@@ -832,18 +788,7 @@
               {:else}
                 <div class="img-empty"></div>
               {/if}
-              <EffectOverlay
-                item={1}
-                {voteTags}
-                {voteTagItem}
-                {gridEffectItem}
-                {gridEffectUrl}
-                {bangItem}
-                {flipItem}
-                {flipUrl}
-                {flipRect}
-                {rankJump}
-              />
+              <EffectOverlay item={1} {voteTags} {voteTagItem} />
             </div>
 
             <div
@@ -856,8 +801,7 @@
               tabindex="0"
               on:mouseenter={() => (hoveredItem = 2)}
               on:mouseleave={() => (hoveredItem = 0)}
-              on:click={() =>
-                castVote(pairData.item2.name, pairData.item1.name, 2)}
+              on:click={(e) => { const r = e.currentTarget.getBoundingClientRect(); castVote(pairData.item2.name, pairData.item1.name, 2, { x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 }); }}
               on:keydown={(e) =>
                 e.key === "Enter" &&
                 castVote(pairData.item2.name, pairData.item1.name, 2)}
@@ -872,15 +816,7 @@
               {:else}
                 <div class="img-empty"></div>
               {/if}
-              <EffectOverlay
-                item={2}
-                {voteTags}
-                {voteTagItem}
-                {gridEffectItem}
-                {gridEffectUrl}
-                {bangItem}
-                {rankJump}
-              />
+              <EffectOverlay item={2} {voteTags} {voteTagItem} />
             </div>
           </div>
 
@@ -888,35 +824,29 @@
             <div
               class="name text-base"
               class:hovered={hoveredItem === 1 && selectedItem === 0}
+              class:rank-flash={rankFlash?.item === 1}
             >
-              {selectedItem === 1
-                ? (winnerCountElo ?? Math.round(pairData.item1.elo))
-                : selectedItem === 2
-                  ? (loserCountElo ?? Math.round(pairData.item1.elo))
-                  : pairData.item1.name}
-              {#if eloPopup?.item === 1}<span class="elo-popup text-base"
-                  >+{eloPopup.delta}</span
-                >{/if}
-              {#if eloPopup?.item === 2}<span class="elo-popup-loser text-base"
-                  >-{eloPopup.delta}</span
-                >{/if}
+              {rankFlash?.item === 1
+                ? rankFlash.text
+                : selectedItem === 1
+                  ? (winnerCountElo ?? Math.round(pairData.item1.elo))
+                  : selectedItem === 2
+                    ? (loserCountElo ?? Math.round(pairData.item1.elo))
+                    : pairData.item1.name}
             </div>
             <div class="or text-base">or</div>
             <div
               class="name text-base"
               class:hovered={hoveredItem === 2 && selectedItem === 0}
+              class:rank-flash={rankFlash?.item === 2}
             >
-              {selectedItem === 2
-                ? (winnerCountElo ?? Math.round(pairData.item2.elo))
-                : selectedItem === 1
-                  ? (loserCountElo ?? Math.round(pairData.item2.elo))
-                  : pairData.item2.name}
-              {#if eloPopup?.item === 2}<span class="elo-popup text-base"
-                  >+{eloPopup.delta}</span
-                >{/if}
-              {#if eloPopup?.item === 1}<span class="elo-popup-loser text-base"
-                  >-{eloPopup.delta}</span
-                >{/if}
+              {rankFlash?.item === 2
+                ? rankFlash.text
+                : selectedItem === 2
+                  ? (winnerCountElo ?? Math.round(pairData.item2.elo))
+                  : selectedItem === 1
+                    ? (loserCountElo ?? Math.round(pairData.item2.elo))
+                    : pairData.item2.name}
             </div>
           </div>
         </div>
@@ -1068,24 +998,35 @@
     text-decoration: underline;
   }
 
-  .elo-popup {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    pointer-events: none;
-    animation: floatUp 1s ease-out forwards;
-    white-space: nowrap;
+  @keyframes rank-typewriter {
+    from { clip-path: inset(0 100% 0 0); }
+    to   { clip-path: inset(0 0% 0 0); }
   }
 
-  @keyframes floatUp {
-    0% {
-      opacity: 1;
-      bottom: 1.5rem;
-    }
-    100% {
-      opacity: 0;
-      bottom: calc(1.5rem + 2em);
-    }
+  @keyframes rank-blink {
+    0%   { opacity: 1; }
+    12%  { opacity: 1; }
+    13%  { opacity: 0; }
+    25%  { opacity: 0; }
+    26%  { opacity: 1; }
+    37%  { opacity: 1; }
+    38%  { opacity: 0; }
+    50%  { opacity: 0; }
+    51%  { opacity: 1; }
+    62%  { opacity: 1; }
+    63%  { opacity: 0; }
+    75%  { opacity: 0; }
+    76%  { opacity: 1; }
+    87%  { opacity: 1; }
+    88%  { opacity: 0; }
+    99%  { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  .rank-flash {
+    animation:
+      rank-typewriter 1s steps(20, end) forwards,
+      rank-blink 1s steps(1, end) 1s forwards;
   }
 
   .or {
@@ -1144,57 +1085,11 @@
     }
   }
 
-  .vote-item.selected img,
-  .vote-item.selected .img-empty {
-    transform: scale(2);
-  }
-
   .vote-item.loser img,
   .vote-item.loser .img-empty {
     filter: grayscale(1);
   }
 
-  .elo-popup-loser {
-    position: absolute;
-    right: 100%;
-    top: 50%;
-    bottom: auto;
-    margin-right: 0.3em;
-    transform: translateY(-50%);
-    animation: slideLeft 1s ease-out forwards;
-    white-space: nowrap;
-  }
-
-  .name .elo-popup-loser {
-    right: auto;
-    left: 50%;
-    top: auto;
-    transform: translateX(-50%);
-    margin-right: 0;
-    animation: floatUp 1s ease-out forwards;
-  }
-
-  @keyframes slideLeft {
-    0% {
-      opacity: 1;
-      transform: translateX(0) translateY(-50%);
-    }
-    100% {
-      opacity: 0;
-      transform: translateX(-2em) translateY(-50%);
-    }
-  }
-
-  @keyframes slideRight {
-    0% {
-      opacity: 1;
-      transform: translateX(0) translateY(-50%);
-    }
-    100% {
-      opacity: 0;
-      transform: translateX(2em) translateY(-50%);
-    }
-  }
 
   .mobile-vote-container {
     display: flex;
