@@ -135,12 +135,12 @@
 
   function toggleView() {
     if (viewMode === "vote") {
-      viewMode = "grid";
+      viewMode = listInfo?.noImages ? "list" : "grid";
       loadRankings();
     } else if (viewMode === "grid") {
       viewMode = "list";
     } else {
-      viewMode = "grid";
+      viewMode = listInfo?.noImages ? "list" : "grid";
     }
   }
 
@@ -556,6 +556,7 @@
       <span class="chevron">⏷</span>
     </div>
     <div class="right-controls">
+      <!-- debug
       <button
         class="text-base"
         class:active={debugMode}
@@ -570,6 +571,7 @@
           >
         {/each}
       {/if}
+      -->
       <button
         class="text-base"
         class:active={viewMode !== "vote"}
@@ -682,6 +684,7 @@
                       elo={item.elo}
                       name={item.name}
                       picture={item.data?.picture ?? null}
+                      noImages={listInfo?.noImages}
                     />
                   </div>
                 {/each}
@@ -904,9 +907,12 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    /* padding: var(--spacing-sm) 0; */
-    /* border-bottom: var(--border); */
     gap: var(--spacing-md);
+    position: relative;
+  }
+
+  .list-name-bar button {
+    min-width: 80px;
   }
 
   .list-name-bar.no-border {
@@ -914,14 +920,16 @@
   }
 
   .list-name-toggle {
-    flex: 1;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     justify-content: center;
     align-items: center;
     cursor: pointer;
     text-transform: uppercase;
-    min-width: 0;
     gap: var(--spacing-md);
+    max-width: 50%;
   }
 
   .list-name-toggle span:first-child {

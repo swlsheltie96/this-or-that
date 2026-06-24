@@ -519,7 +519,7 @@
           {#if !isNew && !isSuggestion}
             <div class="delete-group">
               <button class="text-base delete-btn" on:click={handleDelete}
-                >Delete</button
+                >Delete List</button
               >
               {#if confirmDelete}
                 <button
@@ -647,23 +647,28 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    /* padding: var(--spacing-sm) 0; */
-    /* border-bottom: var(--border); */
     gap: var(--spacing-md);
+    position: relative;
   }
   .list-name-bar.no-border {
     border-bottom: none;
   }
 
+  .list-name-bar button {
+    min-width: 80px;
+  }
+
   .list-name-center {
-    flex: 1;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     justify-content: center;
     align-items: center;
     gap: var(--spacing-md);
     cursor: pointer;
     text-transform: uppercase;
-    min-width: 0;
+    max-width: 50%;
   }
 
   .list-name-center span:first-child {
@@ -763,7 +768,19 @@
     gap: var(--spacing-md);
     padding: var(--spacing-margin) 0;
     border-bottom: var(--border);
-    /* min-height: calc(25px + var(--spacing-md)); */
+  }
+
+  .field-row:not(.instruction-row):hover {
+    background: var(--color-black);
+    color: var(--color-white);
+  }
+
+  .field-row:not(.instruction-row):hover input,
+  .field-row:not(.instruction-row):hover label,
+  .field-row:not(.instruction-row):hover textarea,
+  .field-row:not(.instruction-row):hover select {
+    color: var(--color-white);
+    background: transparent;
   }
 
   @media (max-width: 740px) {
@@ -840,6 +857,16 @@
     gap: var(--spacing-md);
     padding: var(--spacing-margin) 0;
     border-bottom: var(--border);
+  }
+
+  .table-row:hover {
+    background: var(--color-black);
+    color: var(--color-white);
+  }
+
+  .table-row:hover input {
+    color: var(--color-white);
+    background: transparent;
   }
 
   @media (max-width: 740px) {

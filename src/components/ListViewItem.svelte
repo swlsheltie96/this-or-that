@@ -3,16 +3,19 @@
   export let elo = 1000;
   export let name = "";
   export let picture = null;
+  export let noImages = false;
 </script>
 
 <div class="list-view-item">
-  <div class="image-wrap">
-    {#if picture}
-      <img src={picture} alt={name} loading="lazy" />
-    {:else}
-      <div class="img-empty"></div>
-    {/if}
-  </div>
+  {#if !noImages}
+    <div class="image-wrap">
+      {#if picture}
+        <img src={picture} alt={name} loading="lazy" />
+      {:else}
+        <div class="img-empty"></div>
+      {/if}
+    </div>
+  {/if}
   <span class="text-small rank">{rank}</span>
   <span class="text-small item-name">{name}</span>
   <span class="text-small elo">{Math.round(elo)}</span>
@@ -25,6 +28,7 @@
     gap: var(--spacing-md);
     padding-bottom: var(--spacing-sm);
     border-bottom: var(--border);
+    min-height: 75px;
   }
 
   .image-wrap {

@@ -171,15 +171,15 @@
             <div class="item-data rank text-base">{i + 1}</div>
             <div class="item-data name text-base">{item.name}</div>
           </div>
-          <div class="item-data img">
-            {#if listInfo?.noImages}
-              <div class="img-no-image text-item">{item.name}</div>
-            {:else if item.data?.picture}
-              <img src={item.data.picture} alt={item.name} loading="lazy" />
-            {:else}
-              <div class="img-empty"></div>
-            {/if}
-          </div>
+          {#if !listInfo?.noImages}
+            <div class="item-data img">
+              {#if item.data?.picture}
+                <img src={item.data.picture} alt={item.name} loading="lazy" />
+              {:else}
+                <div class="img-empty"></div>
+              {/if}
+            </div>
+          {/if}
           <div class="item-data elo text-base">{Math.round(item.elo)}</div>
         </div>
 
@@ -192,15 +192,15 @@
             >
           </div>
 
-          <div class="item-data img">
-            {#if listInfo?.noImages}
-              <div class="img-no-image text-item">{item.name}</div>
-            {:else if item.data?.picture}
-              <img src={item.data.picture} alt={item.name} loading="lazy" />
-            {:else}
-              <div class="img-empty"></div>
-            {/if}
-          </div>
+          {#if !listInfo?.noImages}
+            <div class="item-data img">
+              {#if item.data?.picture}
+                <img src={item.data.picture} alt={item.name} loading="lazy" />
+              {:else}
+                <div class="img-empty"></div>
+              {/if}
+            </div>
+          {/if}
           <div class="item-data elo text-base">{Math.round(item.elo)}</div>
         </div>
       {/each}
@@ -443,6 +443,7 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-md);
+    min-height: 25vw;
   }
   .view-list .item-data-wrapper {
     gap: var(--spacing-md);

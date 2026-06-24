@@ -95,6 +95,15 @@
       navigate(`/?view=vote&listName=${encodeURIComponent(currentListName)}`);
   }
 
+  let hoverSide = 1;
+  let hoverX = 50;
+  let hoverY = 20;
+  function handleMouseEnter() {
+    hoverSide = Math.random() < 0.5 ? 1 : 2;
+    hoverX = 15 + Math.random() * 70;
+    hoverY = 10 + Math.random() * 60;
+  }
+
   $: if (listName) {
     if (cycleInterval) {
       clearInterval(cycleInterval);
@@ -121,10 +130,9 @@
 </script>
 
 {#if pair}
-  <div class="vote-preview" on:click={handleClick}>
-    <div class="vote-now-label text-small">VOTE NOW</div>
+  <div class="vote-preview" on:click={handleClick} on:mouseenter={handleMouseEnter}>
     <div class="images-row">
-      <div class="image-wrap">
+      <div class="image-wrap" class:hovered={hoverSide === 1} style="--hover-x:{hoverX}%;--hover-y:{hoverY}%">
         {#if noImages}
           <div class="img-no-image text-item">{pair.item1.name}</div>
         {:else if pair.item1.data?.picture}
@@ -134,7 +142,7 @@
         {/if}
       </div>
       <div class="or text-base">or</div>
-      <div class="image-wrap">
+      <div class="image-wrap" class:hovered={hoverSide === 2} style="--hover-x:{hoverX}%;--hover-y:{hoverY}%">
         {#if noImages}
           <div class="img-no-image text-item">{pair.item2.name}</div>
         {:else if pair.item2.data?.picture}
@@ -169,23 +177,24 @@
     position: relative;
   }
 
-  .vote-now-label {
+  .image-wrap::after {
+    content: "VOTE NOW";
     position: absolute;
-    top: var(--spacing-margin);
-    right: 0;
+    top: var(--hover-y);
+    left: var(--hover-x);
+    transform: translate(-50%, -50%) rotate(-15deg);
     background: var(--color-black);
     color: var(--color-white);
     padding: 2px var(--spacing-sm);
-    /* border-radius: var(--border-radius); */
+    font-family: var(--font-family);
+    font-size: 0.8rem;
     text-transform: uppercase;
-    transform: rotate(-15deg);
-    transform-origin: top right;
-    opacity: 0;
     pointer-events: none;
-    /* transition: opacity 0.1s; */
+    opacity: 0;
+    white-space: nowrap;
   }
 
-  .vote-preview:hover .vote-now-label {
+  .vote-preview:hover .image-wrap.hovered::after {
     opacity: 1;
   }
 
@@ -212,7 +221,8 @@
 
   .image-wrap {
     aspect-ratio: 1 / 1;
-    overflow: hidden;
+    overflow: visible;
+    position: relative;
     border: 1.5px solid var(--color-black);
     padding: var(--spacing-lg);
     border-radius: var(--border-radius);
