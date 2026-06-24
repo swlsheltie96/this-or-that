@@ -671,6 +671,23 @@
     max-width: 50%;
   }
 
+  @media (max-width: 740px) {
+    .list-name-bar {
+      flex-wrap: wrap;
+    }
+
+    .list-name-center {
+      position: static;
+      transform: none;
+      order: -1;
+      width: 100%;
+      max-width: 100%;
+      justify-content: center;
+      padding: var(--spacing-lg);
+      box-sizing: border-box;
+    }
+  }
+
   .list-name-center span:first-child {
     overflow: hidden;
     white-space: nowrap;
@@ -956,8 +973,9 @@
   .add-row {
     padding: var(--spacing-sm) 0;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    align-items: flex-start;
   }
 
   .add-row-left {
