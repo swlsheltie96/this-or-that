@@ -10,6 +10,7 @@
   let currentView = "home";
   let listName = "";
   let activeListName = "";
+  let showMobileInfo = false;
 
   let windowWidth = window.innerWidth;
   $: isMobile = windowWidth <= 740;
@@ -66,15 +67,25 @@
     {#if currentView === "home" && isMobile}
       <Header />
       <TickerTape {isMobile} />
-      <div class="mobile-info text-small">
-        A pairwise ranking tool powered by the Elo algorithm. Your ranking
-        problems solved.
+      {#if !showMobileInfo}
+        <div class="mobile-info text-small">
+          A pairwise ranking tool powered by the Elo algorithm. Your ranking
+          problems solved.
+        </div>
+        <VotePreview listName={activeListName} />
+      {:else}
+        <div class="mobile-info-block text-small">Voting uses the Elo rating system — the same algorithm used to rank chess players. Every vote is a weighted matchup, not just a tally. The live Elo score animates in real time, so you can watch the rankings shift as you go.</div>
+      {/if}
+      <div class="mobile-list-wrap">
+        <HomeDropdown
+          isMobile={true}
+          on:activeList={(e) => (activeListName = e.detail.listName)}
+        />
       </div>
-      <VotePreview listName={activeListName} />
-      <HomeDropdown
-        isMobile={true}
-        on:activeList={(e) => (activeListName = e.detail.listName)}
-      />
+      <div class="mobile-bottom-bar text-base">
+        <button class="mobile-bottom-link" on:click={() => (showMobileInfo = !showMobileInfo)}>{showMobileInfo ? 'Close' : 'Info'}</button>
+        <a class="mobile-bottom-link" href="https://www.instagram.com/this____or__that?utm_source=qr" target="_blank" rel="noopener noreferrer">Follow</a>
+      </div>
     {/if}
     {#if !isMobile}
       <Header />
@@ -110,6 +121,44 @@
     padding: var(--spacing-margin);
     text-align: center;
     text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .mobile-info-block {
+    padding: var(--spacing-margin);
+    text-align: center;
+    text-transform: uppercase;
+    line-height: 1.6;
+    flex-shrink: 0;
+  }
+
+  .mobile-list-wrap {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .mobile-bottom-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-margin);
+    flex-shrink: 0;
+    background: var(--color-lime);
+    border-radius: var(--border-radius);
+    text-transform: uppercase;
+  }
+
+  .mobile-bottom-link {
+    color: var(--color-black);
+    text-decoration: underline;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-family);
+    font-size: inherit;
+    text-transform: uppercase;
+    padding: 0;
   }
   .app-container.vote-layout {
     height: calc(100dvh - 2 * var(--spacing-sm));

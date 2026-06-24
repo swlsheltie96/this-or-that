@@ -252,7 +252,7 @@
     width: 0;
     flex: 1;
     aspect-ratio: 1 / 1;
-    overflow: visible;
+    overflow: hidden;
     position: relative;
     border: 1.5px solid var(--color-black);
     padding: var(--spacing-lg);
